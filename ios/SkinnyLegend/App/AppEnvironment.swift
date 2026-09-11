@@ -24,6 +24,8 @@ final class AppEnvironment {
 
     let api: any APIClient
     let auth: any AuthService
+    let placeSearch: any PlaceSearching
+    let locator: any LocationFixing
 
     var session: SessionState = .loading
 
@@ -34,9 +36,11 @@ final class AppEnvironment {
         }
     }
 
-    init(api: any APIClient, auth: any AuthService) {
+    init(api: any APIClient, auth: any AuthService, placeSearch: any PlaceSearching = MapKitPlaceSearch(), locator: any LocationFixing = CoreLocationFixer()) {
         self.api = api
         self.auth = auth
+        self.placeSearch = placeSearch
+        self.locator = locator
     }
 
     /// Chooses mock or live wiring once, at launch (spec §14). Gated on `useLiveBackend`
@@ -51,12 +55,13 @@ final class AppEnvironment {
                 guard let auth else { throw APIError.unauthenticated }
                 return try await auth.idToken()
             })
-            return AppEnvironment(api: client, auth: auth)
+            return AppEnvironment(api: client, auth: auth, placeSearch: MapKitPlaceSearch(), locator: CoreLocationFixer())
         }
         if !AppMode.isMock {
             print("[AppEnvironment] No GoogleService-Info.plist found and -mockAPI was not passed; falling back to mock services.")
         }
-        return AppEnvironment(api: MockAPIClient(), auth: MockAuthService(startSignedIn: true))
+        return AppEnvironment(api: MockAPIClient(), auth: MockAuthService(startSignedIn: true),
+                              placeSearch: MockPlaceSearch(), locator: MockLocationFixer())
     }
 
     /// Restores the Firebase session, then upserts the user through `POST /auth/session`.

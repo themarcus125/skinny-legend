@@ -3,11 +3,13 @@ import SwiftUI
 
 struct TrackView: View {
     @State private var model: TrackModel
+    @State private var places: PlaceResolver
     @State private var pickerItem: PhotosPickerItem?
     @State private var isCameraPresented = false
 
-    init(api: any APIClient) {
+    init(api: any APIClient, placeSearch: any PlaceSearching, locator: any LocationFixing) {
         _model = State(initialValue: TrackModel(api: api))
+        _places = State(initialValue: PlaceResolver(search: placeSearch, locator: locator))
     }
 
     var body: some View {
@@ -18,6 +20,8 @@ struct TrackView: View {
                     header
                     if let preview = model.previewImage {
                         photoCard(preview)
+                        PlaceChip(resolver: places)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                     }
                     statusCard
                     actionButtons
@@ -32,17 +36,26 @@ struct TrackView: View {
             guard let item else { return }
             Task {
                 if let data = try? await item.loadTransferable(type: Data.self) {
-                    await model.use(imageData: data)
+                    await handle(data)
                 }
                 pickerItem = nil
             }
         }
         .fullScreenCover(isPresented: $isCameraPresented) {
             CameraPicker { data in
-                Task { await model.use(imageData: data) }
+                Task { await handle(data) }
             }
             .ignoresSafeArea()
         }
+    }
+
+    /// Spec §7: "While uploading, the app fetches one location fix" — the upload and the place
+    /// lookup run concurrently rather than one after the other.
+    private func handle(_ data: Data) async {
+        guard await model.prepare(imageData: data) else { return }
+        async let uploading: Void = model.upload()
+        async let resolving: Void = places.resolve(exifPoint: model.prepared?.coordinate)
+        _ = await (uploading, resolving)
     }
 
     private var header: some View {
@@ -66,6 +79,7 @@ struct TrackView: View {
             .overlay(alignment: .topTrailing) {
                 Button {
                     model.reset()
+                    places.clear()
                 } label: {
                     Image(systemName: "xmark")
                         .font(.system(size: 13, weight: .bold))

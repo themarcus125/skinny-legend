@@ -33,19 +33,27 @@ final class TrackModel {
         }
     }
 
-    func use(imageData: Data) async {
+    /// Returns false when the bytes are not a decodable image.
+    @discardableResult
+    func prepare(imageData: Data) async -> Bool {
         phase = .preparing
         photoKey = nil
         do {
             let photo = try await Self.prepare(imageData)
             prepared = photo
             previewImage = UIImage(data: photo.jpeg)
+            return true
         } catch {
             prepared = nil
             previewImage = nil
             phase = .failed("Ảnh không hợp lệ, hãy chọn ảnh khác.")
-            return
+            return false
         }
+    }
+
+    /// Convenience used by tests and by any caller that does not need the two phases separately.
+    func use(imageData: Data) async {
+        guard await prepare(imageData: imageData) else { return }
         await upload()
     }
 
@@ -62,7 +70,7 @@ final class TrackModel {
     }
 
     /// One automatic retry, then the error is surfaced and `prepared` is kept for a manual retry.
-    private func upload() async {
+    func upload() async {
         guard let photo = prepared else { return }
         for attempt in 1...2 {
             phase = .uploading(0)

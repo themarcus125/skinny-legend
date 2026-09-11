@@ -16,7 +16,7 @@ struct MainTabView: View {
     var body: some View {
         TabView(selection: $selection) {
             Tab("Ghi nhận", systemImage: "camera.fill", value: AppTab.track) {
-                NavigationStack { TrackView(api: env.api) }
+                NavigationStack { TrackView(api: env.api, placeSearch: env.placeSearch, locator: env.locator) }
             }
             Tab("Tổng quan", systemImage: "flame.fill", value: AppTab.dashboard) {
                 NavigationStack { TabStub(title: "Tổng quan", symbol: "flame.fill") }
