@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { and, desc, eq, ne } from 'drizzle-orm';
-import { computeScore, schema, toLocalDate, type Category } from '@skinny/shared';
+import { computeScore, isoWeekKey, schema, toLocalDate, type Category, type ConfirmedEntry, type LocalDate } from '@skinny/shared';
 import { db } from '../db.js';
 import { ApiError } from '../errors.js';
 import { validate } from '../validate.js';
@@ -9,7 +9,7 @@ import { authenticate, requireActive, type AuthEnv } from '../middleware/auth.js
 import { storage, newKey } from '../services/storage.js';
 import { classifyPhoto, type Verdict } from '../services/vision.js';
 import { makeThumbnail, normalizeImage } from '../services/thumbnail.js';
-import { loadChallenge, loadConfirmedEntries, todayLocal } from '../services/score.js';
+import { loadChallenge, loadConfirmedEntries, todayLocal, type Challenge } from '../services/score.js';
 
 export type EntryDeps = { classify: typeof classifyPhoto };
 
@@ -53,14 +53,34 @@ function toVerdictDto(v: Verdict) {
   return { categories: v.categories, healthy: v.healthy, confidence: v.confidence, reason: v.reason, model: v.model, failed: v.failed };
 }
 
-/** Points this entry would earn if confirmed with `categories`, given the user's other confirmed entries. */
-async function projection(userId: string, entry: EntryRow, categories: Category[]) {
-  const challenge = await loadChallenge();
-  const others = ((await loadConfirmedEntries([userId])).get(userId) ?? []).filter((e) => e.id !== entry.id);
+function periodKeyOf(date: LocalDate, capPeriod: 'day' | 'week'): string {
+  return capPeriod === 'day' ? date : isoWeekKey(date);
+}
+
+/**
+ * Points this entry would earn if confirmed with `categories`, given the user's other confirmed
+ * entries. `capsHit` is computed for the entry's own day/week (not "today") by counting scored
+ * rows whose entry falls in the same period as `entry.localDate`.
+ */
+async function projection(challenge: Challenge, entry: EntryRow, categories: Category[], otherEntries: ConfirmedEntry[]) {
+  const others = otherEntries.filter((e) => e.id !== entry.id);
   const candidate = { id: entry.id, localDate: entry.localDate, takenAt: entry.takenAt, categories };
-  const result = computeScore({ entries: [...others, candidate], rules: challenge.rules, challenge: challenge.config, asOf: todayLocal(challenge.config) });
+  const combined = [...others, candidate];
+  const result = computeScore({ entries: combined, rules: challenge.rules, challenge: challenge.config, asOf: todayLocal(challenge.config) });
   const projectedPoints = result.scored.filter((s) => s.entryId === entry.id).reduce((sum, s) => sum + s.points, 0);
-  return { projectedPoints, capsHit: result.capsHit };
+
+  const dateById = new Map(combined.map((e) => [e.id, e.localDate]));
+  const capsHit = { exercise: false, meal: false, group: false } as Record<Category, boolean>;
+  for (const rule of challenge.rules) {
+    const targetPeriod = periodKeyOf(entry.localDate, rule.capPeriod);
+    const count = result.scored.filter((s) => {
+      if (s.category !== rule.category || s.points <= 0) return false;
+      const day = dateById.get(s.entryId);
+      return day !== undefined && periodKeyOf(day, rule.capPeriod) === targetPeriod;
+    }).length;
+    capsHit[rule.category] = count >= rule.capCount;
+  }
+  return { projectedPoints, capsHit };
 }
 
 async function categoriesOf(entryId: string): Promise<Category[]> {
@@ -85,29 +105,34 @@ export function entryRoutes(deps: EntryDeps) {
     await storage.putObject(thumbKey, thumb, 'image/jpeg');
 
     const takenAt = new Date(body.takenAt);
-    const [entry] = await db.insert(schema.entries).values({
-      userId: user.id,
-      challengeId: challenge.id,
-      photoKey: body.photoKey,
-      thumbKey,
-      takenAt,
-      localDate: toLocalDate(takenAt, challenge.config.timezone),
-      lat: body.lat,
-      lng: body.lng,
-      placeName: body.placeName,
-      placeSource: body.placeSource ?? (body.placeName ? 'manual' : 'none'),
-    }).returning();
+    const categories = [...new Set(verdict.categories)];
+    const entry = await db.transaction(async (tx) => {
+      const [row] = await tx.insert(schema.entries).values({
+        userId: user.id,
+        challengeId: challenge.id,
+        photoKey: body.photoKey,
+        thumbKey,
+        takenAt,
+        localDate: toLocalDate(takenAt, challenge.config.timezone),
+        lat: body.lat,
+        lng: body.lng,
+        placeName: body.placeName,
+        placeSource: body.placeSource ?? (body.placeName ? 'manual' : 'none'),
+      }).returning();
 
-    await db.insert(schema.aiVerdicts).values({
-      entryId: entry!.id, model: verdict.model, categoriesJson: verdict.categories, healthy: verdict.healthy,
-      confidence: verdict.confidence, reason: verdict.reason, rawResponse: verdict.raw, latencyMs: verdict.latencyMs, failed: verdict.failed,
+      await tx.insert(schema.aiVerdicts).values({
+        entryId: row!.id, model: verdict.model, categoriesJson: verdict.categories, healthy: verdict.healthy,
+        confidence: verdict.confidence, reason: verdict.reason, rawResponse: verdict.raw, latencyMs: verdict.latencyMs, failed: verdict.failed,
+      });
+      if (categories.length > 0) {
+        await tx.insert(schema.entryCategories).values(categories.map((category) => ({ entryId: row!.id, category, source: 'ai' as const })));
+      }
+      return row!;
     });
-    if (verdict.categories.length > 0) {
-      await db.insert(schema.entryCategories).values(verdict.categories.map((category) => ({ entryId: entry!.id, category, source: 'ai' as const })));
-    }
 
-    const proj = await projection(user.id, entry!, verdict.categories);
-    return c.json({ entry: await toEntryDto(entry!, verdict.categories), verdict: toVerdictDto(verdict), ...proj }, 201);
+    const others = (await loadConfirmedEntries([user.id])).get(user.id) ?? [];
+    const proj = await projection(challenge, entry, categories, others);
+    return c.json({ entry: await toEntryDto(entry, categories), verdict: toVerdictDto(verdict), ...proj }, 201);
   });
 
   r.patch('/:id', validate('json', patchBody), async (c) => {
@@ -116,6 +141,7 @@ export function entryRoutes(deps: EntryDeps) {
     const [entry] = await db.select().from(schema.entries).where(and(eq(schema.entries.id, c.req.param('id')), eq(schema.entries.userId, user.id), ne(schema.entries.status, 'rejected')));
     if (!entry) throw new ApiError(404, 'not_found', 'Entry not found');
 
+    const challenge = await loadChallenge();
     const categories = [...new Set(body.categories)];
     const [updated] = await db.transaction(async (tx) => {
       await tx.delete(schema.entryCategories).where(eq(schema.entryCategories.entryId, entry.id));
@@ -128,7 +154,8 @@ export function entryRoutes(deps: EntryDeps) {
       }).where(eq(schema.entries.id, entry.id)).returning();
     });
 
-    const proj = await projection(user.id, updated!, categories);
+    const others = (await loadConfirmedEntries([user.id])).get(user.id) ?? [];
+    const proj = await projection(challenge, updated!, categories, others);
     return c.json({ entry: await toEntryDto(updated!, categories), ...proj });
   });
 

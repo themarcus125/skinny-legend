@@ -70,6 +70,20 @@ describe('POST /entries', () => {
     const k2 = await uploadPhoto(headers);
     const second = await (await post(headers, { photoKey: k2, takenAt: '2026-09-10T05:00:00Z' })).json();
     expect(second.projectedPoints).toBe(0);
+    expect(second.capsHit.exercise).toBe(true);
+    expect(second.capsHit.meal).toBe(false);
+  });
+
+  it('dedupes duplicate AI categories before insert', async () => {
+    classify.mockResolvedValue({ ...okVerdict, categories: ['exercise', 'exercise'] as any });
+    const { headers } = await asUser('u1', { activate: true });
+    const key = await uploadPhoto(headers);
+    const res = await post(headers, { photoKey: key, takenAt: '2026-09-10T01:00:00Z' });
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    expect(body.entry.categories).toEqual(['exercise']);
+    const cats = await db.select().from(schema.entryCategories);
+    expect(cats.length).toBe(1);
   });
 
   it('rejects an undecodable photo with photo_invalid', async () => {
@@ -115,6 +129,17 @@ describe('PATCH /entries/:id', () => {
     const created = await (await post(a.headers, { photoKey: key, takenAt: '2026-09-10T01:00:00Z' })).json();
     const res = await app.request(`/entries/${created.entry.id}`, { method: 'PATCH', headers: { ...b.headers, 'content-type': 'application/json' }, body: JSON.stringify({ categories: ['meal'] }) });
     expect(res.status).toBe(404);
+  });
+
+  it("computes capsHit for the entry's own day/week, not today", async () => {
+    const { headers } = await asUser('u1', { activate: true });
+    const h = { ...headers, 'content-type': 'application/json' };
+    const key = await uploadPhoto(headers);
+    const created = await (await post(headers, { photoKey: key, takenAt: '2026-09-10T01:00:00Z' })).json();
+    const res = await app.request(`/entries/${created.entry.id}`, { method: 'PATCH', headers: h, body: JSON.stringify({ categories: ['exercise', 'group'] }) });
+    const body = await res.json();
+    expect(body.capsHit.exercise).toBe(true);
+    expect(body.capsHit.group).toBe(false);
   });
 });
 

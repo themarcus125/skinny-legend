@@ -64,7 +64,7 @@ export async function classifyPhoto(image: Buffer, deps: { fetch?: typeof fetch;
     raw = json.choices?.[0]?.message?.content ?? '';
     const parsed = verdictSchema.safeParse(JSON.parse(extractJson(raw)));
     if (!parsed.success) return fail(raw);
-    const categories = parsed.data.categories.filter((c): c is Category => (CATEGORIES as readonly string[]).includes(c));
+    const categories = [...new Set(parsed.data.categories.filter((c): c is Category => (CATEGORIES as readonly string[]).includes(c)))];
     return {
       categories,
       healthy: categories.includes('meal') ? parsed.data.healthy : null,

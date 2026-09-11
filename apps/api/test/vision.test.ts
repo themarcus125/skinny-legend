@@ -27,6 +27,11 @@ describe('classifyPhoto', () => {
     expect(v.confidence).toBe(1);
   });
 
+  it('dedupes repeated categories', async () => {
+    const v = await classifyPhoto(png, { fetch: fakeFetch('{"categories":["exercise","exercise","meal"],"healthy":true,"confidence":0.8,"reason":"x"}') });
+    expect(v.categories).toEqual(['exercise', 'meal']);
+  });
+
   it('returns failed verdict on malformed JSON', async () => {
     const v = await classifyPhoto(png, { fetch: fakeFetch('not json') });
     expect(v.failed).toBe(true);
