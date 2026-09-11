@@ -13,8 +13,8 @@ RUN pnpm --filter @skinny/api --prod deploy --legacy /out
 FROM node:22-alpine
 WORKDIR /app
 COPY --from=build /out .
-COPY --from=build /repo/apps/api/drizzle ./drizzle
-COPY --from=build /repo/apps/api/drizzle.config.ts ./drizzle.config.ts
+# No drizzle/ or drizzle.config.ts here: drizzle-kit is a devDependency and is absent from
+# the --prod image, so migrations are run from a dev checkout against the deployed database.
 ENV NODE_ENV=production
 EXPOSE 3000
 CMD ["node", "dist/index.js"]
