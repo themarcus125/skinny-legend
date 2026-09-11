@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import sharp from 'sharp';
 import { classifyPhoto } from '../src/services/vision.js';
-import { makeThumbnail } from '../src/services/thumbnail.js';
+import { makeThumbnail, normalizeImage } from '../src/services/thumbnail.js';
 
 const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64');
 
@@ -53,5 +53,16 @@ describe('makeThumbnail', () => {
     expect(meta.format).toBe('jpeg');
     expect(meta.width).toBe(400);
     expect(meta.height).toBe(300);
+  });
+});
+
+describe('normalizeImage', () => {
+  it('re-encodes as a JPEG capped at 1200px on the long edge', async () => {
+    const input = await sharp({ create: { width: 2000, height: 1000, channels: 3, background: '#888' } }).png().toBuffer();
+    const out = await normalizeImage(input);
+    const meta = await sharp(out).metadata();
+    expect(meta.format).toBe('jpeg');
+    expect(meta.width).toBe(1200);
+    expect(meta.height).toBe(600);
   });
 });
