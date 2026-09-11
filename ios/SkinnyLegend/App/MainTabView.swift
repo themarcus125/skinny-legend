@@ -10,12 +10,13 @@ enum AppTab: Hashable {
 
 /// The five tabs from spec §7, on the iOS 26 glass tab bar that minimises as content scrolls.
 struct MainTabView: View {
+    @Environment(AppEnvironment.self) private var env
     @State private var selection: AppTab = .dashboard
 
     var body: some View {
         TabView(selection: $selection) {
             Tab("Ghi nhận", systemImage: "camera.fill", value: AppTab.track) {
-                NavigationStack { TabStub(title: "Ghi nhận", symbol: "camera.fill") }
+                NavigationStack { TrackView(api: env.api) }
             }
             Tab("Tổng quan", systemImage: "flame.fill", value: AppTab.dashboard) {
                 NavigationStack { TabStub(title: "Tổng quan", symbol: "flame.fill") }

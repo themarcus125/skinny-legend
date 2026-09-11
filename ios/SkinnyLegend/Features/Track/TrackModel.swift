@@ -1,0 +1,94 @@
+import Foundation
+import Observation
+import UIKit
+
+/// Drives the Track flow: compress → presign → PUT upload. Spec §10 asks for one automatic retry
+/// on upload failure, with the prepared photo kept so the user can retry by hand afterwards.
+@MainActor
+@Observable
+final class TrackModel {
+    enum Phase: Equatable {
+        case idle
+        case preparing
+        case uploading(Double)
+        case uploaded
+        case failed(String)
+    }
+
+    private let api: any APIClient
+
+    var phase: Phase = .idle
+    var previewImage: UIImage?
+    var prepared: PreparedPhoto?
+    var photoKey: String?
+
+    init(api: any APIClient) {
+        self.api = api
+    }
+
+    var isBusy: Bool {
+        switch phase {
+        case .preparing, .uploading: true
+        case .idle, .uploaded, .failed: false
+        }
+    }
+
+    func use(imageData: Data) async {
+        phase = .preparing
+        photoKey = nil
+        do {
+            let photo = try await Self.prepare(imageData)
+            prepared = photo
+            previewImage = UIImage(data: photo.jpeg)
+        } catch {
+            prepared = nil
+            previewImage = nil
+            phase = .failed("Ảnh không hợp lệ, hãy chọn ảnh khác.")
+            return
+        }
+        await upload()
+    }
+
+    func retryUpload() async {
+        guard prepared != nil else { return }
+        await upload()
+    }
+
+    func reset() {
+        phase = .idle
+        previewImage = nil
+        prepared = nil
+        photoKey = nil
+    }
+
+    /// One automatic retry, then the error is surfaced and `prepared` is kept for a manual retry.
+    private func upload() async {
+        guard let photo = prepared else { return }
+        for attempt in 1...2 {
+            phase = .uploading(0)
+            do {
+                let presign = try await api.presign(kind: .photo, contentType: "image/jpeg")
+                try await api.upload(photo.jpeg, to: presign, contentType: "image/jpeg") { [weak self] fraction in
+                    Task { @MainActor in
+                        guard let self, case .uploading = self.phase else { return }
+                        self.phase = .uploading(fraction)
+                    }
+                }
+                photoKey = presign.key
+                phase = .uploaded
+                return
+            } catch let error as APIError {
+                if attempt == 2 { phase = .failed(error.userMessage) }
+            } catch {
+                if attempt == 2 { phase = .failed("Tải ảnh lên thất bại.") }
+            }
+        }
+    }
+
+    /// Compression is CPU-bound, so it runs off the main actor.
+    private nonisolated static func prepare(_ data: Data) async throws -> PreparedPhoto {
+        try await Task.detached(priority: .userInitiated) {
+            try ImagePipeline.prepare(data)
+        }.value
+    }
+}
