@@ -83,6 +83,22 @@ describe('GET /me/trends', () => {
   });
 });
 
+describe('read routes require auth', () => {
+  it('GET /feed with no headers returns 401 unauthenticated', async () => {
+    const res = await app.request('/feed');
+    expect(res.status).toBe(401);
+    const body = await res.json();
+    expect(body.error.code).toBe('unauthenticated');
+  });
+
+  it('GET /users/:id/entries with no headers returns 401 unauthenticated', async () => {
+    const res = await app.request('/users/00000000-0000-0000-0000-000000000000/entries');
+    expect(res.status).toBe(401);
+    const body = await res.json();
+    expect(body.error.code).toBe('unauthenticated');
+  });
+});
+
 describe('GET /feed and GET /users/:id/entries', () => {
   it('rejects an invalid feed cursor with 400 instead of crashing', async () => {
     const a = await asUser('a', { activate: true });
