@@ -24,7 +24,7 @@ export function EntriesTable({
     <Table containerClassName="max-h-[calc(100dvh-17rem)]">
       <TableHeader>
         <TableRow>
-          <TableHead className="w-16">Ảnh</TableHead>
+          <TableHead className="w-20">Ảnh</TableHead>
           <TableHead>Thành viên</TableHead>
           <TableHead>Ngày</TableHead>
           <TableHead>Hạng mục</TableHead>
