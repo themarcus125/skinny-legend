@@ -27,10 +27,13 @@ export function MembersTable({
   users,
   onPatch,
   isPatching,
+  currentUserId,
 }: {
   users: AdminUser[];
   onPatch: (id: string, patch: UserPatch) => void;
   isPatching: boolean;
+  /** The signed-in admin's id. Their own row can't disable or demote itself (no self-lockout). */
+  currentUserId?: string | null;
 }) {
   const [confirming, setConfirming] = useState<PendingConfirm | null>(null);
 
@@ -55,46 +58,56 @@ export function MembersTable({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {users.map((user) => (
-            <TableRow key={user.id}>
-              <TableCell className="font-medium">{user.displayName}</TableCell>
-              <TableCell>
-                <Badge variant={statusVariant(user.status)}>{USER_STATUS_LABELS[user.status]}</Badge>
-              </TableCell>
-              <TableCell>
-                <Select
-                  value={user.role}
-                  disabled={isPatching}
-                  onValueChange={(role) => onPatch(user.id, { role: role as Role })}
-                >
-                  <SelectTrigger className="w-36" aria-label={`Vai trò của ${user.displayName}`}>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {ROLES.map((role) => (
-                      <SelectItem key={role} value={role}>
-                        {ROLE_LABELS[role]}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </TableCell>
-              <TableCell className="text-sm text-muted-foreground">{formatDateTime(user.createdAt)}</TableCell>
-              <TableCell className="space-x-2 text-right">
-                {availableActions(user).map((action) => (
-                  <Button
-                    key={action.key}
-                    size="sm"
-                    variant={action.confirm ? 'outline' : 'default'}
-                    disabled={isPatching}
-                    onClick={() => run(user, action)}
+          {users.map((user) => {
+            const isSelf = currentUserId != null && user.id === currentUserId;
+            // Self-lockout guard: never let the signed-in admin disable or demote themselves.
+            // Approve/reactivate stay available — those can't strand the account.
+            const actions = availableActions(user).filter((action) => !(isSelf && action.key === 'disable'));
+            return (
+              <TableRow key={user.id}>
+                <TableCell className="font-medium">{user.displayName}</TableCell>
+                <TableCell>
+                  <Badge variant={statusVariant(user.status)}>{USER_STATUS_LABELS[user.status]}</Badge>
+                </TableCell>
+                <TableCell>
+                  <Select
+                    value={user.role}
+                    disabled={isPatching || isSelf}
+                    onValueChange={(role) => onPatch(user.id, { role: role as Role })}
                   >
-                    {action.label}
-                  </Button>
-                ))}
-              </TableCell>
-            </TableRow>
-          ))}
+                    <SelectTrigger
+                      className="w-36"
+                      aria-label={`Vai trò của ${user.displayName}`}
+                      title={isSelf ? 'Không thể đổi vai trò của chính bạn' : undefined}
+                    >
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ROLES.map((role) => (
+                        <SelectItem key={role} value={role}>
+                          {ROLE_LABELS[role]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </TableCell>
+                <TableCell className="text-sm text-muted-foreground">{formatDateTime(user.createdAt)}</TableCell>
+                <TableCell className="space-x-2 text-right">
+                  {actions.map((action) => (
+                    <Button
+                      key={action.key}
+                      size="sm"
+                      variant={action.confirm ? 'outline' : 'default'}
+                      disabled={isPatching}
+                      onClick={() => run(user, action)}
+                    >
+                      {action.label}
+                    </Button>
+                  ))}
+                </TableCell>
+              </TableRow>
+            );
+          })}
         </TableBody>
       </Table>
 

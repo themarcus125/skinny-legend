@@ -6,10 +6,11 @@ import { MembersTable } from '@/components/members/members-table';
 import { QueryState } from '@/components/query-state';
 import { describeError } from '@/lib/api';
 import type { UserPatch } from '@/lib/api/types';
-import { useAdminApi } from '@/lib/auth/auth-context';
+import { useAdminApi, useAuth } from '@/lib/auth/auth-context';
 
 export default function MembersPage() {
   const api = useAdminApi();
+  const { user: currentUser } = useAuth();
   const queryClient = useQueryClient();
 
   const usersQuery = useQuery({ queryKey: ['admin', 'users'], queryFn: () => api.listUsers() });
@@ -45,6 +46,7 @@ export default function MembersPage() {
           users={users}
           isPatching={patchUser.isPending}
           onPatch={(id, patch) => patchUser.mutate({ id, patch })}
+          currentUserId={currentUser?.id}
         />
       </QueryState>
     </div>
