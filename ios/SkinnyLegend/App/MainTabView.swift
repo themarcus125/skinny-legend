@@ -19,7 +19,7 @@ struct MainTabView: View {
                 NavigationStack { TrackView(api: env.api, placeSearch: env.placeSearch, locator: env.locator) }
             }
             Tab("Tổng quan", systemImage: "flame.fill", value: AppTab.dashboard) {
-                NavigationStack { TabStub(title: "Tổng quan", symbol: "flame.fill") }
+                NavigationStack { DashboardView(api: env.api) }
             }
             Tab("Xếp hạng", systemImage: "trophy.fill", value: AppTab.leaderboard) {
                 NavigationStack { TabStub(title: "Xếp hạng", symbol: "trophy.fill") }
