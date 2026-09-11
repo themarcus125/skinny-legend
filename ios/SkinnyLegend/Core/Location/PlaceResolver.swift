@@ -32,6 +32,11 @@ final class PlaceResolver {
     private let search: any PlaceSearching
     private let locator: any LocationFixing
 
+    /// Bumped by every `resolve()` call and by `clear()`/`cancel()`; a resolve compares its
+    /// captured value against the current one after each `await` and drops its write (rather than
+    /// overwriting a newer result, or resurrecting a dismissed chip) when they no longer match.
+    private var generation = 0
+
     private(set) var candidates: [Place] = []
     private(set) var fix: GeoPoint?
     private(set) var selected: Place?
@@ -46,10 +51,16 @@ final class PlaceResolver {
     var placeSource: PlaceSource { selected?.source ?? PlaceSource.none }
 
     func resolve(exifPoint: GeoPoint?) async {
+        generation += 1
+        let myGeneration = generation
         isResolving = true
         candidates = []
         selected = nil
-        defer { isResolving = false }
+        defer {
+            // Only the resolve that is still current clears its own busy flag; a superseded one
+            // must not stomp on whatever the newer resolve (or `clear()`) already set.
+            if generation == myGeneration { isResolving = false }
+        }
 
         // `exifPoint ?? await locator.currentFix()` does not compile: `??`'s right-hand side is
         // an `@autoclosure`, which cannot contain `await`. Branch explicitly instead.
@@ -59,6 +70,7 @@ final class PlaceResolver {
         } else {
             resolvedPoint = await locator.currentFix()
         }
+        guard generation == myGeneration, !Task.isCancelled else { return }
         guard let point = resolvedPoint else {
             fix = nil
             return
@@ -66,12 +78,14 @@ final class PlaceResolver {
         fix = point
 
         let pois = Array(await search.nearbyPOIs(around: point, radius: Self.searchRadius).prefix(Self.candidateLimit))
+        guard generation == myGeneration, !Task.isCancelled else { return }
         if let nearest = pois.first {
             candidates = pois
             selected = nearest
             return
         }
         if let geocoded = await search.reverseGeocode(point) {
+            guard generation == myGeneration, !Task.isCancelled else { return }
             candidates = [geocoded]
             selected = geocoded
         }
@@ -83,6 +97,13 @@ final class PlaceResolver {
     }
 
     func clear() {
+        generation += 1
         selected = nil
+    }
+
+    /// Invalidates any in-flight `resolve()` without touching `selected`/`candidates` — used when
+    /// a photo is replaced or discarded and a fresh `resolve()` is about to start anyway.
+    func cancel() {
+        generation += 1
     }
 }

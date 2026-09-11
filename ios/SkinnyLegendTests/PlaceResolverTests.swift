@@ -22,6 +22,46 @@ private func poi(_ name: String, offset: Double) -> Place {
     Place(id: name, name: name, point: GeoPoint(lat: hcmc.lat + offset, lng: hcmc.lng), source: .poi)
 }
 
+/// A search whose result depends on the point it was asked about, so a test can tell an old
+/// resolve's fix apart from a newer resolve's fix.
+private struct PointAwareSearch: PlaceSearching {
+    let poisForPoint: @Sendable (GeoPoint) -> [Place]
+
+    func nearbyPOIs(around point: GeoPoint, radius: CLLocationDistance) async -> [Place] {
+        poisForPoint(point)
+    }
+
+    func reverseGeocode(_ point: GeoPoint) async -> Place? { nil }
+}
+
+/// A locator whose `currentFix()` suspends until the test explicitly resumes it, so a test can
+/// interleave a `clear()` or a newer `resolve()` call while an older one is still awaiting its fix.
+private actor GatedLocator: LocationFixing {
+    private var pendingFix: CheckedContinuation<GeoPoint?, Never>?
+    private var waiter: CheckedContinuation<Void, Never>?
+
+    func currentFix() async -> GeoPoint? {
+        await withCheckedContinuation { continuation in
+            pendingFix = continuation
+            waiter?.resume()
+            waiter = nil
+        }
+    }
+
+    /// Suspends until `currentFix()` has been called and is parked waiting on `resume(with:)`.
+    func waitUntilCalled() async {
+        if pendingFix != nil { return }
+        await withCheckedContinuation { continuation in
+            waiter = continuation
+        }
+    }
+
+    func resume(with point: GeoPoint?) {
+        pendingFix?.resume(returning: point)
+        pendingFix = nil
+    }
+}
+
 @Suite("PlaceResolver")
 @MainActor
 struct PlaceResolverTests {
@@ -92,5 +132,50 @@ struct PlaceResolverTests {
         #expect(resolver.selected == nil)
         #expect(resolver.placeSource == .none)
         #expect(resolver.candidates.count == 1)
+    }
+
+    @Test("A stale resolve does not overwrite state after clear()")
+    func staleResolveDroppedAfterClear() async {
+        let locator = GatedLocator()
+        let resolver = PlaceResolver(search: FakeSearch(pois: [poi("A", offset: 0)]), locator: locator)
+
+        let staleTask = Task { await resolver.resolve(exifPoint: nil) }
+        await locator.waitUntilCalled()
+
+        resolver.clear()
+        await locator.resume(with: hcmc)
+        await staleTask.value
+
+        #expect(resolver.selected == nil)
+        #expect(resolver.candidates.isEmpty)
+        #expect(resolver.fix == nil)
+    }
+
+    @Test("A newer resolve wins over an older one that finishes later")
+    func newerResolveWinsOverStaleOne() async {
+        let oldPoint = hcmc
+        let newPoint = GeoPoint(lat: 21.0278, lng: 105.8342)
+        let search = PointAwareSearch { point in
+            point == newPoint
+                ? [Place(id: "new", name: "New", point: newPoint, source: .poi)]
+                : [Place(id: "old", name: "Old", point: oldPoint, source: .poi)]
+        }
+        let locator = GatedLocator()
+        let resolver = PlaceResolver(search: search, locator: locator)
+
+        let staleTask = Task { await resolver.resolve(exifPoint: nil) }
+        await locator.waitUntilCalled()
+
+        // The newer resolve supplies its own EXIF point, so it never touches the locator and
+        // completes fully while the older one is still parked in `currentFix()`.
+        await resolver.resolve(exifPoint: newPoint)
+        #expect(resolver.selected?.name == "New")
+
+        // Letting the stale resolve finish must not clobber the newer result.
+        await locator.resume(with: oldPoint)
+        await staleTask.value
+
+        #expect(resolver.selected?.name == "New")
+        #expect(resolver.fix == newPoint)
     }
 }

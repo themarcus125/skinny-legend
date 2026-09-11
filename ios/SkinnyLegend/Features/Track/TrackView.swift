@@ -6,6 +6,9 @@ struct TrackView: View {
     @State private var places: PlaceResolver
     @State private var pickerItem: PhotosPickerItem?
     @State private var isCameraPresented = false
+    /// The in-flight prepare/upload/resolve pipeline for the current photo, so a photo swap or
+    /// discard can cancel a stale one before it can overwrite state for the new photo.
+    @State private var loadTask: Task<Void, Never>?
 
     init(api: any APIClient, placeSearch: any PlaceSearching, locator: any LocationFixing) {
         _model = State(initialValue: TrackModel(api: api))
@@ -34,7 +37,8 @@ struct TrackView: View {
         .navigationTitle("Ghi nhận")
         .onChange(of: pickerItem) { _, item in
             guard let item else { return }
-            Task {
+            loadTask?.cancel()
+            loadTask = Task {
                 if let data = try? await item.loadTransferable(type: Data.self) {
                     await handle(data)
                 }
@@ -43,7 +47,8 @@ struct TrackView: View {
         }
         .fullScreenCover(isPresented: $isCameraPresented) {
             CameraPicker { data in
-                Task { await handle(data) }
+                loadTask?.cancel()
+                loadTask = Task { await handle(data) }
             }
             .ignoresSafeArea()
         }
@@ -78,6 +83,8 @@ struct TrackView: View {
             .clipShape(RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous))
             .overlay(alignment: .topTrailing) {
                 Button {
+                    loadTask?.cancel()
+                    loadTask = nil
                     model.reset()
                     places.clear()
                 } label: {
