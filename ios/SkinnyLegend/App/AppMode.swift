@@ -14,6 +14,14 @@ enum AppMode {
 
     /// Firebase is configured, and the live API client used, only here.
     static var useLiveBackend: Bool {
+        servicesAreLive(isMock: isMock, hasFirebasePlist: hasFirebasePlist)
+    }
+
+    /// Pure decision behind `useLiveBackend`, pulled out so it can be unit tested without
+    /// touching `ProcessInfo`/`Bundle`: a launch with neither `-mockAPI` nor a
+    /// `GoogleService-Info.plist` must resolve to `false` (mock), not attempt to stand up
+    /// `FirebaseAuthService` against an unconfigured `FirebaseApp` and crash.
+    static func servicesAreLive(isMock: Bool, hasFirebasePlist: Bool) -> Bool {
         !isMock && hasFirebasePlist
     }
 

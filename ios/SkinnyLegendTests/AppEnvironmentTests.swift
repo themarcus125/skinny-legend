@@ -77,15 +77,37 @@ struct AppEnvironmentTests {
         }
     }
 
-    @Test("A disabled member sees a disabled message, not the tabs")
+    @Test("A disabled member (status in the session body) sees a sign-out screen, not the tabs")
     func disabledMember() async {
         let env = AppEnvironment(api: StubAPIClient(sessionResult: .success(disabledUser())), auth: MockAuthService(startSignedIn: true))
         await env.bootstrap()
-        if case .failed(let message) = env.session {
+        if case .disabled(let message) = env.session {
             #expect(message.isEmpty == false)
         } else {
-            Issue.record("Expected .failed, got \(env.session)")
+            Issue.record("Expected .disabled, got \(env.session)")
         }
+    }
+
+    @Test("A 403 disabled from the API (the real shape: authenticate rejects before a body) also routes to disabled")
+    func disabledFromAPIError() async {
+        let error = APIError(status: 403, code: "disabled", message: "Account disabled")
+        let env = AppEnvironment(api: StubAPIClient(sessionResult: .failure(error)), auth: MockAuthService(startSignedIn: true))
+        await env.bootstrap()
+        if case .disabled(let message) = env.session {
+            #expect(message.isEmpty == false)
+        } else {
+            Issue.record("Expected .disabled, got \(env.session)")
+        }
+    }
+
+    @Test("Signing out from the disabled state returns to signed-out")
+    func signOutFromDisabled() async {
+        let error = APIError(status: 403, code: "disabled", message: "Account disabled")
+        let env = AppEnvironment(api: StubAPIClient(sessionResult: .failure(error)), auth: MockAuthService(startSignedIn: true))
+        await env.bootstrap()
+        env.signOut()
+        #expect(env.session == .signedOut)
+        #expect(env.currentUser == nil)
     }
 
     @Test("A network failure surfaces a retryable error state")
@@ -126,5 +148,33 @@ struct AppEnvironmentTests {
         env.signOut()
         #expect(env.session == .signedOut)
         #expect(env.currentUser == nil)
+    }
+}
+
+/// `AppMode.useLiveBackend` reads `ProcessInfo`/`Bundle` directly, so the branching decision is
+/// pulled into a pure function here — this is what a launch with neither `-mockAPI` nor a
+/// `GoogleService-Info.plist` must resolve to `false` for, so `AppEnvironment.make()` falls back
+/// to the mock services instead of constructing a `FirebaseAuthService` that talks to an
+/// unconfigured `FirebaseApp` and crashes.
+@Suite("AppMode")
+struct AppModeTests {
+    @Test("Mock mode wins even when a Firebase plist is present")
+    func mockWinsOverPlist() {
+        #expect(AppMode.servicesAreLive(isMock: true, hasFirebasePlist: true) == false)
+    }
+
+    @Test("Mock mode with no plist stays mock")
+    func mockWithNoPlist() {
+        #expect(AppMode.servicesAreLive(isMock: true, hasFirebasePlist: false) == false)
+    }
+
+    @Test("Live mode requires both: not mock and a Firebase plist present")
+    func liveRequiresPlist() {
+        #expect(AppMode.servicesAreLive(isMock: false, hasFirebasePlist: true) == true)
+    }
+
+    @Test("Not mock but no Firebase plist still falls back to mock, rather than crashing on an unconfigured FirebaseApp")
+    func noFlagNoPlistFallsBackToMock() {
+        #expect(AppMode.servicesAreLive(isMock: false, hasFirebasePlist: false) == false)
     }
 }

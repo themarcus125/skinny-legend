@@ -14,6 +14,8 @@ struct RootView: View {
                 SignInView()
             case .pending(let user):
                 PendingApprovalView(user: user)
+            case .disabled(let message):
+                DisabledView(message: message)
             case .active:
                 MainTabView()
             case .failed(let message):

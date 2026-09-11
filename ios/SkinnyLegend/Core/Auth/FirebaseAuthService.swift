@@ -3,6 +3,7 @@ import CryptoKit
 import FirebaseAuth
 import Foundation
 import GoogleSignIn
+import OSLog
 import UIKit
 
 /// Sign in with Apple and Google, both exchanged for a Firebase session (spec §3).
@@ -10,6 +11,7 @@ import UIKit
 final class FirebaseAuthService: AuthService {
     /// Raw nonce for the in-flight Apple request; Firebase needs it to verify the identity token.
     private var currentNonce: String?
+    private let log = Logger(subsystem: "com.themarcus125.skinnylegend", category: "auth")
 
     var isGoogleAvailable: Bool { Self.googleClientID != nil }
 
@@ -31,7 +33,8 @@ final class FirebaseAuthService: AuthService {
         do {
             return try await user.getIDToken()
         } catch {
-            throw AuthError.provider(error.localizedDescription)
+            log.error("ID token refresh failed: \(error.localizedDescription, privacy: .public)")
+            throw AuthError.provider("Không thể làm mới phiên đăng nhập. Vui lòng đăng nhập lại.")
         }
     }
 
@@ -50,7 +53,10 @@ final class FirebaseAuthService: AuthService {
         case .success(let value):
             authorization = value
         case .failure(let error):
-            throw (error as? ASAuthorizationError)?.code == .canceled ? AuthError.cancelled : AuthError.provider(error.localizedDescription)
+            if (error as? ASAuthorizationError)?.code == .canceled {
+                throw AuthError.cancelled
+            }
+            throw providerFailure("Apple", error)
         }
 
         guard let nonce = currentNonce else { throw AuthError.missingToken }
@@ -65,7 +71,7 @@ final class FirebaseAuthService: AuthService {
         do {
             _ = try await Auth.auth().signIn(with: firebaseCredential)
         } catch {
-            throw AuthError.provider(error.localizedDescription)
+            throw providerFailure("Apple", error)
         }
     }
 
@@ -85,7 +91,7 @@ final class FirebaseAuthService: AuthService {
         } catch let error as NSError where error.code == GIDSignInError.canceled.rawValue {
             throw AuthError.cancelled
         } catch {
-            throw AuthError.provider(error.localizedDescription)
+            throw providerFailure("Google", error)
         }
     }
 
@@ -95,6 +101,13 @@ final class FirebaseAuthService: AuthService {
     }
 
     // MARK: - Helpers
+
+    /// SDK errors (`error.localizedDescription`) are raw English strings not meant for end
+    /// users; log the real one and surface a Vietnamese generic instead.
+    private func providerFailure(_ provider: String, _ error: any Error) -> AuthError {
+        log.error("\(provider, privacy: .public) sign-in failed: \(error.localizedDescription, privacy: .public)")
+        return .provider("Đăng nhập với \(provider) thất bại. Vui lòng thử lại.")
+    }
 
     private static func topViewController() -> UIViewController? {
         let scene = UIApplication.shared.connectedScenes
