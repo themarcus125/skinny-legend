@@ -16,7 +16,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
   }, [decision.kind, router]);
 
   if (decision.kind === 'loading') {
-    return <p className="p-8 text-sm text-muted-foreground">Đang tải…</p>;
+    return <p className="flex min-h-dvh items-center justify-center text-sm text-muted-foreground">Đang tải…</p>;
   }
   if (decision.kind === 'sign-in') return <SignInCard />;
   if (decision.kind === 'error') return <SignInCard error={decision.message} />;
