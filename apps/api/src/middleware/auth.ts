@@ -38,7 +38,14 @@ export const authenticate = createMiddleware<AuthEnv>(async (c, next) => {
   const id = await identify(c.req.raw.headers);
   let [user] = await db.select().from(schema.users).where(eq(schema.users.firebaseUid, id.uid));
   if (!user) {
-    [user] = await db.insert(schema.users).values({ firebaseUid: id.uid, displayName: id.name }).returning();
+    [user] = await db
+      .insert(schema.users)
+      .values({ firebaseUid: id.uid, displayName: id.name })
+      .onConflictDoNothing()
+      .returning();
+    if (!user) {
+      [user] = await db.select().from(schema.users).where(eq(schema.users.firebaseUid, id.uid));
+    }
   }
   if (user!.status === 'disabled') throw new ApiError(403, 'disabled', 'Account disabled');
   c.set('user', user!);

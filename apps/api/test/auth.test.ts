@@ -22,6 +22,14 @@ describe('POST /auth/session', () => {
     expect(res.status).toBe(401);
     expect(await res.json()).toEqual({ error: { code: 'unauthenticated', message: 'Missing or invalid token' } });
   });
+
+  it('concurrent first logins resolve to one user', async () => {
+    const headers = { 'x-test-uid': 'race', 'x-test-name': 'Race' };
+    const results = await Promise.all(Array.from({ length: 5 }, () => app.request('/auth/session', { method: 'POST', headers })));
+    expect(results.map((r) => r.status)).toEqual([200, 200, 200, 200, 200]);
+    const ids = new Set(await Promise.all(results.map(async (r) => (await r.json()).user.id)));
+    expect(ids.size).toBe(1);
+  });
 });
 
 describe('GET /me and PATCH /me', () => {
@@ -37,5 +45,14 @@ describe('GET /me and PATCH /me', () => {
     const { headers } = await asUser('u1');
     const res = await app.request('/leaderboard', { headers });
     expect(res.status).toBe(403);
+  });
+
+  it('rejects invalid profile updates with the error envelope', async () => {
+    const { headers } = await asUser('u1');
+    const res = await app.request('/me', { method: 'PATCH', headers: { ...headers, 'content-type': 'application/json' }, body: JSON.stringify({ displayName: '' }) });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error.code).toBe('invalid_body');
+    expect(typeof body.error.message).toBe('string');
   });
 });
