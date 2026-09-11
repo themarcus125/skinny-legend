@@ -1,7 +1,9 @@
 import { Hono } from 'hono';
+import { z } from 'zod';
 import { and, desc, eq, lt } from 'drizzle-orm';
 import { computeScore, isoWeekKey, addDays, schema, type Category, type ScoreResult, CATEGORIES } from '@skinny/shared';
 import { db } from '../db.js';
+import { validate } from '../validate.js';
 import { authenticate, requireActive, type AuthEnv } from '../middleware/auth.js';
 import { loadChallenge, loadConfirmedEntries, todayLocal, type Challenge } from '../services/score.js';
 import { storage } from '../services/storage.js';
@@ -25,8 +27,8 @@ async function scoreboard(challenge: Challenge, asOf: string) {
     user,
     score: computeScore({ entries: entries.get(user.id) ?? [], rules: challenge.rules, challenge: challenge.config, asOf }),
   }));
-  rows.sort((a, b) => b.score.total - a.score.total || a.user.displayName.localeCompare(b.user.displayName));
-  return rows.map((r, i) => ({ ...r, rank: i + 1 }));
+  rows.sort((a, b) => b.score.total - a.score.total || a.user.displayName.localeCompare(b.user.displayName) || a.user.id.localeCompare(b.user.id));
+  return rows.map((r) => ({ ...r, rank: 1 + rows.filter((o) => o.score.total > r.score.total).length }));
 }
 
 function pointsInWeek(score: ScoreResult, week: string) {
@@ -96,8 +98,8 @@ readRoutes.get('/me/trends', async (c) => {
   return c.json({ weeks, heatmap, byCategory: mine.byCategory, streakBonus: mine.streakBonus });
 });
 
-readRoutes.get('/feed', async (c) => {
-  const cursor = c.req.query('cursor');
+readRoutes.get('/feed', validate('query', z.object({ cursor: z.string().datetime({ offset: true }).optional() })), async (c) => {
+  const { cursor } = c.req.valid('query');
   const where = cursor
     ? and(eq(schema.entries.status, 'confirmed'), lt(schema.entries.createdAt, new Date(cursor)))
     : eq(schema.entries.status, 'confirmed');
@@ -113,9 +115,10 @@ readRoutes.get('/feed', async (c) => {
   return c.json({ entries, nextCursor });
 });
 
-readRoutes.get('/users/:id/entries', async (c) => {
+readRoutes.get('/users/:id/entries', validate('param', z.object({ id: z.string().uuid() })), async (c) => {
+  const { id } = c.req.valid('param');
   const rows = await db.select().from(schema.entries)
-    .where(and(eq(schema.entries.userId, c.req.param('id')), eq(schema.entries.status, 'confirmed')))
+    .where(and(eq(schema.entries.userId, id), eq(schema.entries.status, 'confirmed')))
     .orderBy(desc(schema.entries.takenAt)).limit(100);
   const entries = [];
   for (const row of rows) {

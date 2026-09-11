@@ -40,6 +40,18 @@ describe('GET /leaderboard', () => {
     const body = await (await app.request('/leaderboard', { headers: a.headers })).json();
     expect(body.leaderboard).toHaveLength(1);
   });
+
+  it('gives tied users the same competition rank', async () => {
+    const a = await asUser('a', { activate: true, name: 'A' });
+    const b = await asUser('b', { activate: true, name: 'B' });
+    await confirmed(a.headers, '2026-09-09T01:00:00Z', ['exercise']);
+    await confirmed(b.headers, '2026-09-09T01:00:00Z', ['exercise']);
+    const body = await (await app.request('/leaderboard', { headers: a.headers })).json();
+    expect(body.leaderboard.map((r: { rank: number }) => r.rank)).toEqual([1, 1]);
+    const dashboard = await (await app.request('/me/dashboard', { headers: a.headers })).json();
+    expect(dashboard.rank).toBe(1);
+    expect(dashboard.memberCount).toBe(2);
+  });
 });
 
 describe('GET /me/dashboard', () => {
@@ -72,6 +84,22 @@ describe('GET /me/trends', () => {
 });
 
 describe('GET /feed and GET /users/:id/entries', () => {
+  it('rejects an invalid feed cursor with 400 instead of crashing', async () => {
+    const a = await asUser('a', { activate: true });
+    const res = await app.request('/feed?cursor=garbage', { headers: a.headers });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error.code).toBe('invalid_body');
+  });
+
+  it('rejects a non-UUID user id with 400 instead of crashing', async () => {
+    const a = await asUser('a', { activate: true });
+    const res = await app.request('/users/not-a-uuid/entries', { headers: a.headers });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error.code).toBe('invalid_body');
+  });
+
   it('feed shows confirmed entries from everyone with user info and place', async () => {
     const a = await asUser('a', { activate: true, name: 'A' });
     const b = await asUser('b', { activate: true, name: 'B' });
