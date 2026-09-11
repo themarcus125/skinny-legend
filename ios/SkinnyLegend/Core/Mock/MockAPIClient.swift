@@ -104,7 +104,10 @@ actor MockAPIClient: APIClient {
             failed: false
         )
         let projection = project(entryID: stored.id, categories: Set(suggested), on: day)
-        return CreateEntryResponse(entry: dto(stored), verdict: verdict, projectedPoints: projection.points, capsHit: projection.caps)
+        return CreateEntryResponse(
+            entry: dto(stored), verdict: verdict, projectedPoints: projection.points,
+            capsHit: projection.caps, cappedCategories: projection.cappedCategories
+        )
     }
 
     func confirmEntry(id: String, _ input: ConfirmEntryInput) async throws -> ConfirmEntryResponse {
@@ -117,7 +120,10 @@ actor MockAPIClient: APIClient {
         store[index].placeSource = input.placeSource
         let stored = store[index]
         let projection = project(entryID: id, categories: Set(input.categories), on: stored.localDate)
-        return ConfirmEntryResponse(entry: dto(stored), projectedPoints: projection.points, capsHit: projection.caps)
+        return ConfirmEntryResponse(
+            entry: dto(stored), projectedPoints: projection.points,
+            capsHit: projection.caps, cappedCategories: projection.cappedCategories
+        )
     }
 
     func deleteEntry(id: String) async throws {
@@ -277,13 +283,16 @@ actor MockAPIClient: APIClient {
         return rows
     }
 
-    /// Points this entry would earn if confirmed with `categories`, plus caps for its own day/week.
-    private func project(entryID: String, categories: Set<Category>, on day: LocalDate) -> (points: Int, caps: CapsHit) {
+    /// Points this entry would earn if confirmed with `categories`, plus caps for its own day/week,
+    /// plus which of this entry's own categories scored 0 because their cap was already full.
+    private func project(entryID: String, categories: Set<Category>, on day: LocalDate) -> (points: Int, caps: CapsHit, cappedCategories: [Category]) {
         var inputs = scoringInputs(for: profile.id).filter { $0.id != entryID }
         let takenAt = store.first { $0.id == entryID }?.takenAt ?? Date()
         inputs.append(MockScoring.Input(id: entryID, localDate: day, takenAt: takenAt, categories: Array(categories)))
         let result = MockScoring.compute(entries: inputs, asOf: max(today, day))
-        let points = result.scored.filter { $0.entryID == entryID }.reduce(0) { $0 + $1.points }
+        let ownRows = result.scored.filter { $0.entryID == entryID }
+        let points = ownRows.reduce(0) { $0 + $1.points }
+        let cappedCategories = ownRows.filter { $0.capped }.map { $0.category }
 
         let dayByEntry = Dictionary(inputs.map { ($0.id, $0.localDate) }, uniquingKeysWith: { first, _ in first })
         var caps: [Category: Bool] = [:]
@@ -295,7 +304,7 @@ actor MockAPIClient: APIClient {
             }.count
             caps[rule.category] = count >= rule.capCount
         }
-        return (points, CapsHit(exercise: caps[.exercise] ?? false, meal: caps[.meal] ?? false, group: caps[.group] ?? false))
+        return (points, CapsHit(exercise: caps[.exercise] ?? false, meal: caps[.meal] ?? false, group: caps[.group] ?? false), cappedCategories)
     }
 
     private func paginate(

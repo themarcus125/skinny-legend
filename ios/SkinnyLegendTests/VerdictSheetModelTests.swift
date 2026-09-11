@@ -20,21 +20,21 @@ struct VerdictSheetModelTests {
     func startsFromServerProjection() {
         let model = VerdictSheetModel(
             api: MockAPIClient(), entry: entry([.exercise, .group]), mode: .created(verdict([.exercise, .group])),
-            capsHit: CapsHit(exercise: true, meal: false, group: false), projectedPoints: 6,
-            placeName: "Phòng gym California", placeSource: .poi
+            capsHit: CapsHit(exercise: true, meal: false, group: false), cappedCategories: [],
+            projectedPoints: 6, placeName: "Phòng gym California", placeSource: .poi
         )
         #expect(model.selected == [.exercise, .group])
         #expect(model.projectedPoints == 6)
         #expect(model.isEditingCategories == false)
-        #expect(model.capWarnings.isEmpty)   // this entry filled the exercise cap itself
+        #expect(model.capWarnings.isEmpty)   // this entry filled the exercise cap itself, server says cappedCategories: []
     }
 
     @Test("Toggling a chip re-projects the points locally")
     func toggleReprojects() {
         let model = VerdictSheetModel(
             api: MockAPIClient(), entry: entry([.exercise, .group]), mode: .created(verdict([.exercise, .group])),
-            capsHit: CapsHit(exercise: true, meal: false, group: false), projectedPoints: 6,
-            placeName: nil, placeSource: PlaceSource.none
+            capsHit: CapsHit(exercise: true, meal: false, group: false), cappedCategories: [],
+            projectedPoints: 6, placeName: nil, placeSource: PlaceSource.none
         )
         model.toggle(.group)
         #expect(model.selected == [.exercise])
@@ -47,11 +47,12 @@ struct VerdictSheetModelTests {
 
     @Test("A category already capped by earlier entries scores nothing and warns")
     func warnsOnBlockedCategory() {
-        // The server projected 0 for a lone exercise, so the cap was filled by another entry.
+        // The server projected 0 for a lone exercise, so the cap was filled by another entry,
+        // and cappedCategories names exercise as this entry's own capped category.
         let model = VerdictSheetModel(
             api: MockAPIClient(), entry: entry([.exercise]), mode: .created(verdict([.exercise])),
-            capsHit: CapsHit(exercise: true, meal: false, group: false), projectedPoints: 0,
-            placeName: nil, placeSource: PlaceSource.none
+            capsHit: CapsHit(exercise: true, meal: false, group: false), cappedCategories: [.exercise],
+            projectedPoints: 0, placeName: nil, placeSource: PlaceSource.none
         )
         #expect(model.projectedPoints == 0)
         #expect(model.capWarnings == ["Đã đủ Tập luyện hôm nay — mục này không cộng thêm điểm."])
@@ -64,17 +65,41 @@ struct VerdictSheetModelTests {
     func warnsWeekly() {
         let model = VerdictSheetModel(
             api: MockAPIClient(), entry: entry([.group]), mode: .created(verdict([.group])),
-            capsHit: CapsHit(exercise: false, meal: false, group: true), projectedPoints: 0,
-            placeName: nil, placeSource: PlaceSource.none
+            capsHit: CapsHit(exercise: false, meal: false, group: true), cappedCategories: [.group],
+            projectedPoints: 0, placeName: nil, placeSource: PlaceSource.none
         )
         #expect(model.capWarnings == ["Đã đủ Hoạt động nhóm tuần này — mục này không cộng thêm điểm."])
+    }
+
+    @Test("A mixed entry blocks only the category the server actually capped")
+    func mixedEntryBlocksOnlyItsCappedCategory() {
+        // exercise self-fills its own cap and scores; meal was already capped earlier the same
+        // day, so only meal comes back in cappedCategories even though capsHit is true for both.
+        let model = VerdictSheetModel(
+            api: MockAPIClient(), entry: entry([.exercise, .meal]), mode: .created(verdict([.exercise, .meal])),
+            capsHit: CapsHit(exercise: true, meal: true, group: false), cappedCategories: [.meal],
+            projectedPoints: 3, placeName: nil, placeSource: PlaceSource.none
+        )
+        #expect(model.projectedPoints == 3)
+        #expect(model.isCapped(.meal))
+        #expect(model.isCapped(.exercise) == false)
+        #expect(model.capWarnings == ["Đã đủ Bữa ăn lành mạnh hôm nay — mục này không cộng thêm điểm."])
+
+        model.toggle(.meal)   // deselect the already-capped meal
+        #expect(model.selected == [.exercise])
+        #expect(model.projectedPoints == 3)
+
+        model.toggle(.group)   // add group; capsHit.group is false, so it scores
+        #expect(model.selected == [.exercise, .group])
+        #expect(model.projectedPoints == 6)
     }
 
     @Test("A failed verdict opens the chip editor with nothing selected")
     func failedVerdictOpensEditor() {
         let model = VerdictSheetModel(
             api: MockAPIClient(), entry: entry([]), mode: .created(verdict([], failed: true)),
-            capsHit: CapsHit.none, projectedPoints: 0, placeName: nil, placeSource: PlaceSource.none
+            capsHit: CapsHit.none, cappedCategories: [], projectedPoints: 0,
+            placeName: nil, placeSource: PlaceSource.none
         )
         #expect(model.selected.isEmpty)
         #expect(model.isEditingCategories)
@@ -85,7 +110,8 @@ struct VerdictSheetModelTests {
     func editMode() {
         let model = VerdictSheetModel(
             api: MockAPIClient(), entry: entry([.meal], status: .confirmed), mode: .edit,
-            capsHit: CapsHit.none, projectedPoints: 2, placeName: "Cơm tấm Ba Ghiền", placeSource: .poi
+            capsHit: CapsHit.none, cappedCategories: [], projectedPoints: 2,
+            placeName: "Cơm tấm Ba Ghiền", placeSource: .poi
         )
         #expect(model.selected == [.meal])
         #expect(model.verdict == nil)
@@ -101,8 +127,8 @@ struct VerdictSheetModelTests {
         )
         let model = VerdictSheetModel(
             api: client, entry: created.entry, mode: .created(created.verdict),
-            capsHit: created.capsHit, projectedPoints: created.projectedPoints,
-            placeName: nil, placeSource: PlaceSource.none
+            capsHit: created.capsHit, cappedCategories: created.cappedCategories,
+            projectedPoints: created.projectedPoints, placeName: nil, placeSource: PlaceSource.none
         )
         model.applyPlace(name: "Hồ bơi Lam Sơn", source: .manual)
         let confirmed = await model.confirm()
@@ -118,7 +144,8 @@ struct VerdictSheetModelTests {
     func surfacesConfirmError() async {
         let model = VerdictSheetModel(
             api: MockAPIClient(), entry: entry([.exercise]), mode: .edit,
-            capsHit: CapsHit.none, projectedPoints: 3, placeName: nil, placeSource: PlaceSource.none
+            capsHit: CapsHit.none, cappedCategories: [], projectedPoints: 3,
+            placeName: nil, placeSource: PlaceSource.none
         )
         // "e1" is not in the mock store, so the PATCH 404s.
         let confirmed = await model.confirm()

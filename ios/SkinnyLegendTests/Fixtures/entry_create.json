@@ -21,5 +21,6 @@
     "failed": false
   },
   "projectedPoints": 6,
-  "capsHit": { "exercise": true, "meal": false, "group": false }
+  "capsHit": { "exercise": true, "meal": false, "group": false },
+  "cappedCategories": []
 }

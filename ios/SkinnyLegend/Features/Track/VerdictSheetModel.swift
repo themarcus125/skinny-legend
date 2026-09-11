@@ -17,6 +17,7 @@ final class VerdictSheetModel: Identifiable {
     private let initialSelection: Set<Category>
     private let serverProjectedPoints: Int
     private let capsHit: CapsHit
+    private let cappedCategories: Set<Category>
 
     let id: String
     let entry: EntryDTO
@@ -35,6 +36,7 @@ final class VerdictSheetModel: Identifiable {
         entry: EntryDTO,
         mode: Mode,
         capsHit: CapsHit,
+        cappedCategories: [Category],
         projectedPoints: Int,
         placeName: String?,
         placeSource: PlaceSource
@@ -44,6 +46,7 @@ final class VerdictSheetModel: Identifiable {
         self.entry = entry
         self.mode = mode
         self.capsHit = capsHit
+        self.cappedCategories = Set(cappedCategories)
         self.serverProjectedPoints = projectedPoints
         self.placeName = placeName
         self.placeSource = placeSource
@@ -69,14 +72,17 @@ final class VerdictSheetModel: Identifiable {
         return nil
     }
 
-    /// Categories that cannot earn points for this entry. The server's `capsHit` counts *this*
-    /// entry, so a cap this entry filled itself is not a block — detected by comparing the
-    /// server's projection with the uncapped value of its own suggestion.
+    /// Categories that cannot earn points for this entry. While the selection is untouched, this
+    /// is exactly the server's own `cappedCategories` for this entry — no inference needed, since
+    /// the server already told us which of this entry's own categories scored 0. Once the user
+    /// edits the selection, a category not in `cappedCategories` may still need to be treated as
+    /// blocked when re-projecting locally: a category `capsHit` reports as full for the entry's
+    /// period, but that isn't one of the initial (server-scored) categories, was filled by another
+    /// entry and stays blocked if added back.
     private var blockedCategories: Set<Category> {
-        let uncapped = Rulebook.projectedPoints(for: initialSelection, capped: [])
-        return serverProjectedPoints == uncapped
-            ? capsHit.cappedSet.subtracting(initialSelection)
-            : capsHit.cappedSet
+        guard selected != initialSelection else { return cappedCategories }
+        let filledByOtherEntries = Category.allCases.filter { capsHit[$0] && !initialSelection.contains($0) }
+        return cappedCategories.union(filledByOtherEntries)
     }
 
     /// The server's own number while the selection is untouched; a local re-projection after edits.

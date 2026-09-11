@@ -91,6 +91,7 @@ struct TrackView: View {
             entry: result.entry,
             mode: .created(result.verdict),
             capsHit: result.capsHit,
+            cappedCategories: result.cappedCategories,
             projectedPoints: result.projectedPoints,
             placeName: places.placeName,
             placeSource: places.placeSource

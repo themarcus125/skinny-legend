@@ -36,10 +36,15 @@ struct CreateEntryResponse: Codable, Sendable {
     let verdict: VerdictDTO
     let projectedPoints: Int
     let capsHit: CapsHit
+    /// This entry's own categories that scored 0 because their cap was already full — unlike
+    /// `capsHit`, which reports whether a category's cap is full for the entry's period even
+    /// when this entry's own row is the one that just filled it.
+    let cappedCategories: [Category]
 }
 
 struct ConfirmEntryResponse: Codable, Sendable {
     let entry: EntryDTO
     let projectedPoints: Int
     let capsHit: CapsHit
+    let cappedCategories: [Category]
 }

@@ -32,6 +32,7 @@ struct DTODecodingTests {
         #expect(response.capsHit[.exercise] == true)
         #expect(response.capsHit[.group] == false)
         #expect(response.capsHit.cappedSet == [.exercise])
+        #expect(response.cappedCategories == [])
     }
 
     @Test("Decodes the history page, its per-entry points and its cursor")
