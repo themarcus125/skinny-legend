@@ -37,8 +37,18 @@ function r2(): Storage {
     async putObject(Key, Body, ContentType) { await client.send(new PutObjectCommand({ Bucket, Key, Body, ContentType })); },
     async deleteObject(Key) { await client.send(new DeleteObjectCommand({ Bucket, Key })); },
     async listKeys(Prefix) {
-      const res = await client.send(new ListObjectsV2Command({ Bucket, Prefix }));
-      return (res.Contents ?? []).map((o) => ({ key: o.Key!, lastModified: o.LastModified! }));
+      // ListObjectsV2 caps each response at 1000 keys; loop on the continuation
+      // token until S3/R2 reports the listing is no longer truncated so callers
+      // (e.g. the orphan cleanup job) see every matching object, not just the
+      // first page.
+      const keys: { key: string; lastModified: Date }[] = [];
+      let ContinuationToken: string | undefined;
+      do {
+        const res = await client.send(new ListObjectsV2Command({ Bucket, Prefix, ContinuationToken }));
+        for (const o of res.Contents ?? []) keys.push({ key: o.Key!, lastModified: o.LastModified! });
+        ContinuationToken = res.IsTruncated ? res.NextContinuationToken : undefined;
+      } while (ContinuationToken);
+      return keys;
     },
     publicUrl: (Key) => getSignedUrl(client, new GetObjectCommand({ Bucket, Key }), { expiresIn: 3600 }),
   };
