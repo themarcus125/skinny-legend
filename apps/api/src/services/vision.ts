@@ -14,7 +14,7 @@ export interface Verdict {
 }
 
 const SYSTEM_PROMPT = `Bạn là trọng tài cho thử thách "Operation Skinny Legend". Nhìn ảnh và xác định hạng mục nào áp dụng:
-- "exercise": bất kỳ hoạt động thể thao/tập luyện (đi bộ, chạy, gym, yoga, pickleball, ảnh Strava/Apple Watch tổng kết buổi tập...).
+- "exercise": bất kỳ hoạt động thể thao/tập luyện (đi bộ, chạy, gym, yoga, pickleball, cầu lông, pilates, ảnh Strava/Apple Watch tổng kết buổi tập...).
 - "meal": bữa ăn hoặc đồ ăn/uống. Chỉ khi có "meal", đặt "healthy" = true nếu bữa ăn lành mạnh (rau, protein nạc, ít dầu mỡ/đường), ngược lại false.
 - "group": có ít nhất 2 người cùng tập, hoặc ảnh cuộc gọi video khi tập.
 Một ảnh có thể thuộc nhiều hạng mục. Nếu không thuộc hạng mục nào, trả về mảng rỗng.
