@@ -86,6 +86,44 @@ describe('POST /entries', () => {
     expect(cats.length).toBe(1);
   });
 
+  it('does not pre-suggest an unhealthy meal', async () => {
+    classify.mockResolvedValue({ ...okVerdict, categories: ['meal'], healthy: false });
+    const { headers } = await asUser('u1', { activate: true });
+    const key = await uploadPhoto(headers);
+    const res = await post(headers, { photoKey: key, takenAt: '2026-09-10T01:00:00Z' });
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    expect(body.entry.categories).toEqual([]);
+    expect(body.verdict.healthy).toBe(false);
+    expect(body.verdict.categories).toEqual(['meal']);
+    expect(body.projectedPoints).toBe(0);
+    const [verdict] = await db.select().from(schema.aiVerdicts);
+    expect(verdict).toMatchObject({ healthy: false, categoriesJson: ['meal'] });
+  });
+
+  it('keeps the other categories of an unhealthy meal photo', async () => {
+    classify.mockResolvedValue({ ...okVerdict, categories: ['meal', 'group'], healthy: false });
+    const { headers } = await asUser('u1', { activate: true });
+    const key = await uploadPhoto(headers);
+    const body = await (await post(headers, { photoKey: key, takenAt: '2026-09-10T01:00:00Z' })).json();
+    expect(body.entry.categories).toEqual(['group']);
+  });
+
+  it('rejects a takenAt more than 10 minutes in the future', async () => {
+    const { headers } = await asUser('u1', { activate: true });
+    const key = await uploadPhoto(headers);
+    const res = await post(headers, { photoKey: key, takenAt: new Date(Date.now() + 60 * 60 * 1000).toISOString() });
+    expect(res.status).toBe(400);
+    expect((await res.json()).error.code).toBe('taken_at_future');
+  });
+
+  it('allows a takenAt a few minutes ahead of the server clock', async () => {
+    const { headers } = await asUser('u1', { activate: true });
+    const key = await uploadPhoto(headers);
+    const res = await post(headers, { photoKey: key, takenAt: new Date(Date.now() + 60 * 1000).toISOString() });
+    expect(res.status).toBe(201);
+  });
+
   it('rejects an undecodable photo with photo_invalid', async () => {
     const { headers } = await asUser('u1', { activate: true });
     const presign = await (await app.request('/uploads/presign', { method: 'POST', headers: { ...headers, 'content-type': 'application/json' }, body: JSON.stringify({ kind: 'photo', contentType: 'image/png' }) })).json();
@@ -131,6 +169,13 @@ describe('PATCH /entries/:id', () => {
     expect(res.status).toBe(404);
   });
 
+  it('rejects a non-uuid id with 400', async () => {
+    const { headers } = await asUser('u1', { activate: true });
+    const res = await app.request('/entries/garbage', { method: 'PATCH', headers: { ...headers, 'content-type': 'application/json' }, body: JSON.stringify({ categories: ['meal'] }) });
+    expect(res.status).toBe(400);
+    expect((await res.json()).error.code).toBe('invalid_body');
+  });
+
   it("computes capsHit for the entry's own day/week, not today", async () => {
     const { headers } = await asUser('u1', { activate: true });
     const h = { ...headers, 'content-type': 'application/json' };
@@ -167,5 +212,46 @@ describe('DELETE /entries/:id and GET /entries/mine', () => {
     const mine = await (await app.request('/entries/mine', { headers })).json();
     expect(mine.entries.map((e: { localDate: string }) => e.localDate)).toEqual(['2026-09-10', '2026-09-09']);
     expect(mine.entries[0].points).toBe(3);
+    expect(mine.nextCursor).toBeNull();
+  });
+
+  it('history pages backwards from a takenAt cursor', async () => {
+    const { headers } = await asUser('u1', { activate: true });
+    const h = { ...headers, 'content-type': 'application/json' };
+    for (const t of ['2026-09-08T01:00:00Z', '2026-09-09T01:00:00Z', '2026-09-10T01:00:00Z']) {
+      const key = await uploadPhoto(headers);
+      const created = await (await post(headers, { photoKey: key, takenAt: t })).json();
+      await app.request(`/entries/${created.entry.id}`, { method: 'PATCH', headers: h, body: JSON.stringify({ categories: ['exercise'] }) });
+    }
+    const all = await (await app.request('/entries/mine', { headers })).json();
+    const cursor = all.entries[0].takenAt as string;
+    const page = await (await app.request(`/entries/mine?cursor=${encodeURIComponent(cursor)}`, { headers })).json();
+    expect(page.entries.map((e: { localDate: string }) => e.localDate)).toEqual(['2026-09-09', '2026-09-08']);
+    expect(page.nextCursor).toBeNull();
+  });
+
+  it('rejects a malformed history cursor with 400', async () => {
+    const { headers } = await asUser('u1', { activate: true });
+    const res = await app.request('/entries/mine?cursor=nope', { headers });
+    expect(res.status).toBe(400);
+    expect((await res.json()).error.code).toBe('invalid_body');
+  });
+
+  it('rejects a non-uuid id with 400', async () => {
+    const { headers } = await asUser('u1', { activate: true });
+    const res = await app.request('/entries/garbage', { method: 'DELETE', headers });
+    expect(res.status).toBe(400);
+    expect((await res.json()).error.code).toBe('invalid_body');
+  });
+
+  it("cannot delete someone else's entry", async () => {
+    const a = await asUser('a', { activate: true });
+    const b = await asUser('b', { activate: true });
+    const key = await uploadPhoto(a.headers);
+    const created = await (await post(a.headers, { photoKey: key, takenAt: '2026-09-10T01:00:00Z' })).json();
+    const res = await app.request(`/entries/${created.entry.id}`, { method: 'DELETE', headers: b.headers });
+    expect(res.status).toBe(404);
+    const [row] = await db.select().from(schema.entries);
+    expect(row?.status).toBe('pending');
   });
 });

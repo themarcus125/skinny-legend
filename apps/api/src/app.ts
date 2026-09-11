@@ -13,6 +13,7 @@ import { type AuthEnv } from './middleware/auth.js';
 export function createApp(deps: Partial<EntryDeps> = {}) {
   const app = new Hono<AuthEnv>();
   app.onError(errorHandler);
+  app.notFound((c) => c.json({ error: { code: 'not_found', message: 'Route not found' } }, 404));
   app.get('/health', (c) => c.json({ ok: true }));
   app.route('/auth', authRoutes);
   app.route('/me', meRoutes);

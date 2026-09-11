@@ -9,3 +9,12 @@ describe('GET /health', () => {
     expect(await res.json()).toEqual({ ok: true });
   });
 });
+
+describe('unknown routes', () => {
+  it('404s with the standard error envelope', async () => {
+    const app = createApp();
+    const res = await app.request('/nope');
+    expect(res.status).toBe(404);
+    expect(await res.json()).toEqual({ error: { code: 'not_found', message: 'Route not found' } });
+  });
+});

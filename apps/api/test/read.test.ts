@@ -110,6 +110,18 @@ describe('GET /feed and GET /users/:id/entries', () => {
     expect(feed.entries[0]).toMatchObject({ user: { displayName: 'A' }, placeName: 'Gym X', categories: ['exercise'] });
     const theirs = await (await app.request(`/users/${a.user.id}/entries`, { headers: b.headers })).json();
     expect(theirs.entries).toHaveLength(1);
+    expect(theirs.nextCursor).toBeNull();
+  });
+
+  it('pages another member’s history from a takenAt cursor', async () => {
+    const a = await asUser('a', { activate: true, name: 'A' });
+    const b = await asUser('b', { activate: true, name: 'B' });
+    await confirmed(a.headers, '2026-09-08T01:00:00Z', ['exercise']);
+    await confirmed(a.headers, '2026-09-09T01:00:00Z', ['exercise']);
+    const all = await (await app.request(`/users/${a.user.id}/entries`, { headers: b.headers })).json();
+    expect(all.entries.map((e: { localDate: string }) => e.localDate)).toEqual(['2026-09-09', '2026-09-08']);
+    const page = await (await app.request(`/users/${a.user.id}/entries?cursor=${encodeURIComponent(all.entries[0].takenAt)}`, { headers: b.headers })).json();
+    expect(page.entries.map((e: { localDate: string }) => e.localDate)).toEqual(['2026-09-08']);
   });
 
   it('feed omits pending entries', async () => {

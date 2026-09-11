@@ -1,6 +1,9 @@
 import { zValidator } from '@hono/zod-validator';
-import type { ZodType } from 'zod';
+import { z, type ZodType } from 'zod';
 import { ApiError } from './errors.js';
+
+/** Shared `:id` path param shape for every route keyed by a uuid primary key. */
+export const uuidParam = z.object({ id: z.string().uuid() });
 
 type Target = 'json' | 'query' | 'param';
 

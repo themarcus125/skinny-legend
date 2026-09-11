@@ -6,7 +6,7 @@ import { ApiError } from '../errors.js';
 export interface Challenge { id: string; config: ChallengeConfig; rules: ScoringRule[] }
 
 export async function loadChallenge(): Promise<Challenge> {
-  const [c] = await db.select().from(schema.challenges).limit(1);
+  const [c] = await db.select().from(schema.challenges).orderBy(schema.challenges.startDate).limit(1);
   if (!c) throw new ApiError(500, 'no_challenge', 'No challenge configured');
   const rules = await db.select().from(schema.scoringRules).where(eq(schema.scoringRules.challengeId, c.id));
   return {

@@ -28,12 +28,27 @@ describe('POST /feedback', () => {
     expect(res.status).toBe(201);
     expect(await db.select().from(schema.feedback)).toHaveLength(1);
   });
+
+  it('rejects a screenshotKey owned by another user', async () => {
+    const { headers } = await asUser('u', { activate: true });
+    const res = await app.request('/feedback', { method: 'POST', headers: json(headers), body: JSON.stringify({ message: 'hi', screenshotKey: 'feedback/00000000-0000-0000-0000-000000000000/s.jpg' }) });
+    expect(res.status).toBe(403);
+    expect((await res.json()).error.code).toBe('forbidden');
+  });
 });
 
 describe('admin guard', () => {
   it('members get 403', async () => {
     const { headers } = await asUser('u', { activate: true });
     expect((await app.request('/admin/users', { headers })).status).toBe(403);
+  });
+
+  it('members cannot patch other users', async () => {
+    const member = await asUser('u', { activate: true });
+    const target = await asUser('t', { activate: true });
+    const res = await app.request(`/admin/users/${target.user.id}`, { method: 'PATCH', headers: json(member.headers), body: JSON.stringify({ status: 'disabled' }) });
+    expect(res.status).toBe(403);
+    expect((await res.json()).error.code).toBe('forbidden');
   });
 });
 
@@ -51,6 +66,14 @@ describe('admin users', () => {
   it('rejects a non-uuid id with 400', async () => {
     const admin = await asUser('adm', { admin: true });
     const res = await app.request('/admin/users/not-a-uuid', { method: 'PATCH', headers: json(admin.headers), body: JSON.stringify({ status: 'active' }) });
+    expect(res.status).toBe(400);
+    expect((await res.json()).error.code).toBe('invalid_body');
+  });
+
+  it('rejects an empty patch with 400', async () => {
+    const admin = await asUser('adm', { admin: true });
+    const target = await asUser('p');
+    const res = await app.request(`/admin/users/${target.user.id}`, { method: 'PATCH', headers: json(admin.headers), body: JSON.stringify({}) });
     expect(res.status).toBe(400);
     expect((await res.json()).error.code).toBe('invalid_body');
   });

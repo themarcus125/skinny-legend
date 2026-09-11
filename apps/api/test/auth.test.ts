@@ -1,4 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
+import { eq } from 'drizzle-orm';
+import { schema } from '@skinny/shared';
+import { db } from '../src/db.js';
 import { app, resetDb, asUser } from './helpers.js';
 
 beforeEach(resetDb);
@@ -54,5 +57,34 @@ describe('GET /me and PATCH /me', () => {
     const body = await res.json();
     expect(body.error.code).toBe('invalid_body');
     expect(typeof body.error.message).toBe('string');
+  });
+
+  it('rejects an empty patch with 400', async () => {
+    const { headers } = await asUser('u1');
+    const res = await app.request('/me', { method: 'PATCH', headers: { ...headers, 'content-type': 'application/json' }, body: JSON.stringify({}) });
+    expect(res.status).toBe(400);
+    expect((await res.json()).error.code).toBe('invalid_body');
+  });
+
+  it('rejects an avatarKey owned by another user', async () => {
+    const { headers } = await asUser('u1');
+    const res = await app.request('/me', { method: 'PATCH', headers: { ...headers, 'content-type': 'application/json' }, body: JSON.stringify({ avatarKey: 'avatars/00000000-0000-0000-0000-000000000000/a.jpg' }) });
+    expect(res.status).toBe(403);
+    expect((await res.json()).error.code).toBe('forbidden');
+  });
+
+  it('accepts an avatarKey under the caller’s own prefix', async () => {
+    const { headers, user } = await asUser('u1');
+    const res = await app.request('/me', { method: 'PATCH', headers: { ...headers, 'content-type': 'application/json' }, body: JSON.stringify({ avatarKey: `avatars/${user.id}/a.jpg` }) });
+    expect(res.status).toBe(200);
+    expect((await res.json()).user.avatarKey).toBe(`avatars/${user.id}/a.jpg`);
+  });
+
+  it('disabled users are refused with 403 disabled', async () => {
+    const { headers, user } = await asUser('u1', { activate: true });
+    await db.update(schema.users).set({ status: 'disabled' }).where(eq(schema.users.id, user.id));
+    const res = await app.request('/me', { headers });
+    expect(res.status).toBe(403);
+    expect((await res.json()).error.code).toBe('disabled');
   });
 });

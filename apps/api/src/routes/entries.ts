@@ -1,10 +1,10 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
-import { and, desc, eq, ne } from 'drizzle-orm';
+import { and, desc, eq, lt, ne } from 'drizzle-orm';
 import { computeScore, isoWeekKey, schema, toLocalDate, type Category, type ConfirmedEntry, type LocalDate } from '@skinny/shared';
 import { db } from '../db.js';
 import { ApiError } from '../errors.js';
-import { validate } from '../validate.js';
+import { validate, uuidParam } from '../validate.js';
 import { authenticate, requireActive, type AuthEnv } from '../middleware/auth.js';
 import { storage, newKey } from '../services/storage.js';
 import { classifyPhoto, type Verdict } from '../services/vision.js';
@@ -24,6 +24,14 @@ const createBody = z.object({
   placeName: z.string().max(120).optional(),
   placeSource: placeSourceSchema.optional(),
 });
+
+const historyQuery = z.object({ cursor: z.string().datetime({ offset: true }).optional() });
+
+/** Page size for the cursor-paginated history endpoints. */
+export const HISTORY_PAGE_SIZE = 50;
+
+/** An entry may be logged slightly ahead of the server clock (device drift, timezone rounding). */
+const TAKEN_AT_FUTURE_TOLERANCE_MS = 10 * 60 * 1000;
 
 const patchBody = z.object({
   categories: z.array(categorySchema).max(3),
@@ -97,6 +105,9 @@ export function entryRoutes(deps: EntryDeps) {
     const body = c.req.valid('json');
     if (!body.photoKey.startsWith(`photos/${user.id}/`)) throw new ApiError(403, 'forbidden', 'Photo does not belong to you');
 
+    const takenAt = new Date(body.takenAt);
+    if (takenAt.getTime() - Date.now() > TAKEN_AT_FUTURE_TOLERANCE_MS) throw new ApiError(400, 'taken_at_future', 'takenAt is in the future');
+
     const challenge = await loadChallenge();
     const image = await storage.getObject(body.photoKey).catch(() => { throw new ApiError(400, 'photo_missing', 'Photo not uploaded'); });
     const normalized = await normalizeImage(image).catch(() => { throw new ApiError(400, 'photo_invalid', 'Photo could not be decoded'); });
@@ -104,8 +115,10 @@ export function entryRoutes(deps: EntryDeps) {
     const thumbKey = newKey('thumb', user.id);
     await storage.putObject(thumbKey, thumb, 'image/jpeg');
 
-    const takenAt = new Date(body.takenAt);
-    const categories = [...new Set(verdict.categories)];
+    // The stored verdict keeps what the model actually saw; the pre-suggestion drops an
+    // unhealthy meal so the user has to opt in rather than opt out of claiming the points.
+    const suggested = verdict.healthy === false ? verdict.categories.filter((cat) => cat !== 'meal') : verdict.categories;
+    const categories = [...new Set(suggested)];
     const entry = await db.transaction(async (tx) => {
       const [row] = await tx.insert(schema.entries).values({
         userId: user.id,
@@ -135,10 +148,10 @@ export function entryRoutes(deps: EntryDeps) {
     return c.json({ entry: await toEntryDto(entry, categories), verdict: toVerdictDto(verdict), ...proj }, 201);
   });
 
-  r.patch('/:id', validate('json', patchBody), async (c) => {
+  r.patch('/:id', validate('param', uuidParam), validate('json', patchBody), async (c) => {
     const user = c.get('user');
     const body = c.req.valid('json');
-    const [entry] = await db.select().from(schema.entries).where(and(eq(schema.entries.id, c.req.param('id')), eq(schema.entries.userId, user.id), ne(schema.entries.status, 'rejected')));
+    const [entry] = await db.select().from(schema.entries).where(and(eq(schema.entries.id, c.req.valid('param').id), eq(schema.entries.userId, user.id), ne(schema.entries.status, 'rejected')));
     if (!entry) throw new ApiError(404, 'not_found', 'Entry not found');
 
     const challenge = await loadChallenge();
@@ -159,20 +172,25 @@ export function entryRoutes(deps: EntryDeps) {
     return c.json({ entry: await toEntryDto(updated!, categories), ...proj });
   });
 
-  r.delete('/:id', async (c) => {
+  r.delete('/:id', validate('param', uuidParam), async (c) => {
     const user = c.get('user');
     const res = await db.update(schema.entries).set({ status: 'rejected', updatedAt: new Date() })
-      .where(and(eq(schema.entries.id, c.req.param('id')), eq(schema.entries.userId, user.id))).returning({ id: schema.entries.id });
+      .where(and(eq(schema.entries.id, c.req.valid('param').id), eq(schema.entries.userId, user.id))).returning({ id: schema.entries.id });
     if (res.length === 0) throw new ApiError(404, 'not_found', 'Entry not found');
     return c.body(null, 204);
   });
 
-  r.get('/mine', async (c) => {
+  r.get('/mine', validate('query', historyQuery), async (c) => {
     const user = c.get('user');
+    const { cursor } = c.req.valid('query');
     const challenge = await loadChallenge();
     const rows = await db.select().from(schema.entries)
-      .where(and(eq(schema.entries.userId, user.id), ne(schema.entries.status, 'rejected')))
-      .orderBy(desc(schema.entries.takenAt)).limit(200);
+      .where(and(
+        eq(schema.entries.userId, user.id),
+        ne(schema.entries.status, 'rejected'),
+        ...(cursor ? [lt(schema.entries.takenAt, new Date(cursor))] : []),
+      ))
+      .orderBy(desc(schema.entries.takenAt)).limit(HISTORY_PAGE_SIZE);
     const score = computeScore({ entries: (await loadConfirmedEntries([user.id])).get(user.id) ?? [], rules: challenge.rules, challenge: challenge.config, asOf: todayLocal(challenge.config) });
     const entries = [];
     for (const row of rows) {
@@ -181,7 +199,8 @@ export function entryRoutes(deps: EntryDeps) {
       const capped = score.scored.some((s) => s.entryId === row.id && s.capped);
       entries.push({ ...(await toEntryDto(row, cats)), points, capped });
     }
-    return c.json({ entries });
+    const nextCursor = rows.length === HISTORY_PAGE_SIZE ? rows[rows.length - 1]!.takenAt.toISOString() : null;
+    return c.json({ entries, nextCursor });
   });
 
   return r;

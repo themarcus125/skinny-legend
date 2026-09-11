@@ -3,11 +3,11 @@ import { z } from 'zod';
 import { and, desc, eq, lt } from 'drizzle-orm';
 import { computeScore, isoWeekKey, addDays, schema, type Category, type ScoreResult, CATEGORIES } from '@skinny/shared';
 import { db } from '../db.js';
-import { validate } from '../validate.js';
+import { validate, uuidParam } from '../validate.js';
 import { authenticate, requireActive, type AuthEnv } from '../middleware/auth.js';
 import { loadChallenge, loadConfirmedEntries, todayLocal, type Challenge } from '../services/score.js';
 import { storage } from '../services/storage.js';
-import { toEntryDto } from './entries.js';
+import { toEntryDto, HISTORY_PAGE_SIZE } from './entries.js';
 
 type UserRow = typeof schema.users.$inferSelect;
 
@@ -36,7 +36,11 @@ function pointsInWeek(score: ScoreResult, week: string) {
 }
 
 export const readRoutes = new Hono<AuthEnv>();
-readRoutes.use(authenticate, requireActive);
+// These routes are mounted at the app root, so the guard is scoped to their own paths:
+// a blanket `use()` here would answer every unknown path with 401 instead of a 404.
+for (const path of ['/leaderboard', '/me/*', '/feed', '/users/*']) {
+  readRoutes.use(path, authenticate, requireActive);
+}
 
 readRoutes.get('/leaderboard', async (c) => {
   const me = c.get('user');
@@ -115,15 +119,23 @@ readRoutes.get('/feed', validate('query', z.object({ cursor: z.string().datetime
   return c.json({ entries, nextCursor });
 });
 
-readRoutes.get('/users/:id/entries', validate('param', z.object({ id: z.string().uuid() })), async (c) => {
+const historyQuery = z.object({ cursor: z.string().datetime({ offset: true }).optional() });
+
+readRoutes.get('/users/:id/entries', validate('param', uuidParam), validate('query', historyQuery), async (c) => {
   const { id } = c.req.valid('param');
+  const { cursor } = c.req.valid('query');
   const rows = await db.select().from(schema.entries)
-    .where(and(eq(schema.entries.userId, id), eq(schema.entries.status, 'confirmed')))
-    .orderBy(desc(schema.entries.takenAt)).limit(100);
+    .where(and(
+      eq(schema.entries.userId, id),
+      eq(schema.entries.status, 'confirmed'),
+      ...(cursor ? [lt(schema.entries.takenAt, new Date(cursor))] : []),
+    ))
+    .orderBy(desc(schema.entries.takenAt)).limit(HISTORY_PAGE_SIZE);
   const entries = [];
   for (const row of rows) {
     const cats = (await db.select().from(schema.entryCategories).where(eq(schema.entryCategories.entryId, row.id))).map((r) => r.category as Category);
     entries.push(await toEntryDto(row, cats));
   }
-  return c.json({ entries });
+  const nextCursor = rows.length === HISTORY_PAGE_SIZE ? rows[rows.length - 1]!.takenAt.toISOString() : null;
+  return c.json({ entries, nextCursor });
 });

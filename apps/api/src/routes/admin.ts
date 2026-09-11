@@ -4,7 +4,7 @@ import { and, desc, eq, gte, lte, type SQL } from 'drizzle-orm';
 import { schema, type Category } from '@skinny/shared';
 import { db } from '../db.js';
 import { ApiError } from '../errors.js';
-import { validate } from '../validate.js';
+import { validate, uuidParam } from '../validate.js';
 import { authenticate, requireAdmin, type AuthEnv } from '../middleware/auth.js';
 import { writeAudit } from '../services/audit.js';
 import { storage } from '../services/storage.js';
@@ -13,16 +13,15 @@ import { toEntryDto } from './entries.js';
 export const adminRoutes = new Hono<AuthEnv>();
 adminRoutes.use(authenticate, requireAdmin);
 
-const idParam = z.object({ id: z.string().uuid() });
-
 // ---- users
 adminRoutes.get('/users', async (c) => {
   const users = await db.select().from(schema.users).orderBy(schema.users.createdAt);
   return c.json({ users });
 });
 
-const patchUser = z.object({ status: z.enum(['pending', 'active', 'disabled']).optional(), role: z.enum(['member', 'admin']).optional(), displayName: z.string().min(1).max(40).optional() });
-adminRoutes.patch('/users/:id', validate('param', idParam), validate('json', patchUser), async (c) => {
+const patchUser = z.object({ status: z.enum(['pending', 'active', 'disabled']).optional(), role: z.enum(['member', 'admin']).optional(), displayName: z.string().min(1).max(40).optional() })
+  .refine((o) => Object.keys(o).length > 0, { message: 'No fields to update' });
+adminRoutes.patch('/users/:id', validate('param', uuidParam), validate('json', patchUser), async (c) => {
   const id = c.req.valid('param').id;
   const patch = c.req.valid('json');
   const user = await db.transaction(async (tx) => {
@@ -66,7 +65,7 @@ adminRoutes.get('/entries', validate('query', entryFilters), async (c) => {
 });
 
 const patchEntry = z.object({ categories: z.array(z.enum(['exercise', 'meal', 'group'])).max(3).optional(), status: z.enum(['pending', 'confirmed', 'rejected']).optional() });
-adminRoutes.patch('/entries/:id', validate('param', idParam), validate('json', patchEntry), async (c) => {
+adminRoutes.patch('/entries/:id', validate('param', uuidParam), validate('json', patchEntry), async (c) => {
   const id = c.req.valid('param').id;
   const body = c.req.valid('json');
   const updated = await db.transaction(async (tx) => {
@@ -85,7 +84,7 @@ adminRoutes.patch('/entries/:id', validate('param', idParam), validate('json', p
   return c.json({ entry: await toEntryDto(updated, cats) });
 });
 
-adminRoutes.delete('/entries/:id', validate('param', idParam), async (c) => {
+adminRoutes.delete('/entries/:id', validate('param', uuidParam), async (c) => {
   const id = c.req.valid('param').id;
   await db.transaction(async (tx) => {
     const res = await tx.update(schema.entries).set({ status: 'rejected', updatedAt: new Date() }).where(eq(schema.entries.id, id)).returning({ id: schema.entries.id });
@@ -97,7 +96,7 @@ adminRoutes.delete('/entries/:id', validate('param', idParam), async (c) => {
 
 // ---- rules
 adminRoutes.get('/rules', async (c) => {
-  const [challenge] = await db.select().from(schema.challenges).limit(1);
+  const [challenge] = await db.select().from(schema.challenges).orderBy(schema.challenges.startDate).limit(1);
   const rules = await db.select().from(schema.scoringRules).where(eq(schema.scoringRules.challengeId, challenge!.id));
   return c.json({ challenge, rules });
 });
@@ -110,7 +109,7 @@ const putRules = z.object({
 });
 adminRoutes.put('/rules', validate('json', putRules), async (c) => {
   const body = c.req.valid('json');
-  const [challenge] = await db.select().from(schema.challenges).limit(1);
+  const [challenge] = await db.select().from(schema.challenges).orderBy(schema.challenges.startDate).limit(1);
   await db.transaction(async (tx) => {
     await tx.update(schema.challenges).set(body.challenge).where(eq(schema.challenges.id, challenge!.id));
     await tx.delete(schema.scoringRules).where(eq(schema.scoringRules.challengeId, challenge!.id));
