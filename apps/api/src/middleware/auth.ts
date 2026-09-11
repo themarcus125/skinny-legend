@@ -25,8 +25,17 @@ async function identify(headers: Headers): Promise<{ uid: string; name: string; 
   }
   const auth = headers.get('authorization');
   if (!auth?.startsWith('Bearer ')) throw new ApiError(401, 'unauthenticated', 'Missing or invalid token');
+  // Initialise outside the try below: a misconfigured service account is a server
+  // fault (500), not a bad token (401), and must not be swallowed as one.
+  let admin;
   try {
-    const decoded = await firebase().verifyIdToken(auth.slice(7));
+    admin = firebase();
+  } catch (err) {
+    console.error('[auth] Firebase Admin initialisation failed', err);
+    throw new Error('Firebase Admin initialisation failed');
+  }
+  try {
+    const decoded = await admin.verifyIdToken(auth.slice(7));
     return { uid: decoded.uid, name: decoded.name ?? decoded.email?.split('@')[0] ?? 'Member' };
   } catch {
     throw new ApiError(401, 'unauthenticated', 'Missing or invalid token');
