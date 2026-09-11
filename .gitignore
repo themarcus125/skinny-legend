@@ -7,4 +7,9 @@ dist/
 .DS_Store
 ios/**/xcuserdata/
 ios/**/DerivedData/
+ios/*.xcodeproj/
+ios/SkinnyLegend/Info.plist
+ios/build/
+ios/.swiftpm/
 .superpowers/
+.claude/launch.json
