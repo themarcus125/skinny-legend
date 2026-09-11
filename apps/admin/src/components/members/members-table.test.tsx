@@ -58,6 +58,21 @@ describe('MembersTable', () => {
     expect(onPatch).toHaveBeenCalledWith('u-3', { status: 'disabled' });
   });
 
+  it('shows the Vietnamese role label on the closed trigger, not the raw value', () => {
+    const onPatch = vi.fn();
+    render(
+      <MembersTable
+        users={[member({ id: 'u-6', displayName: 'Tuấn', role: 'admin' })]}
+        onPatch={onPatch}
+        isPatching={false}
+      />,
+    );
+
+    const trigger = screen.getByRole('combobox', { name: 'Vai trò của Tuấn' });
+    expect(trigger).toHaveTextContent('Quản trị');
+    expect(trigger).not.toHaveTextContent('admin');
+  });
+
   it('changes a member role through the select', async () => {
     const onPatch = vi.fn();
     const user = userEvent.setup();

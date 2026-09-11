@@ -88,6 +88,14 @@ describe('OverrideDialog', () => {
     expect(onSave).toHaveBeenCalledWith('e-1', { categories: ['exercise'], status: 'confirmed' });
   });
 
+  it('shows the Vietnamese status label on the closed trigger, not the raw value', () => {
+    render(<OverrideDialog entry={entry({ status: 'confirmed' })} onClose={vi.fn()} onSave={vi.fn()} isSaving={false} />);
+
+    const trigger = screen.getByRole('combobox', { name: /Trạng thái/ });
+    expect(trigger).toHaveTextContent('Đã xác nhận');
+    expect(trigger).not.toHaveTextContent('confirmed');
+  });
+
   it('calls onClose without saving when "Huỷ" is clicked', () => {
     const onSave = vi.fn();
     const onClose = vi.fn();

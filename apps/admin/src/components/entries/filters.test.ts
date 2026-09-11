@@ -28,16 +28,22 @@ describe('verdictSummary', () => {
     ).toBe('AI lỗi');
   });
 
-  it('joins categories with the rounded confidence', () => {
+  it('joins categories with the rounded confidence, translated to Vietnamese labels', () => {
     expect(
       verdictSummary({ categories: ['exercise', 'group'], healthy: null, confidence: 0.84, reason: 'x', model: 'm', failed: false }),
-    ).toBe('exercise, group · 84%');
+    ).toBe('Thể thao, Hoạt động nhóm · 84%');
   });
 
-  it('appends the healthy verdict for a meal', () => {
+  it('appends the healthy verdict for a meal, translated to its Vietnamese label', () => {
     expect(
       verdictSummary({ categories: ['meal'], healthy: false, confidence: 0.42, reason: 'x', model: 'm', failed: false }),
-    ).toBe('meal · 42% · không lành mạnh');
+    ).toBe('Bữa ăn lành mạnh · 42% · không lành mạnh');
+  });
+
+  it('falls back to the raw string for a category the model hallucinated outside the known set', () => {
+    expect(
+      verdictSummary({ categories: ['exercise', 'sleeping'], healthy: null, confidence: 0.5, reason: 'x', model: 'm', failed: false }),
+    ).toBe('Thể thao, sleeping · 50%');
   });
 
   it('handles a verdict with no categories', () => {

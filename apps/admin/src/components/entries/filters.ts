@@ -1,5 +1,6 @@
 import type { AdminEntry, EntryFilters, EntryStatus } from '@/lib/api/types';
 import { formatPercent } from '@/lib/format';
+import { CATEGORY_LABELS } from '@/lib/labels';
 
 /** shadcn Select forbids an empty string value, so "no filter" is the sentinel 'all'. */
 export const ALL = 'all';
@@ -26,7 +27,12 @@ export function toEntryFilters(form: FilterForm): EntryFilters {
 export function verdictSummary(verdict: AdminEntry['verdict']): string {
   if (!verdict) return 'Không có';
   if (verdict.failed) return 'AI lỗi';
-  const categories = verdict.categories.length ? verdict.categories.join(', ') : 'không có hạng mục';
+  // categories is a raw string[] from the model's JSON response, not the Category union, so an
+  // unrecognized value (a model hallucination) falls back to itself rather than throwing.
+  const labels: Record<string, string> = CATEGORY_LABELS;
+  const categories = verdict.categories.length
+    ? verdict.categories.map((category) => labels[category] ?? category).join(', ')
+    : 'không có hạng mục';
   const healthy = verdict.healthy === null ? '' : verdict.healthy ? ' · lành mạnh' : ' · không lành mạnh';
   return `${categories} · ${formatPercent(verdict.confidence)}${healthy}`;
 }

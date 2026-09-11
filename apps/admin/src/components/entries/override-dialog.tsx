@@ -95,7 +95,7 @@ function OverrideDialogBody({
             <label className="text-xs text-muted-foreground" htmlFor="override-status">
               Trạng thái
             </label>
-            <Select value={status} onValueChange={(next) => setStatus(next as EntryStatus)}>
+            <Select items={ENTRY_STATUS_LABELS} value={status} onValueChange={(next) => setStatus(next as EntryStatus)}>
               <SelectTrigger id="override-status">
                 <SelectValue />
               </SelectTrigger>

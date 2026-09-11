@@ -71,6 +71,7 @@ export function MembersTable({
                 </TableCell>
                 <TableCell>
                   <Select
+                    items={ROLE_LABELS}
                     value={user.role}
                     disabled={isPatching || isSelf}
                     onValueChange={(role) => onPatch(user.id, { role: role as Role })}

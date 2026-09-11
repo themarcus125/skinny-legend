@@ -46,6 +46,21 @@ describe('EntriesFilters', () => {
     expect(onChange).toHaveBeenCalledWith({ ...EMPTY_FILTER_FORM, user: 'u-2' });
   });
 
+  it('shows the picked member\'s display name on the closed trigger, not the raw id', () => {
+    const onChange = vi.fn();
+    render(
+      <EntriesFilters
+        value={{ ...EMPTY_FILTER_FORM, user: 'u-2' }}
+        onChange={onChange}
+        members={[member({ id: 'u-2', displayName: 'Minh' })]}
+      />,
+    );
+
+    const trigger = screen.getByRole('combobox');
+    expect(trigger).toHaveTextContent('Minh');
+    expect(trigger).not.toHaveTextContent('u-2');
+  });
+
   it('reports the "from" date as a plain filter field, unaffected by other fields', () => {
     const onChange = vi.fn();
     render(<EntriesFilters value={EMPTY_FILTER_FORM} onChange={onChange} members={[]} />);

@@ -17,6 +17,9 @@ export function EntriesFilters({
   onChange: (next: FilterForm) => void;
   members: AdminUser[];
 }) {
+  const memberItems: Record<string, string> = { [ALL]: 'Tất cả' };
+  for (const member of members) memberItems[member.id] = member.displayName;
+
   return (
     <div className="flex flex-wrap items-end gap-4">
       <Tabs value={value.status} onValueChange={(status) => onChange({ ...value, status })}>
@@ -34,7 +37,11 @@ export function EntriesFilters({
         <label className="text-xs text-muted-foreground" htmlFor="filter-user">
           Thành viên
         </label>
-        <Select value={value.user} onValueChange={(user) => onChange({ ...value, user: user ?? ALL })}>
+        <Select
+          items={memberItems}
+          value={value.user}
+          onValueChange={(user) => onChange({ ...value, user: user ?? ALL })}
+        >
           <SelectTrigger id="filter-user" className="w-44">
             <SelectValue />
           </SelectTrigger>

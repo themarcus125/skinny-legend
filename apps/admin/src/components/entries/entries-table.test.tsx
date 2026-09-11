@@ -91,7 +91,7 @@ describe('EntriesTable', () => {
     );
 
     const row = screen.getByRole('row', { name: /Minh/ });
-    expect(within(row).getByText('exercise · 91%')).toBeInTheDocument();
+    expect(within(row).getByText('Thể thao · 91%')).toBeInTheDocument();
     expect(within(row).getByText('Ảnh chụp trong phòng gym.')).toBeInTheDocument();
   });
 
