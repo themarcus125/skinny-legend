@@ -9,7 +9,8 @@
     "test": "vitest run",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate"
+    "db:migrate": "drizzle-kit migrate",
+    "db:seed": "tsx src/seed.ts"
   },
   "dependencies": {
     "@skinny/shared": "workspace:*",
@@ -24,7 +25,8 @@
     "@aws-sdk/s3-request-presigner": "^3.700.0",
     "sharp": "^0.33.0",
     "date-fns": "^4.1.0",
-    "@date-fns/tz": "^1.2.0"
+    "@date-fns/tz": "^1.2.0",
+    "dotenv": "^16.4.0"
   },
   "devDependencies": {
     "drizzle-kit": "^0.31.0",
