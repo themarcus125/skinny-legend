@@ -183,3 +183,14 @@ Pages: **Members** (approve pending, set role, disable), **Entries** (table with
 ## 13. Out of scope for v1
 
 Push notifications, widgets, per-user timezones, multiple concurrent challenges, Android, in-app fund tracking (Momo link stays in the group doc).
+
+## 14. iOS platform and design direction (addendum, 2026-09-11)
+
+Decided after the backend shipped; supersedes the "iOS 17+" line in §7.
+
+- **Deployment target: iOS 26.0 only.** Everyone in the group is on iOS 26. No availability checks; Liquid Glass APIs used natively (`glassEffect`, `GlassEffectContainer`, glass tab bar and toolbars, `tabBarMinimizeBehavior`, `backgroundExtensionEffect`, morphing transitions). Xcode 26, Swift 6 language mode, strict concurrency.
+- **Project generation: XcodeGen** (`ios/project.yml` → `SkinnyLegend.xcodeproj`, generated, the `.xcodeproj` is git-ignored). Agents and CI can build with `xcodebuild` without touching the Xcode GUI. Dependencies via Swift Package Manager: Firebase iOS SDK (Auth only). Bundle id `com.themarcus125.skinnylegend`.
+- **Architecture:** SwiftUI + `@Observable` models, one feature folder per tab (`Track`, `Dashboard`, `Leaderboard`, `Trends`, `Account`) plus `Feed`, and a `Core` layer: `APIClient` (protocol + `LiveAPIClient` over `URLSession` + `MockAPIClient` with seeded fixtures), `AuthService` (protocol + Firebase implementation + mock), `Models` (Codable DTOs that mirror the API responses field for field), `ImagePipeline` (resize to 1200px JPEG q0.8, EXIF GPS extraction), `PlaceResolver` (CoreLocation + MapKit POI lookup, §8), `DesignSystem` (theme, glass card, chips, streak flame, big-number style).
+- **Mock mode:** launch argument `-mockAPI` (set in the Simulator scheme by default) swaps in `MockAPIClient` + `MockAuthService`. Firebase is only configured when `GoogleService-Info.plist` is present and mock mode is off, so the app runs in the Simulator with no Apple Developer account. Every screen is built and screenshot-verified in mock mode first; the live client is wired against the local Hono API once Firebase exists.
+- **Visual direction: playful fitness.** System Liquid Glass materials over a soft warm gradient background; one vivid accent ("flame" orange-coral) for points, streaks and the primary Track action; SF Rounded, heavy weight, for all numerals; streak shown as a flame with the count; category chips as tinted glass capsules (exercise, meal, group); celebratory haptic + morph when an entry confirms. Vietnamese copy throughout, matching the rulebook ("Không đúng?", "Đổi").
+- **Testing:** Swift Testing for view models and the image/location helpers against the mock client; the ios-simulator skill drives screenshot verification per screen; TestFlight later for real devices.
