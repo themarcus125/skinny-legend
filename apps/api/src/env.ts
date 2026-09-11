@@ -18,6 +18,8 @@ const schema = z
     OPENROUTER_API_KEY: z.string().default(''),
     VISION_MODEL: z.string().default('qwen/qwen3.7-flash'),
     AUTH_MODE: z.enum(['firebase', 'test']).default('firebase'),
+    // Comma-separated list of browser origins allowed to call this API (the admin dashboard).
+    CORS_ORIGINS: z.string().default('http://localhost:3001'),
   })
   // Every var above has a default so the test suite can boot with an almost-empty
   // environment; the real requirements depend on AUTH_MODE and are enforced here.

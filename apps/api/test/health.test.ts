@@ -18,3 +18,28 @@ describe('unknown routes', () => {
     expect(await res.json()).toEqual({ error: { code: 'not_found', message: 'Route not found' } });
   });
 });
+
+describe('CORS', () => {
+  it('answers the admin dashboard preflight with its origin', async () => {
+    const app = createApp();
+    const res = await app.request('/health', {
+      method: 'OPTIONS',
+      headers: {
+        Origin: 'http://localhost:3001',
+        'Access-Control-Request-Method': 'GET',
+        'Access-Control-Request-Headers': 'authorization',
+      },
+    });
+
+    expect(res.headers.get('access-control-allow-origin')).toBe('http://localhost:3001');
+    expect(res.headers.get('access-control-allow-headers')?.toLowerCase()).toContain('authorization');
+    expect(res.headers.get('access-control-allow-methods')).toContain('PATCH');
+  });
+
+  it('does not echo an origin that is not allowed', async () => {
+    const app = createApp();
+    const res = await app.request('/health', { headers: { Origin: 'https://evil.example' } });
+
+    expect(res.headers.get('access-control-allow-origin')).toBeNull();
+  });
+});
