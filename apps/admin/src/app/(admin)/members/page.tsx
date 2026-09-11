@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { MembersTable } from '@/components/members/members-table';
+import { PageHeader } from '@/components/page-header';
 import { QueryState } from '@/components/query-state';
 import { describeError } from '@/lib/api';
 import type { UserPatch } from '@/lib/api/types';
@@ -28,27 +29,29 @@ export default function MembersPage() {
   const pendingCount = users.filter((user) => user.status === 'pending').length;
 
   return (
-    <div className="space-y-6">
-      <header>
-        <h1 className="text-2xl font-semibold">Thành viên</h1>
-        <p className="text-sm text-muted-foreground">
-          {pendingCount > 0 ? `${pendingCount} tài khoản đang chờ duyệt.` : 'Không có tài khoản nào chờ duyệt.'}
-        </p>
-      </header>
+    <div>
+      <PageHeader
+        title="Thành viên"
+        description={
+          pendingCount > 0 ? `${pendingCount} tài khoản đang chờ duyệt.` : 'Không có tài khoản nào chờ duyệt.'
+        }
+      />
 
-      <QueryState
-        isPending={usersQuery.isPending}
-        error={usersQuery.error}
-        isEmpty={users.length === 0}
-        emptyLabel="Chưa có thành viên nào."
-      >
-        <MembersTable
-          users={users}
-          isPatching={patchUser.isPending}
-          onPatch={(id, patch) => patchUser.mutate({ id, patch })}
-          currentUserId={currentUser?.id}
-        />
-      </QueryState>
+      <section className="overflow-hidden rounded-xl border border-border bg-card shadow-card">
+        <QueryState
+          isPending={usersQuery.isPending}
+          error={usersQuery.error}
+          isEmpty={users.length === 0}
+          emptyLabel="Chưa có thành viên nào."
+        >
+          <MembersTable
+            users={users}
+            isPatching={patchUser.isPending}
+            onPatch={(id, patch) => patchUser.mutate({ id, patch })}
+            currentUserId={currentUser?.id}
+          />
+        </QueryState>
+      </section>
     </div>
   );
 }

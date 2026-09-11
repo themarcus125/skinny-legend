@@ -21,15 +21,15 @@ export function EntriesTable({
   isMutating: boolean;
 }) {
   return (
-    <Table>
+    <Table containerClassName="md:max-h-[calc(100dvh-17rem)]">
       <TableHeader>
         <TableRow>
-          <TableHead className="w-16">Ảnh</TableHead>
+          <TableHead className="w-20">Ảnh</TableHead>
           <TableHead>Thành viên</TableHead>
-          <TableHead>Ngày</TableHead>
-          <TableHead>Hạng mục</TableHead>
+          <TableHead className="w-28">Ngày</TableHead>
+          <TableHead className="w-40">Hạng mục</TableHead>
           <TableHead>Trạng thái</TableHead>
-          <TableHead>Nhận định AI</TableHead>
+          <TableHead className="w-56">Nhận định AI</TableHead>
           <TableHead className="text-right">Thao tác</TableHead>
         </TableRow>
       </TableHeader>
@@ -39,24 +39,44 @@ export function EntriesTable({
             <TableCell>
               {entry.thumbUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element -- R2 serves short-lived signed URLs; next/image would need remotePatterns and would cache them.
-                <img src={entry.thumbUrl} alt="" className="h-12 w-12 rounded object-cover" />
+                <img
+                  src={entry.thumbUrl}
+                  alt=""
+                  width={44}
+                  height={44}
+                  loading="lazy"
+                  decoding="async"
+                  className="size-11 rounded-lg object-cover ring-1 ring-border"
+                />
               ) : (
-                <div className="h-12 w-12 rounded bg-muted" role="img" aria-label="Không có ảnh thu nhỏ" />
+                <div className="size-11 rounded-lg bg-muted" role="img" aria-label="Không có ảnh thu nhỏ" />
               )}
             </TableCell>
-            <TableCell className="font-medium">{entry.user.displayName}</TableCell>
-            <TableCell className="text-sm">{formatLocalDate(entry.localDate)}</TableCell>
+            <TableCell className="font-medium text-foreground">{entry.user.displayName}</TableCell>
+            <TableCell className="text-sm tabular-nums text-foreground-secondary">
+              {formatLocalDate(entry.localDate)}
+            </TableCell>
             <TableCell>
               <CategoryChips categories={entry.categories} />
             </TableCell>
             <TableCell>
-              <Badge variant={entry.status === 'confirmed' ? 'default' : entry.status === 'pending' ? 'secondary' : 'destructive'}>
+              <Badge
+                variant={
+                  entry.status === 'confirmed' ? 'success' : entry.status === 'pending' ? 'warning' : 'destructive'
+                }
+              >
                 {ENTRY_STATUS_LABELS[entry.status]}
               </Badge>
             </TableCell>
-            <TableCell className="max-w-64 text-sm text-muted-foreground">
-              <span className="block">{verdictSummary(entry.verdict)}</span>
-              {entry.verdict?.reason ? <span className="block truncate">{entry.verdict.reason}</span> : null}
+            <TableCell className="w-56 max-w-56">
+              <span className="block truncate text-sm text-foreground" title={verdictSummary(entry.verdict)}>
+                {verdictSummary(entry.verdict)}
+              </span>
+              {entry.verdict?.reason ? (
+                <span className="block truncate text-label text-muted-foreground" title={entry.verdict.reason}>
+                  {entry.verdict.reason}
+                </span>
+              ) : null}
             </TableCell>
             <TableCell className="space-x-2 text-right">
               <Button size="sm" variant="outline" disabled={isMutating} onClick={() => onOverride(entry)}>
@@ -64,7 +84,8 @@ export function EntriesTable({
               </Button>
               <Button
                 size="sm"
-                variant="destructive"
+                variant="outline"
+                className="text-destructive hover:border-destructive/30 hover:bg-danger-soft"
                 disabled={isMutating || entry.status === 'rejected'}
                 onClick={() => onReject(entry)}
               >

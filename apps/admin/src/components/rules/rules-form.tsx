@@ -22,6 +22,17 @@ import { rulesFormSchema, toFormValues, toRulesPayload, type RulesFormValues } f
 
 const CAP_PERIOD_LABELS = { day: 'mỗi ngày', week: 'mỗi tuần' } as const;
 
+const RULE_ROW_CLASS = 'grid items-end gap-3 sm:grid-cols-[minmax(0,1fr)_7rem_7rem_9rem_auto]';
+
+/**
+ * The category card reads as a table: only the first row shows its four labels. Later rows keep
+ * them in the DOM (htmlFor / getByLabelText) but visually hidden — at `sm` and up, where the grid
+ * columns line up under the first row's labels; stacked on phones every row shows them again.
+ */
+function ruleLabelClass(index: number) {
+  return index === 0 ? undefined : 'sm:sr-only';
+}
+
 /** Every numeric path in RulesFormValues. */
 type NumberFieldName =
   | 'streakPoints'
@@ -38,10 +49,12 @@ function NumberField({
   control,
   name,
   label,
+  labelClassName,
 }: {
   control: Control<RulesFormValues>;
   name: NumberFieldName;
   label: string;
+  labelClassName?: string;
 }) {
   return (
     <FormField
@@ -49,10 +62,11 @@ function NumberField({
       name={name}
       render={({ field }) => (
         <FormItem>
-          <FormLabel>{label}</FormLabel>
+          <FormLabel className={labelClassName}>{label}</FormLabel>
           <FormControl>
             <Input
               type="number"
+              className="tabular-nums"
               value={Number.isNaN(field.value) ? '' : field.value}
               onBlur={field.onBlur}
               name={field.name}
@@ -93,8 +107,8 @@ export function RulesForm({
       <Form {...form}>
         <form className="space-y-6" onSubmit={form.handleSubmit((values) => setPending(values))}>
           <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Mốc thời gian</CardTitle>
+            <CardHeader className="border-b">
+              <CardTitle>Mốc thời gian</CardTitle>
               <CardDescription>
                 Múi giờ cố định phía máy chủ: {data.challenge.timezone} (không sửa được qua API).
               </CardDescription>
@@ -130,8 +144,8 @@ export function RulesForm({
           </Card>
 
           <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Chuỗi ngày</CardTitle>
+            <CardHeader className="border-b">
+              <CardTitle>Chuỗi ngày</CardTitle>
               <CardDescription>Thưởng mỗi khi chuỗi đạt bội số của độ dài chuỗi.</CardDescription>
             </CardHeader>
             <CardContent className="grid gap-4 sm:grid-cols-2">
@@ -141,19 +155,19 @@ export function RulesForm({
           </Card>
 
           <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Hạng mục</CardTitle>
+            <CardHeader className="border-b">
+              <CardTitle>Hạng mục</CardTitle>
               <CardDescription>Điểm và giới hạn cho mỗi hạng mục. Mỗi hạng mục chỉ xuất hiện một lần.</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-3">
               {rules.fields.map((row, index) => (
-                <div key={row.id} className="grid items-end gap-3 sm:grid-cols-[1fr_6rem_6rem_8rem_auto]">
+                <div key={row.id} className={RULE_ROW_CLASS}>
                   <FormField
                     control={form.control}
                     name={`rules.${index}.category`}
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Hạng mục</FormLabel>
+                        <FormLabel className={ruleLabelClass(index)}>Hạng mục</FormLabel>
                         <Select items={CATEGORY_LABELS} value={field.value} onValueChange={(value) => field.onChange(value as Category)}>
                           <FormControl>
                             <SelectTrigger>
@@ -172,14 +186,24 @@ export function RulesForm({
                       </FormItem>
                     )}
                   />
-                  <NumberField control={form.control} name={`rules.${index}.points`} label="Điểm" />
-                  <NumberField control={form.control} name={`rules.${index}.capCount`} label="Giới hạn" />
+                  <NumberField
+                    control={form.control}
+                    name={`rules.${index}.points`}
+                    label="Điểm"
+                    labelClassName={ruleLabelClass(index)}
+                  />
+                  <NumberField
+                    control={form.control}
+                    name={`rules.${index}.capCount`}
+                    label="Giới hạn"
+                    labelClassName={ruleLabelClass(index)}
+                  />
                   <FormField
                     control={form.control}
                     name={`rules.${index}.capPeriod`}
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Chu kỳ</FormLabel>
+                        <FormLabel className={ruleLabelClass(index)}>Chu kỳ</FormLabel>
                         <Select items={CAP_PERIOD_LABELS} value={field.value} onValueChange={field.onChange}>
                           <FormControl>
                             <SelectTrigger>
@@ -198,6 +222,8 @@ export function RulesForm({
                   <Button
                     type="button"
                     variant="ghost"
+                    size="sm"
+                    className="text-secondary-foreground hover:text-destructive"
                     disabled={rules.fields.length === 1}
                     onClick={() => rules.remove(index)}
                   >
@@ -207,7 +233,7 @@ export function RulesForm({
               ))}
 
               {form.formState.errors.rules?.root ? (
-                <p role="alert" className="text-sm text-destructive">
+                <p role="alert" className="rounded-lg bg-danger-soft px-3 py-2 text-sm text-danger-fg">
                   {form.formState.errors.rules.root.message}
                 </p>
               ) : null}
@@ -215,6 +241,7 @@ export function RulesForm({
               <Button
                 type="button"
                 variant="outline"
+                size="sm"
                 disabled={unused.length === 0}
                 onClick={() => rules.append({ category: unused[0]!, points: 0, capCount: 1, capPeriod: 'day' })}
               >
@@ -223,9 +250,14 @@ export function RulesForm({
             </CardContent>
           </Card>
 
-          <Button type="submit" disabled={isSaving}>
-            Lưu luật chơi
-          </Button>
+          <div className="flex items-center justify-end gap-4 rounded-xl border border-border bg-card px-5 py-3 shadow-card">
+            <p className="mr-auto text-label text-muted-foreground">
+              Điểm được tính lại từ luật hiện hành cho mọi mục ghi.
+            </p>
+            <Button type="submit" disabled={isSaving}>
+              Lưu luật chơi
+            </Button>
+          </div>
         </form>
       </Form>
 

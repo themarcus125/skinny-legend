@@ -7,7 +7,7 @@ export function CategoryChips({ categories }: { categories: Category[] }) {
     return <span className="text-sm text-muted-foreground">—</span>;
   }
   return (
-    <div className="flex flex-wrap gap-1">
+    <div className="flex flex-wrap gap-1.5">
       {categories.map((category) => (
         <Badge key={category} variant="secondary">
           {CATEGORY_LABELS[category]}

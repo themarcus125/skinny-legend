@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { PageHeader } from '@/components/page-header';
 import { QueryState } from '@/components/query-state';
 import { RulesForm } from '@/components/rules/rules-form';
 import { describeError } from '@/lib/api';
@@ -24,13 +25,11 @@ export default function RulesPage() {
   });
 
   return (
-    <div className="space-y-6">
-      <header>
-        <h1 className="text-2xl font-semibold">Luật chơi</h1>
-        <p className="text-sm text-muted-foreground">
-          Sửa điểm, giới hạn và mốc thời gian của thử thách đang chạy.
-        </p>
-      </header>
+    <div>
+      <PageHeader
+        title="Luật chơi"
+        description="Sửa điểm, giới hạn và mốc thời gian của thử thách đang chạy."
+      />
 
       <QueryState
         isPending={rulesQuery.isPending}
