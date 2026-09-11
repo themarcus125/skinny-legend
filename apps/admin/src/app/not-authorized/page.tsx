@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { SignOutButton } from '@/components/sign-out-button';
 
 export default function NotAuthorizedPage() {
   return (
@@ -11,6 +12,7 @@ export default function NotAuthorizedPage() {
       <Link href="/" className="text-sm underline">
         Thử lại
       </Link>
+      <SignOutButton />
     </main>
   );
 }

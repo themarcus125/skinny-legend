@@ -23,6 +23,7 @@ function renderGate(state: Partial<AuthState>) {
     status: 'loading',
     user: null,
     error: null,
+    hasFirebaseUser: false,
     api: new MockAdminApi(),
     signIn: vi.fn(),
     signOutUser: vi.fn(),

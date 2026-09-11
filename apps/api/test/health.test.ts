@@ -40,6 +40,6 @@ describe('CORS', () => {
     const app = createApp();
     const res = await app.request('/health', { headers: { Origin: 'https://evil.example' } });
 
-    expect(res.headers.get('access-control-allow-origin')).not.toBe('https://evil.example');
+    expect(res.headers.get('access-control-allow-origin')).toBeNull();
   });
 });

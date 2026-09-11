@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
+import { SignOutButton } from '@/components/sign-out-button';
 import { IS_MOCK } from '@/lib/api';
 import { useAuth } from '@/lib/auth/auth-context';
 
@@ -17,7 +17,7 @@ const NAV = [
 
 export function AppSidebar() {
   const pathname = usePathname();
-  const { user, signOutUser } = useAuth();
+  const { user } = useAuth();
 
   return (
     <aside className="flex w-60 shrink-0 flex-col border-r bg-muted/30 p-4">
@@ -48,9 +48,7 @@ export function AppSidebar() {
 
       <div className="mt-auto space-y-2 pt-6">
         <p className="truncate text-xs text-muted-foreground">{user?.displayName ?? ''}</p>
-        <Button variant="outline" size="sm" className="w-full" onClick={() => void signOutUser()}>
-          Đăng xuất
-        </Button>
+        <SignOutButton className="w-full" />
       </div>
     </aside>
   );

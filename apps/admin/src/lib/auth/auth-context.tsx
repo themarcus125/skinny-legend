@@ -1,6 +1,7 @@
 'use client';
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { onAuthStateChanged, signInWithPopup, signOut } from 'firebase/auth';
 import { createAdminApi, describeError, IS_MOCK } from '@/lib/api';
 import type { AdminApi } from '@/lib/api/client';
@@ -11,6 +12,8 @@ export interface AuthState {
   status: 'loading' | 'signed-out' | 'signed-in' | 'error';
   user: AdminUser | null;
   error: string | null;
+  /** True once a Firebase user is signed in, even if the app rejected their session (disabled/pending). */
+  hasFirebaseUser: boolean;
   api: AdminApi;
   signIn: () => Promise<void>;
   signOutUser: () => Promise<void>;
@@ -19,6 +22,8 @@ export interface AuthState {
 export const AuthContext = createContext<AuthState | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const queryClient = useQueryClient();
+
   const api = useMemo(
     () =>
       createAdminApi(async () => {
@@ -32,27 +37,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<AuthState['status']>('loading');
   const [user, setUser] = useState<AdminUser | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [hasFirebaseUser, setHasFirebaseUser] = useState(false);
 
-  const loadSession = useCallback(async () => {
-    try {
-      const profile = await api.session();
-      setUser(profile);
-      setError(null);
-      setStatus('signed-in');
-    } catch (err) {
-      console.error('[auth] POST /auth/session failed', err);
-      setUser(null);
-      setError(describeError(err));
-      setStatus('error');
-    }
-  }, [api]);
+  // Guards against a slow `loadSession` call finishing after a newer sign-out (or a newer
+  // sign-in) has already moved the state on. Every intentional transition — an
+  // onAuthStateChanged callback, or an explicit sign-out — bumps this; `loadSession` captures
+  // the value it started with and drops its result if the counter has since moved.
+  const generationRef = useRef(0);
+
+  const loadSession = useCallback(
+    async (generation: number) => {
+      try {
+        const profile = await api.session();
+        if (generationRef.current !== generation) return;
+        setUser(profile);
+        setError(null);
+        setStatus('signed-in');
+      } catch (err) {
+        if (generationRef.current !== generation) return;
+        console.error('[auth] POST /auth/session failed', err);
+        setUser(null);
+        setError(describeError(err));
+        setStatus('error');
+      }
+    },
+    [api],
+  );
 
   useEffect(() => {
     if (IS_MOCK) {
-      // Mock mode has no onAuthStateChanged subscription to hang the initial session
-      // fetch off; it must run once on mount instead.
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      void loadSession();
+      const generation = generationRef.current;
+      void loadSession(generation);
       return;
     }
     if (!isFirebaseConfigured()) {
@@ -61,16 +76,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
     return onAuthStateChanged(firebaseAuth(), (firebaseUser) => {
+      generationRef.current += 1;
+      const generation = generationRef.current;
+      setHasFirebaseUser(Boolean(firebaseUser));
       if (!firebaseUser) {
+        queryClient.clear();
         setUser(null);
         setError(null);
         setStatus('signed-out');
         return;
       }
       setStatus('loading');
-      void loadSession();
+      void loadSession(generation);
     });
-  }, [loadSession]);
+  }, [loadSession, queryClient]);
 
   const signIn = useCallback(async () => {
     setError(null);
@@ -86,17 +105,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signOutUser = useCallback(async () => {
+    generationRef.current += 1;
+    queryClient.clear();
     if (IS_MOCK) {
       setUser(null);
+      setHasFirebaseUser(false);
       setStatus('signed-out');
       return;
     }
-    await signOut(firebaseAuth());
-  }, []);
+    try {
+      await signOut(firebaseAuth());
+    } catch (err) {
+      console.error('[auth] Sign-out failed', err);
+      setError('Đăng xuất thất bại. Vui lòng thử lại.');
+    }
+  }, [queryClient]);
 
   const value = useMemo<AuthState>(
-    () => ({ status, user, error, api, signIn, signOutUser }),
-    [status, user, error, api, signIn, signOutUser],
+    () => ({ status, user, error, hasFirebaseUser, api, signIn, signOutUser }),
+    [status, user, error, hasFirebaseUser, api, signIn, signOutUser],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
