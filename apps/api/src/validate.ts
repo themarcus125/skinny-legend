@@ -5,7 +5,7 @@ import { ApiError } from './errors.js';
 type Target = 'json' | 'query' | 'param';
 
 /** zValidator that reports failures through the standard error envelope. */
-export function validate<T extends ZodType>(target: Target, schema: T) {
+export function validate<Tgt extends Target, T extends ZodType>(target: Tgt, schema: T) {
   return zValidator(target, schema, (result) => {
     if (!result.success) {
       const first = result.error.issues[0];
