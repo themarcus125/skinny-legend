@@ -10,7 +10,7 @@ export default function NotAuthorizedPage() {
           Tài khoản này không phải quản trị viên đang hoạt động. Nhờ quản trị viên cấp quyền
           (<code>role=admin</code>, <code>status=active</code>) rồi đăng nhập lại.
         </p>
-        <Link href="/" className="text-sm font-medium text-brand-fg underline-offset-4 hover:underline">
+        <Link href="/" className="rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring text-sm font-medium text-brand-fg underline-offset-4 hover:underline">
           Thử lại
         </Link>
         <SignOutButton />

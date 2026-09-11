@@ -22,6 +22,17 @@ import { rulesFormSchema, toFormValues, toRulesPayload, type RulesFormValues } f
 
 const CAP_PERIOD_LABELS = { day: 'mỗi ngày', week: 'mỗi tuần' } as const;
 
+const RULE_ROW_CLASS = 'grid items-end gap-3 sm:grid-cols-[minmax(0,1fr)_7rem_7rem_9rem_auto]';
+
+/**
+ * The category card reads as a table: only the first row shows its four labels. Later rows keep
+ * them in the DOM (htmlFor / getByLabelText) but visually hidden — at `sm` and up, where the grid
+ * columns line up under the first row's labels; stacked on phones every row shows them again.
+ */
+function ruleLabelClass(index: number) {
+  return index === 0 ? undefined : 'sm:sr-only';
+}
+
 /** Every numeric path in RulesFormValues. */
 type NumberFieldName =
   | 'streakPoints'
@@ -38,10 +49,12 @@ function NumberField({
   control,
   name,
   label,
+  labelClassName,
 }: {
   control: Control<RulesFormValues>;
   name: NumberFieldName;
   label: string;
+  labelClassName?: string;
 }) {
   return (
     <FormField
@@ -49,7 +62,7 @@ function NumberField({
       name={name}
       render={({ field }) => (
         <FormItem>
-          <FormLabel>{label}</FormLabel>
+          <FormLabel className={labelClassName}>{label}</FormLabel>
           <FormControl>
             <Input
               type="number"
@@ -146,15 +159,15 @@ export function RulesForm({
               <CardTitle>Hạng mục</CardTitle>
               <CardDescription>Điểm và giới hạn cho mỗi hạng mục. Mỗi hạng mục chỉ xuất hiện một lần.</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-3">
               {rules.fields.map((row, index) => (
-                <div key={row.id} className="grid items-end gap-3 sm:grid-cols-[minmax(0,1fr)_7rem_7rem_9rem_auto]">
+                <div key={row.id} className={RULE_ROW_CLASS}>
                   <FormField
                     control={form.control}
                     name={`rules.${index}.category`}
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Hạng mục</FormLabel>
+                        <FormLabel className={ruleLabelClass(index)}>Hạng mục</FormLabel>
                         <Select items={CATEGORY_LABELS} value={field.value} onValueChange={(value) => field.onChange(value as Category)}>
                           <FormControl>
                             <SelectTrigger>
@@ -173,14 +186,24 @@ export function RulesForm({
                       </FormItem>
                     )}
                   />
-                  <NumberField control={form.control} name={`rules.${index}.points`} label="Điểm" />
-                  <NumberField control={form.control} name={`rules.${index}.capCount`} label="Giới hạn" />
+                  <NumberField
+                    control={form.control}
+                    name={`rules.${index}.points`}
+                    label="Điểm"
+                    labelClassName={ruleLabelClass(index)}
+                  />
+                  <NumberField
+                    control={form.control}
+                    name={`rules.${index}.capCount`}
+                    label="Giới hạn"
+                    labelClassName={ruleLabelClass(index)}
+                  />
                   <FormField
                     control={form.control}
                     name={`rules.${index}.capPeriod`}
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Chu kỳ</FormLabel>
+                        <FormLabel className={ruleLabelClass(index)}>Chu kỳ</FormLabel>
                         <Select items={CAP_PERIOD_LABELS} value={field.value} onValueChange={field.onChange}>
                           <FormControl>
                             <SelectTrigger>

@@ -69,7 +69,7 @@ function OverrideDialogBody({
           <img
             src={entry.photoUrl}
             alt={`Ảnh của ${entry.user.displayName}`}
-            className="h-52 w-full rounded-lg object-cover ring-1 ring-border"
+            className="h-40 w-full rounded-lg object-cover ring-1 ring-border sm:h-52"
           />
 
           {entry.verdict?.reason ? (

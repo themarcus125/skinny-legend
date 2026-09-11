@@ -32,7 +32,11 @@ export function challengeProgress(
   endDate: string,
   today: string = todayLocalDate(),
 ): ChallengeProgress {
-  const total = daysBetween(startDate, endDate) + 1;
+  // A malformed or inverted span must never yield NaN / ≤0 (the overview draws a bar from it).
+  if (Number.isNaN(Date.parse(startDate)) || Number.isNaN(Date.parse(endDate))) {
+    return { day: 0, total: 1, remaining: 0, phase: 'before' };
+  }
+  const total = Math.max(daysBetween(startDate, endDate) + 1, 1);
   const raw = daysBetween(startDate, today) + 1;
   const phase = raw < 1 ? 'before' : raw > total ? 'after' : 'during';
   const day = Math.min(Math.max(raw, 0), total);

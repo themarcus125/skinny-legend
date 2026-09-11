@@ -29,7 +29,7 @@ export function FeedbackList({ items }: { items: FeedbackItem[] }) {
               href={item.screenshotUrl}
               target="_blank"
               rel="noreferrer"
-              className="mt-2 inline-flex items-center gap-1.5 text-sm font-medium text-brand-fg underline-offset-4 hover:underline"
+              className="mt-2 inline-flex items-center gap-1.5 rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring text-sm font-medium text-brand-fg underline-offset-4 hover:underline"
             >
               <ImageIcon aria-hidden className="size-4" />
               Xem ảnh chụp màn hình

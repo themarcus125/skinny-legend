@@ -21,15 +21,15 @@ export function EntriesTable({
   isMutating: boolean;
 }) {
   return (
-    <Table containerClassName="max-h-[calc(100dvh-17rem)]">
+    <Table containerClassName="md:max-h-[calc(100dvh-17rem)]">
       <TableHeader>
         <TableRow>
           <TableHead className="w-20">Ảnh</TableHead>
           <TableHead>Thành viên</TableHead>
-          <TableHead>Ngày</TableHead>
-          <TableHead>Hạng mục</TableHead>
+          <TableHead className="w-28">Ngày</TableHead>
+          <TableHead className="w-40">Hạng mục</TableHead>
           <TableHead>Trạng thái</TableHead>
-          <TableHead>Nhận định AI</TableHead>
+          <TableHead className="w-56">Nhận định AI</TableHead>
           <TableHead className="text-right">Thao tác</TableHead>
         </TableRow>
       </TableHeader>
@@ -39,7 +39,15 @@ export function EntriesTable({
             <TableCell>
               {entry.thumbUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element -- R2 serves short-lived signed URLs; next/image would need remotePatterns and would cache them.
-                <img src={entry.thumbUrl} alt="" className="size-11 rounded-lg object-cover ring-1 ring-border" />
+                <img
+                  src={entry.thumbUrl}
+                  alt=""
+                  width={44}
+                  height={44}
+                  loading="lazy"
+                  decoding="async"
+                  className="size-11 rounded-lg object-cover ring-1 ring-border"
+                />
               ) : (
                 <div className="size-11 rounded-lg bg-muted" role="img" aria-label="Không có ảnh thu nhỏ" />
               )}
@@ -60,10 +68,14 @@ export function EntriesTable({
                 {ENTRY_STATUS_LABELS[entry.status]}
               </Badge>
             </TableCell>
-            <TableCell className="max-w-72">
-              <span className="block text-sm text-foreground">{verdictSummary(entry.verdict)}</span>
+            <TableCell className="w-56 max-w-56">
+              <span className="block truncate text-sm text-foreground" title={verdictSummary(entry.verdict)}>
+                {verdictSummary(entry.verdict)}
+              </span>
               {entry.verdict?.reason ? (
-                <span className="block truncate text-label text-muted-foreground">{entry.verdict.reason}</span>
+                <span className="block truncate text-label text-muted-foreground" title={entry.verdict.reason}>
+                  {entry.verdict.reason}
+                </span>
               ) : null}
             </TableCell>
             <TableCell className="space-x-2 text-right">

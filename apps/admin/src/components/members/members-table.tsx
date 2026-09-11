@@ -54,7 +54,7 @@ export function MembersTable({
 
   return (
     <>
-      <Table containerClassName="max-h-[calc(100dvh-15rem)]">
+      <Table containerClassName="md:max-h-[calc(100dvh-15rem)]">
         <TableHeader>
           <TableRow>
             <TableHead>Tên</TableHead>

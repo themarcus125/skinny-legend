@@ -32,6 +32,13 @@ describe('challengeProgress', () => {
       phase: 'after',
     });
   });
+
+  it('never yields NaN or an empty span for malformed or inverted dates', () => {
+    expect(challengeProgress('not-a-date', END, START)).toEqual({ day: 0, total: 1, remaining: 0, phase: 'before' });
+    expect(challengeProgress(START, 'nope', START)).toEqual({ day: 0, total: 1, remaining: 0, phase: 'before' });
+    // Inverted span: total clamps to 1, so the ratio stays finite and ≤ 100%.
+    expect(challengeProgress(END, START, START)).toMatchObject({ total: 1, day: 0, phase: 'before' });
+  });
 });
 
 describe('daysBetween', () => {

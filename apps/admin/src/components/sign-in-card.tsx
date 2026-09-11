@@ -19,7 +19,7 @@ export function SignInCard({ error }: { error?: string }) {
         <CardHeader className="items-center justify-items-center text-center">
           <span
             aria-hidden
-            className="mb-3 flex size-10 items-center justify-center rounded-xl bg-brand text-white"
+            className="mb-3 flex size-10 items-center justify-center rounded-xl bg-brand text-primary-foreground"
           >
             <FlameIcon className="size-5" />
           </span>

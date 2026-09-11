@@ -23,19 +23,64 @@ const NAV = [
   { href: '/feedback', label: 'Góp ý', icon: MessageSquareTextIcon },
 ] as const;
 
-export function AppSidebar() {
+function BrandMark() {
+  return (
+    <span
+      aria-hidden
+      className="flex size-7 shrink-0 items-center justify-center rounded-md bg-brand text-primary-foreground shadow-raised"
+    >
+      <FlameIcon className="size-4" strokeWidth={2.25} />
+    </span>
+  );
+}
+
+/** The five section links — same hrefs, labels and aria-current in the rail and the phone top bar. */
+function NavLinks({ layout }: { layout: 'rail' | 'bar' }) {
   const pathname = usePathname();
+  return (
+    <nav
+      aria-label="Điều hướng"
+      className={layout === 'rail' ? 'flex flex-col gap-0.5' : 'flex gap-1 overflow-x-auto px-3 pb-2'}
+    >
+      {NAV.map(({ href, label, icon: Icon }) => {
+        const active = href === '/' ? pathname === '/' : pathname.startsWith(href);
+        return (
+          <Link
+            key={href}
+            href={href}
+            aria-current={active ? 'page' : undefined}
+            className={cn(
+              'group flex h-9 shrink-0 items-center gap-2.5 rounded-lg px-2.5 text-sm font-medium text-sidebar-foreground transition-colors',
+              'hover:bg-sidebar-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+              active &&
+                'bg-sidebar-primary font-semibold text-sidebar-primary-foreground shadow-nav-active hover:bg-sidebar-primary',
+              layout === 'bar' && 'h-8 gap-2 px-2',
+            )}
+          >
+            <Icon
+              aria-hidden
+              className={cn(
+                'size-4 shrink-0 text-muted-foreground transition-colors group-hover:text-foreground',
+                active && 'text-brand',
+              )}
+              strokeWidth={active ? 2.25 : 2}
+            />
+            <span className="truncate">{label}</span>
+          </Link>
+        );
+      })}
+    </nav>
+  );
+}
+
+/** Desktop rail (md and up). Below md it is display:none and MobileTopBar takes over. */
+export function AppSidebar() {
   const { user } = useAuth();
 
   return (
-    <aside className="sticky top-0 flex h-dvh w-[232px] shrink-0 flex-col border-r border-sidebar-border bg-sidebar px-3 py-4">
+    <aside className="sticky top-0 hidden h-dvh w-[232px] shrink-0 flex-col border-r border-sidebar-border bg-sidebar px-3 py-4 md:flex">
       <div className="mb-6 flex items-center gap-2.5 px-2">
-        <span
-          aria-hidden
-          className="flex size-7 shrink-0 items-center justify-center rounded-md bg-brand text-white shadow-raised"
-        >
-          <FlameIcon className="size-4" strokeWidth={2.25} />
-        </span>
+        <BrandMark />
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold leading-5">Skinny Legend</p>
           <p className="text-xs leading-4 text-muted-foreground">Bảng quản trị</p>
@@ -47,34 +92,7 @@ export function AppSidebar() {
         </p>
       ) : null}
 
-      <nav aria-label="Điều hướng" className="flex flex-col gap-0.5">
-        {NAV.map(({ href, label, icon: Icon }) => {
-          const active = href === '/' ? pathname === '/' : pathname.startsWith(href);
-          return (
-            <Link
-              key={href}
-              href={href}
-              aria-current={active ? 'page' : undefined}
-              className={cn(
-                'group flex h-9 items-center gap-2.5 rounded-lg px-2.5 text-sm font-medium text-sidebar-foreground transition-colors',
-                'hover:bg-sidebar-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60',
-                active &&
-                  'bg-sidebar-primary font-semibold text-sidebar-primary-foreground shadow-nav-active hover:bg-sidebar-primary',
-              )}
-            >
-              <Icon
-                aria-hidden
-                className={cn(
-                  'size-4 shrink-0 text-muted-foreground transition-colors group-hover:text-foreground',
-                  active && 'text-brand',
-                )}
-                strokeWidth={active ? 2.25 : 2}
-              />
-              <span className="truncate">{label}</span>
-            </Link>
-          );
-        })}
-      </nav>
+      <NavLinks layout="rail" />
 
       <div className="mt-auto border-t border-sidebar-border pt-3">
         <div className="flex items-center gap-2.5 px-2 py-1.5">
@@ -89,5 +107,24 @@ export function AppSidebar() {
         <SignOutButton variant="ghost" size="sm" className="mt-1 w-full justify-start text-secondary-foreground" />
       </div>
     </aside>
+  );
+}
+
+/** Phone header (below md): brand mark, sign-out, and the same NAV as a horizontal scroller. */
+export function MobileTopBar() {
+  return (
+    <header className="sticky top-0 z-20 border-b border-sidebar-border bg-sidebar md:hidden">
+      <div className="flex h-12 items-center gap-2.5 px-3">
+        <BrandMark />
+        <p className="truncate text-sm font-semibold">Skinny Legend</p>
+        {IS_MOCK ? (
+          <span className="inline-flex h-6 shrink-0 items-center rounded-full bg-warning-soft px-2.5 text-xs font-medium text-warning-fg">
+            Mock
+          </span>
+        ) : null}
+        <SignOutButton variant="ghost" size="sm" className="ml-auto text-secondary-foreground" />
+      </div>
+      <NavLinks layout="bar" />
+    </header>
   );
 }

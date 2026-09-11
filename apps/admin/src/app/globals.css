@@ -49,6 +49,7 @@
   --color-popover-foreground: var(--popover-foreground);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
+  --color-primary-hover: var(--primary-hover);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
@@ -56,6 +57,7 @@
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
+  --color-destructive-hover: var(--destructive-hover);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
@@ -75,7 +77,6 @@
 
   /* new semantic colours → utilities bg-brand, text-brand-fg, bg-success-soft, … */
   --color-brand: var(--brand);
-  --color-brand-hover: var(--brand-hover);
   --color-brand-soft: var(--brand-soft);
   --color-brand-fg: var(--brand-fg);
   --color-success-soft: var(--success-soft);
@@ -102,6 +103,7 @@
 
   /* interactive neutrals */
   --primary: #1B1B1F;                /* ink primary button, switch on */
+  --primary-hover: #2C2C33;
   --primary-foreground: #FFFFFF;
   --secondary: #F1F1F3;              /* neutral chips, secondary button */
   --secondary-foreground: #3E3E48;
@@ -110,16 +112,16 @@
   --accent: #EFEFF2;                 /* menu item hover */
   --accent-foreground: #1B1B1F;
   --destructive: #C62828;            /* solid: dialog confirms only */
+  --destructive-hover: #A61E1E;
 
   /* lines */
   --border: #E5E5EA;
   --border-strong: #D4D4DB;
   --input: #D4D4DB;                  /* one step darker than card borders */
-  --ring: #E8532B;                   /* the flame — focus rings */
+  --ring: #E8532B;                   /* the flame — focus rings, always full-strength (3.7:1 on white, 3.3:1 on the rail) */
 
   /* brand: flame coral (icons, marks, bars — never body text) */
   --brand: #E8532B;
-  --brand-hover: #CF4522;
   --brand-soft: #FFF1EC;
   --brand-fg: #B23A15;               /* 5.0:1 on white — the only brand text colour */
 
@@ -143,7 +145,7 @@
 }
 
 @layer base {
-  * { @apply border-border outline-ring/50; }
+  * { @apply border-border outline-ring; }
   html {
     @apply font-sans;
     color-scheme: light;

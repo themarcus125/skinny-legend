@@ -56,7 +56,13 @@ function KpiTile({
         )}
       </p>
       <p className={error ? 'mt-1 text-label text-danger-fg' : 'mt-1 text-label text-muted-foreground'}>
-        {error ? describeError(error) : isPending ? ' ' : sub}
+        {isPending ? (
+          <span className="inline-block h-[18px] w-24 animate-pulse rounded bg-muted align-top motion-reduce:animate-none" />
+        ) : error ? (
+          describeError(error)
+        ) : (
+          sub
+        )}
       </p>
       {children}
     </div>
@@ -153,19 +159,21 @@ export default function OverviewPage() {
             error={rulesQuery.error}
             isPending={rulesQuery.isPending}
           >
-            <div
-              role="progressbar"
-              aria-label="Tiến độ thử thách"
-              aria-valuemin={0}
-              aria-valuemax={progress.total}
-              aria-valuenow={progress.day}
-              className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-muted"
-            >
+            {rules ? (
               <div
-                className="h-full rounded-full bg-brand"
-                style={{ width: `${(progress.day / progress.total) * 100}%` }}
-              />
-            </div>
+                role="progressbar"
+                aria-label="Tiến độ thử thách"
+                aria-valuemin={0}
+                aria-valuemax={progress.total}
+                aria-valuenow={progress.day}
+                className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-muted"
+              >
+                <div
+                  className="h-full rounded-full bg-brand"
+                  style={{ width: `${(progress.day / progress.total) * 100}%` }}
+                />
+              </div>
+            ) : null}
           </KpiTile>
         </div>
 
@@ -188,7 +196,7 @@ export default function OverviewPage() {
                       <Initial name={pending.displayName} />
                       <span className="text-sm font-medium">{pending.displayName}</span>
                       <Badge variant="warning">Chờ duyệt</Badge>
-                      <Link href="/members" className="ml-auto text-sm font-medium text-brand-fg hover:underline">
+                      <Link href="/members" className="ml-auto rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring text-sm font-medium text-brand-fg hover:underline">
                         Duyệt
                       </Link>
                     </li>
@@ -196,7 +204,7 @@ export default function OverviewPage() {
                   {pendingEntries > 0 ? (
                     <li className="flex items-center gap-3 px-5 py-3">
                       <span className="text-sm font-medium">{pendingEntries} mục ghi chờ xác nhận</span>
-                      <Link href="/entries" className="ml-auto text-sm font-medium text-brand-fg hover:underline">
+                      <Link href="/entries" className="ml-auto rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring text-sm font-medium text-brand-fg hover:underline">
                         Xem
                       </Link>
                     </li>
@@ -234,7 +242,7 @@ export default function OverviewPage() {
               </QueryState>
             </CardContent>
             <CardFooter>
-              <Link href="/feedback" className="text-sm font-medium text-brand-fg hover:underline">
+              <Link href="/feedback" className="rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring text-sm font-medium text-brand-fg hover:underline">
                 Xem tất cả góp ý
               </Link>
             </CardFooter>
