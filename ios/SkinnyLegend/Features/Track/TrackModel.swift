@@ -12,6 +12,8 @@ final class TrackModel {
         case preparing
         case uploading(Double)
         case uploaded
+        case analyzing
+        case ready
         case failed(String)
     }
 
@@ -21,6 +23,7 @@ final class TrackModel {
     var previewImage: UIImage?
     var prepared: PreparedPhoto?
     var photoKey: String?
+    var createResult: CreateEntryResponse?
 
     init(api: any APIClient) {
         self.api = api
@@ -28,8 +31,8 @@ final class TrackModel {
 
     var isBusy: Bool {
         switch phase {
-        case .preparing, .uploading: true
-        case .idle, .uploaded, .failed: false
+        case .preparing, .uploading, .analyzing: true
+        case .idle, .uploaded, .ready, .failed: false
         }
     }
 
@@ -67,6 +70,7 @@ final class TrackModel {
         previewImage = nil
         prepared = nil
         photoKey = nil
+        createResult = nil
     }
 
     /// One automatic retry, then the error is surfaced and `prepared` is kept for a manual retry.
@@ -90,6 +94,29 @@ final class TrackModel {
             } catch {
                 if attempt == 2 { phase = .failed("Tải ảnh lên thất bại.") }
             }
+        }
+    }
+
+    /// `POST /entries` — the server fetches the photo, calls the vision model, and returns the
+    /// pending entry plus its verdict and projection (spec §6).
+    func createEntry(placeName: String?, placeSource: PlaceSource, point: GeoPoint?) async {
+        guard let photoKey, let photo = prepared else { return }
+        phase = .analyzing
+        do {
+            let input = CreateEntryInput(
+                photoKey: photoKey,
+                takenAt: photo.takenAt,
+                lat: point?.lat,
+                lng: point?.lng,
+                placeName: placeName,
+                placeSource: placeName == nil ? PlaceSource.none : placeSource
+            )
+            createResult = try await api.createEntry(input)
+            phase = .ready
+        } catch let error as APIError {
+            phase = .failed(error.userMessage)
+        } catch {
+            phase = .failed("Không phân tích được ảnh, hãy thử lại.")
         }
     }
 

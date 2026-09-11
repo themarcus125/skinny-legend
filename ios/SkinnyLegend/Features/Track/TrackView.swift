@@ -9,8 +9,12 @@ struct TrackView: View {
     /// The in-flight prepare/upload/resolve pipeline for the current photo, so a photo swap or
     /// discard can cancel a stale one before it can overwrite state for the new photo.
     @State private var loadTask: Task<Void, Never>?
+    @State private var verdictModel: VerdictSheetModel?
+    @State private var celebrationPoints: Int?
+    private let apiClient: any APIClient
 
     init(api: any APIClient, placeSearch: any PlaceSearching, locator: any LocationFixing) {
+        self.apiClient = api
         _model = State(initialValue: TrackModel(api: api))
         _places = State(initialValue: PlaceResolver(search: placeSearch, locator: locator))
     }
@@ -52,15 +56,45 @@ struct TrackView: View {
             }
             .ignoresSafeArea()
         }
+        .sheet(item: $verdictModel) { sheetModel in
+            VerdictSheet(model: sheetModel, placeResolver: places) { _ in
+                celebrationPoints = sheetModel.projectedPoints
+                model.reset()
+                places.clear()
+            }
+        }
+        .overlay {
+            if let celebrationPoints {
+                CelebrationOverlay(points: celebrationPoints)
+                    .transition(.opacity)
+                    .task {
+                        try? await Task.sleep(for: .seconds(1.8))
+                        withAnimation(.smooth(duration: 0.3)) { self.celebrationPoints = nil }
+                    }
+            }
+        }
     }
 
     /// Spec §7: "While uploading, the app fetches one location fix" — the upload and the place
-    /// lookup run concurrently rather than one after the other.
+    /// lookup run concurrently rather than one after the other. Once uploaded, `POST /entries`
+    /// runs the vision model and the verdict sheet opens on its result.
     private func handle(_ data: Data) async {
         guard await model.prepare(imageData: data) else { return }
         async let uploading: Void = model.upload()
         async let resolving: Void = places.resolve(exifPoint: model.prepared?.coordinate)
         _ = await (uploading, resolving)
+        guard model.phase == .uploaded else { return }
+        await model.createEntry(placeName: places.placeName, placeSource: places.placeSource, point: places.selected?.point ?? places.fix)
+        guard model.phase == .ready, let result = model.createResult else { return }
+        verdictModel = VerdictSheetModel(
+            api: apiClient,
+            entry: result.entry,
+            mode: .created(result.verdict),
+            capsHit: result.capsHit,
+            projectedPoints: result.projectedPoints,
+            placeName: places.placeName,
+            placeSource: places.placeSource
+        )
     }
 
     private var header: some View {
@@ -121,6 +155,20 @@ struct TrackView: View {
                 Label("Đã tải ảnh lên", systemImage: "checkmark.circle.fill")
                     .font(.roundedLabel(15))
                     .foregroundStyle(Theme.meal)
+            }
+        case .analyzing:
+            GlassCard {
+                HStack(spacing: 10) {
+                    ProgressView().controlSize(.small)
+                    Text("AI đang xem ảnh…")
+                        .font(.roundedLabel(15))
+                }
+            }
+        case .ready:
+            GlassCard {
+                Label("Đã phân tích xong", systemImage: "sparkles")
+                    .font(.roundedLabel(15))
+                    .foregroundStyle(Theme.ember)
             }
         case .failed(let message):
             GlassCard {
