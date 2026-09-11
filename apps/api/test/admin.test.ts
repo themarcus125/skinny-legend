@@ -54,6 +54,13 @@ describe('admin users', () => {
     expect(res.status).toBe(400);
     expect((await res.json()).error.code).toBe('invalid_body');
   });
+
+  it('404s on a well-formed but nonexistent id and writes no audit row', async () => {
+    const admin = await asUser('adm', { admin: true });
+    const res = await app.request('/admin/users/00000000-0000-0000-0000-000000000000', { method: 'PATCH', headers: json(admin.headers), body: JSON.stringify({ status: 'active' }) });
+    expect(res.status).toBe(404);
+    expect(await db.select().from(schema.auditLog)).toHaveLength(0);
+  });
 });
 
 describe('admin entries', () => {
@@ -115,6 +122,24 @@ describe('admin rules', () => {
     const got = await (await app.request('/admin/rules', { headers: admin.headers })).json();
     expect(got.challenge.streakPoints).toBe(6);
     expect(got.rules.find((r: { category: string }) => r.category === 'exercise').points).toBe(4);
+    const audits = await db.select().from(schema.auditLog);
+    expect(audits.some((a) => a.action === 'rules.update')).toBe(true);
+  });
+
+  it('rejects duplicate categories with 400 and leaves rules unchanged', async () => {
+    const admin = await asUser('adm', { admin: true });
+    const res = await app.request('/admin/rules', { method: 'PUT', headers: json(admin.headers), body: JSON.stringify({
+      challenge: { startDate: '2026-09-08', endDate: '2026-12-24', streakPoints: 6, streakLength: 7 },
+      rules: [
+        { category: 'exercise', points: 4, capCount: 1, capPeriod: 'day' },
+        { category: 'exercise', points: 5, capCount: 1, capPeriod: 'day' },
+        { category: 'meal', points: 2, capCount: 1, capPeriod: 'day' },
+      ],
+    }) });
+    expect(res.status).toBe(400);
+    expect((await res.json()).error.code).toBe('invalid_body');
+    const rules = await db.select().from(schema.scoringRules).where(eq(schema.scoringRules.challengeId, snapshotChallenge.id));
+    expect(rules).toHaveLength(3);
   });
 });
 

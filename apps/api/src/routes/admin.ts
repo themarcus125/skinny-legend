@@ -25,9 +25,12 @@ const patchUser = z.object({ status: z.enum(['pending', 'active', 'disabled']).o
 adminRoutes.patch('/users/:id', validate('param', idParam), validate('json', patchUser), async (c) => {
   const id = c.req.valid('param').id;
   const patch = c.req.valid('json');
-  const [user] = await db.update(schema.users).set(patch).where(eq(schema.users.id, id)).returning();
-  if (!user) throw new ApiError(404, 'not_found', 'User not found');
-  await writeAudit(c.get('user').id, 'user.update', 'user', id, patch);
+  const user = await db.transaction(async (tx) => {
+    const [row] = await tx.update(schema.users).set(patch).where(eq(schema.users.id, id)).returning();
+    if (!row) throw new ApiError(404, 'not_found', 'User not found');
+    await writeAudit(c.get('user').id, 'user.update', 'user', id, patch, tx);
+    return row;
+  });
   return c.json({ user });
 });
 
@@ -66,27 +69,29 @@ const patchEntry = z.object({ categories: z.array(z.enum(['exercise', 'meal', 'g
 adminRoutes.patch('/entries/:id', validate('param', idParam), validate('json', patchEntry), async (c) => {
   const id = c.req.valid('param').id;
   const body = c.req.valid('json');
-  const [existing] = await db.select().from(schema.entries).where(eq(schema.entries.id, id));
-  if (!existing) throw new ApiError(404, 'not_found', 'Entry not found');
   const updated = await db.transaction(async (tx) => {
+    const [existing] = await tx.select().from(schema.entries).where(eq(schema.entries.id, id));
+    if (!existing) throw new ApiError(404, 'not_found', 'Entry not found');
     if (body.categories) {
       await tx.delete(schema.entryCategories).where(eq(schema.entryCategories.entryId, id));
       const cats = [...new Set(body.categories)];
       if (cats.length) await tx.insert(schema.entryCategories).values(cats.map((category) => ({ entryId: id, category, source: 'admin' as const })));
     }
     const [row] = await tx.update(schema.entries).set({ updatedAt: new Date(), ...(body.status ? { status: body.status } : {}) }).where(eq(schema.entries.id, id)).returning();
+    await writeAudit(c.get('user').id, 'entry.update', 'entry', id, body, tx);
     return row!;
   });
-  await writeAudit(c.get('user').id, 'entry.update', 'entry', id, body);
   const cats = (await db.select().from(schema.entryCategories).where(eq(schema.entryCategories.entryId, id))).map((r) => r.category as Category);
   return c.json({ entry: await toEntryDto(updated, cats) });
 });
 
 adminRoutes.delete('/entries/:id', validate('param', idParam), async (c) => {
   const id = c.req.valid('param').id;
-  const res = await db.update(schema.entries).set({ status: 'rejected', updatedAt: new Date() }).where(eq(schema.entries.id, id)).returning({ id: schema.entries.id });
-  if (res.length === 0) throw new ApiError(404, 'not_found', 'Entry not found');
-  await writeAudit(c.get('user').id, 'entry.reject', 'entry', id);
+  await db.transaction(async (tx) => {
+    const res = await tx.update(schema.entries).set({ status: 'rejected', updatedAt: new Date() }).where(eq(schema.entries.id, id)).returning({ id: schema.entries.id });
+    if (res.length === 0) throw new ApiError(404, 'not_found', 'Entry not found');
+    await writeAudit(c.get('user').id, 'entry.reject', 'entry', id, undefined, tx);
+  });
   return c.body(null, 204);
 });
 
@@ -99,7 +104,9 @@ adminRoutes.get('/rules', async (c) => {
 
 const putRules = z.object({
   challenge: z.object({ startDate: z.string().date(), endDate: z.string().date(), streakPoints: z.number().int().min(0), streakLength: z.number().int().min(1) }),
-  rules: z.array(z.object({ category: z.enum(['exercise', 'meal', 'group']), points: z.number().int().min(0), capCount: z.number().int().min(0), capPeriod: z.enum(['day', 'week']) })).min(1),
+  rules: z.array(z.object({ category: z.enum(['exercise', 'meal', 'group']), points: z.number().int().min(0), capCount: z.number().int().min(0), capPeriod: z.enum(['day', 'week']) }))
+    .min(1)
+    .refine((rules) => new Set(rules.map((r) => r.category)).size === rules.length, { message: 'Duplicate category in rules' }),
 });
 adminRoutes.put('/rules', validate('json', putRules), async (c) => {
   const body = c.req.valid('json');
@@ -108,8 +115,8 @@ adminRoutes.put('/rules', validate('json', putRules), async (c) => {
     await tx.update(schema.challenges).set(body.challenge).where(eq(schema.challenges.id, challenge!.id));
     await tx.delete(schema.scoringRules).where(eq(schema.scoringRules.challengeId, challenge!.id));
     await tx.insert(schema.scoringRules).values(body.rules.map((r) => ({ ...r, challengeId: challenge!.id })));
+    await writeAudit(c.get('user').id, 'rules.update', 'challenge', challenge!.id, body, tx);
   });
-  await writeAudit(c.get('user').id, 'rules.update', 'challenge', challenge!.id, body);
   return c.json({ ok: true });
 });
 
