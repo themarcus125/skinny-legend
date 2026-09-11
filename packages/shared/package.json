@@ -1,0 +1,19 @@
+{
+  "name": "@skinny/shared",
+  "version": "0.0.1",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": { ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" } },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "date-fns": "^4.1.0",
+    "@date-fns/tz": "^1.2.0",
+    "drizzle-orm": "^0.44.0",
+    "zod": "^4.0.0"
+  }
+}
