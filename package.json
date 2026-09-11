@@ -9,6 +9,7 @@
     "typecheck": "pnpm -r typecheck",
     "predev:api": "pnpm --filter @skinny/shared build",
     "dev:api": "pnpm --filter @skinny/api dev",
+    "dev:admin": "pnpm --filter @skinny/admin dev",
     "db:up": "docker compose up -d db",
     "db:migrate": "pnpm --filter @skinny/api db:migrate"
   },
