@@ -41,7 +41,7 @@ export function EntriesTable({
                 // eslint-disable-next-line @next/next/no-img-element -- R2 serves short-lived signed URLs; next/image would need remotePatterns and would cache them.
                 <img src={entry.thumbUrl} alt="" className="h-12 w-12 rounded object-cover" />
               ) : (
-                <div className="h-12 w-12 rounded bg-muted" aria-label="Không có ảnh thu nhỏ" />
+                <div className="h-12 w-12 rounded bg-muted" role="img" aria-label="Không có ảnh thu nhỏ" />
               )}
             </TableCell>
             <TableCell className="font-medium">{entry.user.displayName}</TableCell>

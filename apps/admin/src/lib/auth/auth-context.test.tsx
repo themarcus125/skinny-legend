@@ -37,6 +37,9 @@ function renderProvider(client: QueryClient) {
 
 afterEach(() => {
   vi.restoreAllMocks();
+  vi.unstubAllEnvs();
+  vi.doUnmock('firebase/auth');
+  vi.doUnmock('./firebase');
 });
 
 describe('AuthProvider', () => {
@@ -80,5 +83,79 @@ describe('AuthProvider', () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     expect(screen.getByTestId('status')).toHaveTextContent('signed-out');
+  });
+
+  it('fails loudly when NEXT_PUBLIC_API_BASE_URL is unset (live mode)', async () => {
+    // API_BASE_URL is read from process.env at module load time, so the module must be
+    // re-imported fresh after stubbing the env vars for the stub to take effect.
+    vi.resetModules();
+    vi.stubEnv('NEXT_PUBLIC_MOCK', '');
+    vi.stubEnv('NEXT_PUBLIC_API_BASE_URL', '');
+
+    const { AuthProvider: FreshAuthProvider, useAuth: freshUseAuth } = await import('./auth-context');
+
+    function FreshConsumer() {
+      const { status, error } = freshUseAuth();
+      return (
+        <div>
+          <p data-testid="status">{status}</p>
+          <p data-testid="error">{error}</p>
+        </div>
+      );
+    }
+
+    const client = new QueryClient();
+    render(
+      <QueryClientProvider client={client}>
+        <FreshAuthProvider>
+          <FreshConsumer />
+        </FreshAuthProvider>
+      </QueryClientProvider>,
+    );
+
+    await waitFor(() => expect(screen.getByTestId('status')).toHaveTextContent('error'));
+    expect(screen.getByTestId('error')).toHaveTextContent('Thiếu biến môi trường NEXT_PUBLIC_API_BASE_URL');
+  });
+
+  it('sets status to error when the live sign-out call fails', async () => {
+    vi.resetModules();
+    vi.stubEnv('NEXT_PUBLIC_MOCK', '');
+    vi.stubEnv('NEXT_PUBLIC_API_BASE_URL', 'http://localhost:3000');
+
+    vi.doMock('firebase/auth', () => ({
+      onAuthStateChanged: vi.fn(() => vi.fn()),
+      signInWithPopup: vi.fn(),
+      signOut: vi.fn().mockRejectedValue(new Error('network down')),
+    }));
+    vi.doMock('./firebase', () => ({
+      firebaseAuth: vi.fn(() => ({})),
+      googleProvider: vi.fn(() => ({})),
+      isFirebaseConfigured: vi.fn(() => true),
+    }));
+
+    const { AuthProvider: FreshAuthProvider, useAuth: freshUseAuth } = await import('./auth-context');
+
+    function FreshConsumer() {
+      const { status, signOutUser } = freshUseAuth();
+      return (
+        <div>
+          <p data-testid="status">{status}</p>
+          <button onClick={() => void signOutUser()}>sign out</button>
+        </div>
+      );
+    }
+
+    const client = new QueryClient();
+    render(
+      <QueryClientProvider client={client}>
+        <FreshAuthProvider>
+          <FreshConsumer />
+        </FreshAuthProvider>
+      </QueryClientProvider>,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'sign out' }));
+
+    await waitFor(() => expect(screen.getByTestId('status')).toHaveTextContent('error'));
   });
 });

@@ -3,7 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { onAuthStateChanged, signInWithPopup, signOut } from 'firebase/auth';
-import { createAdminApi, describeError, IS_MOCK } from '@/lib/api';
+import { API_BASE_URL, createAdminApi, describeError, IS_MOCK } from '@/lib/api';
 import type { AdminApi } from '@/lib/api/client';
 import type { AdminUser } from '@/lib/api/types';
 import { firebaseAuth, googleProvider, isFirebaseConfigured } from './firebase';
@@ -70,6 +70,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       void loadSession(generation);
       return;
     }
+    if (!API_BASE_URL) {
+      setError('Thiếu biến môi trường NEXT_PUBLIC_API_BASE_URL');
+      setStatus('error');
+      return;
+    }
     if (!isFirebaseConfigured()) {
       setError('Thiếu biến môi trường NEXT_PUBLIC_FIREBASE_*');
       setStatus('error');
@@ -118,6 +123,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (err) {
       console.error('[auth] Sign-out failed', err);
       setError('Đăng xuất thất bại. Vui lòng thử lại.');
+      setStatus('error');
     }
   }, [queryClient]);
 

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useFieldArray, useForm, type Control } from 'react-hook-form';
+import { useFieldArray, useForm, useWatch, type Control } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -84,7 +84,8 @@ export function RulesForm({
   const rules = useFieldArray({ control: form.control, name: 'rules' });
   const [pending, setPending] = useState<RulesFormValues | null>(null);
 
-  const used = form.watch('rules').map((rule) => rule.category);
+  const watchedRules = useWatch({ control: form.control, name: 'rules' });
+  const used = watchedRules.map((rule) => rule.category);
   const unused = CATEGORIES.filter((category) => !used.includes(category));
 
   return (
