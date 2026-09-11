@@ -38,4 +38,17 @@ describe('computeStreak', () => {
     const active = new Set(eachDay('2026-09-01', '2026-09-09'));
     expect(computeStreak(active, challenge, '2026-09-09').current).toBe(2);
   });
+
+  it('resets to 0 when asOf is past endDate and the final day was inactive', () => {
+    const shortChallenge = { ...challenge, endDate: '2026-09-14' };
+    const active = new Set(eachDay('2026-09-08', '2026-09-13'));
+    const r = computeStreak(active, shortChallenge, '2026-10-05');
+    expect(r).toEqual({ current: 0, longest: 6, bonusesAwarded: 0, bonusPoints: 0 });
+  });
+
+  it('returns all zeros when asOf is strictly before startDate', () => {
+    const active = new Set(eachDay('2026-09-08', '2026-09-14'));
+    const r = computeStreak(active, challenge, '2026-09-07');
+    expect(r).toEqual({ current: 0, longest: 0, bonusesAwarded: 0, bonusPoints: 0 });
+  });
 });
