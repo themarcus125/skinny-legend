@@ -18,6 +18,13 @@ import { formatDateTime } from '@/lib/format';
 import { ROLE_LABELS, USER_STATUS_LABELS } from '@/lib/labels';
 import { availableActions, statusVariant, type MemberAction } from './member-actions';
 
+/** statusVariant() is pinned by its own tests; the soft pill tone is mapped here instead. */
+const STATUS_TONE: Record<ReturnType<typeof statusVariant>, 'success' | 'warning' | 'destructive'> = {
+  default: 'success',
+  secondary: 'warning',
+  destructive: 'destructive',
+};
+
 interface PendingConfirm {
   user: AdminUser;
   action: MemberAction;
@@ -47,7 +54,7 @@ export function MembersTable({
 
   return (
     <>
-      <Table>
+      <Table containerClassName="max-h-[calc(100dvh-15rem)]">
         <TableHeader>
           <TableRow>
             <TableHead>Tên</TableHead>
@@ -65,9 +72,17 @@ export function MembersTable({
             const actions = availableActions(user).filter((action) => !(isSelf && action.key === 'disable'));
             return (
               <TableRow key={user.id}>
-                <TableCell className="font-medium">{user.displayName}</TableCell>
+                <TableCell className="font-medium text-foreground">
+                  <span
+                    aria-hidden
+                    className="mr-2.5 inline-flex size-7 items-center justify-center rounded-full bg-secondary align-middle text-xs font-semibold text-secondary-foreground"
+                  >
+                    {user.displayName.charAt(0).toUpperCase()}
+                  </span>
+                  {user.displayName}
+                </TableCell>
                 <TableCell>
-                  <Badge variant={statusVariant(user.status)}>{USER_STATUS_LABELS[user.status]}</Badge>
+                  <Badge variant={STATUS_TONE[statusVariant(user.status)]}>{USER_STATUS_LABELS[user.status]}</Badge>
                 </TableCell>
                 <TableCell>
                   <Select
@@ -77,7 +92,8 @@ export function MembersTable({
                     onValueChange={(role) => onPatch(user.id, { role: role as Role })}
                   >
                     <SelectTrigger
-                      className="w-36"
+                      size="sm"
+                      className="w-40"
                       aria-label={`Vai trò của ${user.displayName}`}
                       title={isSelf ? 'Không thể đổi vai trò của chính bạn' : undefined}
                     >
@@ -92,13 +108,18 @@ export function MembersTable({
                     </SelectContent>
                   </Select>
                 </TableCell>
-                <TableCell className="text-sm text-muted-foreground">{formatDateTime(user.createdAt)}</TableCell>
+                <TableCell className="text-sm tabular-nums text-foreground-secondary">
+                  {formatDateTime(user.createdAt)}
+                </TableCell>
                 <TableCell className="space-x-2 text-right">
                   {actions.map((action) => (
                     <Button
                       key={action.key}
                       size="sm"
                       variant={action.confirm ? 'outline' : 'default'}
+                      className={
+                        action.confirm ? 'text-destructive hover:border-destructive/30 hover:bg-danger-soft' : undefined
+                      }
                       disabled={isPatching}
                       onClick={() => run(user, action)}
                     >

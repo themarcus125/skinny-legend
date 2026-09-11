@@ -69,17 +69,17 @@ function OverrideDialogBody({
           <img
             src={entry.photoUrl}
             alt={`Ảnh của ${entry.user.displayName}`}
-            className="h-48 w-full rounded-md object-cover"
+            className="h-52 w-full rounded-lg object-cover ring-1 ring-border"
           />
 
           {entry.verdict?.reason ? (
-            <p className="text-sm text-muted-foreground">“{entry.verdict.reason}”</p>
+            <p className="rounded-lg bg-muted px-3 py-2 text-sm text-foreground-secondary">“{entry.verdict.reason}”</p>
           ) : null}
 
-          <div className="space-y-3">
+          <div className="space-y-1">
             {CATEGORIES.map((category) => (
-              <div key={category} className="flex items-center justify-between">
-                <label htmlFor={`cat-${category}`} className="text-sm">
+              <div key={category} className="flex h-10 items-center justify-between rounded-lg px-3 hover:bg-muted">
+                <label htmlFor={`cat-${category}`} className="text-base">
                   {CATEGORY_LABELS[category]}
                 </label>
                 <Switch
@@ -91,8 +91,8 @@ function OverrideDialogBody({
             ))}
           </div>
 
-          <div className="space-y-1">
-            <label className="text-xs text-muted-foreground" htmlFor="override-status">
+          <div className="space-y-1.5">
+            <label className="text-label font-medium text-secondary-foreground" htmlFor="override-status">
               Trạng thái
             </label>
             <Select items={ENTRY_STATUS_LABELS} value={status} onValueChange={(next) => setStatus(next as EntryStatus)}>
@@ -109,7 +109,7 @@ function OverrideDialogBody({
             </Select>
           </div>
 
-          <p className="text-xs text-muted-foreground">
+          <p className="text-label text-muted-foreground">
             Hạng mục sẽ được ghi với nguồn <code>admin</code> và điểm được tính lại ngay.
           </p>
         </div>

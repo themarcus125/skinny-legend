@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { CountPill, PageHeader } from '@/components/page-header';
 import { QueryState } from '@/components/query-state';
 import { EntriesFilters } from '@/components/entries/entries-filters';
 import { EntriesTable } from '@/components/entries/entries-table';
@@ -53,29 +54,32 @@ export default function EntriesPage() {
   const isMutating = patchEntry.isPending || rejectEntry.isPending;
 
   return (
-    <div className="space-y-6">
-      <header>
-        <h1 className="text-2xl font-semibold">Mục ghi</h1>
-        <p className="text-sm text-muted-foreground">
-          API trả tối đa 200 mục mới nhất cho mỗi bộ lọc.
-        </p>
-      </header>
+    <div>
+      <PageHeader
+        title="Mục ghi"
+        description="API trả tối đa 200 mục mới nhất cho mỗi bộ lọc."
+        action={entriesQuery.data ? <CountPill>{entries.length} mục</CountPill> : null}
+      />
 
-      <EntriesFilters value={form} onChange={setForm} members={membersQuery.data ?? []} />
+      <section className="overflow-hidden rounded-xl border border-border bg-card shadow-card">
+        <div className="border-b border-border px-5 py-4">
+          <EntriesFilters value={form} onChange={setForm} members={membersQuery.data ?? []} />
+        </div>
 
-      <QueryState
-        isPending={entriesQuery.isPending}
-        error={entriesQuery.error}
-        isEmpty={entries.length === 0}
-        emptyLabel="Không có mục ghi nào khớp bộ lọc."
-      >
-        <EntriesTable
-          entries={entries}
-          isMutating={isMutating}
-          onOverride={setEditing}
-          onReject={(entry) => rejectEntry.mutate(entry.id)}
-        />
-      </QueryState>
+        <QueryState
+          isPending={entriesQuery.isPending}
+          error={entriesQuery.error}
+          isEmpty={entries.length === 0}
+          emptyLabel="Không có mục ghi nào khớp bộ lọc."
+        >
+          <EntriesTable
+            entries={entries}
+            isMutating={isMutating}
+            onOverride={setEditing}
+            onReject={(entry) => rejectEntry.mutate(entry.id)}
+          />
+        </QueryState>
+      </section>
 
       <OverrideDialog
         entry={editing}

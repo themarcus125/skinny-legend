@@ -2,6 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { FeedbackList } from '@/components/feedback/feedback-list';
+import { CountPill, PageHeader } from '@/components/page-header';
 import { QueryState } from '@/components/query-state';
 import { useAdminApi } from '@/lib/auth/auth-context';
 
@@ -11,13 +12,12 @@ export default function FeedbackPage() {
   const items = feedbackQuery.data ?? [];
 
   return (
-    <div className="space-y-6">
-      <header>
-        <h1 className="text-2xl font-semibold">Góp ý</h1>
-        <p className="text-sm text-muted-foreground">
-          Góp ý gửi từ ứng dụng iOS, mới nhất trước. Chỉ xem, không sửa được.
-        </p>
-      </header>
+    <div>
+      <PageHeader
+        title="Góp ý"
+        description="Góp ý gửi từ ứng dụng iOS, mới nhất trước. Chỉ xem, không sửa được."
+        action={feedbackQuery.data ? <CountPill>{items.length} góp ý</CountPill> : null}
+      />
 
       <QueryState
         isPending={feedbackQuery.isPending}
