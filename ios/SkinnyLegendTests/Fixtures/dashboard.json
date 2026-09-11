@@ -1,0 +1,11 @@
+{
+  "today": { "points": 5, "categories": ["exercise", "meal"] },
+  "yesterday": { "points": 3 },
+  "deltaVsYesterday": 2,
+  "streak": { "current": 4, "longest": 6, "bonusesAwarded": 0, "bonusPoints": 0 },
+  "total": 41,
+  "rank": 2,
+  "memberCount": 5,
+  "capsHit": { "exercise": true, "meal": true, "group": false },
+  "remaining": ["group"]
+}
