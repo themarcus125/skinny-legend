@@ -76,4 +76,50 @@ enum ImagePipeline {
         formatter.dateFormat = "yyyy:MM:dd HH:mm:ss"
         return formatter.date(from: raw)
     }
+
+    /// Avatars are 512 px squares (spec §6 Uploads): centre-crop to a square, then downsample.
+    static let avatarEdge: CGFloat = 512
+
+    static func prepareAvatar(_ data: Data) throws -> Data {
+        guard let source = CGImageSourceCreateWithData(data as CFData, nil), CGImageSourceGetCount(source) > 0,
+              let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
+              let pixelWidth = properties[kCGImagePropertyPixelWidth] as? Int,
+              let pixelHeight = properties[kCGImagePropertyPixelHeight] as? Int
+        else {
+            throw ImagePipelineError.decodeFailed
+        }
+        // Decode at full resolution with EXIF orientation baked in (`WithTransform`), capping the
+        // thumbnail at the image's own largest raw dimension so nothing is downsampled yet — the
+        // crop below has to run against the actual pixel grid, not a size already shrunk to 512
+        // on the long edge (which would crop the *short* edge down to well under a 512 square).
+        let orientOptions: [CFString: Any] = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceShouldCacheImmediately: true,
+            kCGImageSourceThumbnailMaxPixelSize: max(pixelWidth, pixelHeight),
+        ]
+        guard let oriented = CGImageSourceCreateThumbnailAtIndex(source, 0, orientOptions as CFDictionary) else {
+            throw ImagePipelineError.decodeFailed
+        }
+        let edge = min(oriented.width, oriented.height)
+        let crop = CGRect(
+            x: (oriented.width - edge) / 2,
+            y: (oriented.height - edge) / 2,
+            width: edge,
+            height: edge
+        )
+        guard let square = oriented.cropping(to: crop) else { throw ImagePipelineError.decodeFailed }
+
+        // Downsample the square crop to `avatarEdge`, never upscaling a smaller original.
+        let targetEdge = min(CGFloat(edge), avatarEdge)
+        let format = UIGraphicsImageRendererFormat.default()
+        format.scale = 1
+        let resized = UIGraphicsImageRenderer(size: CGSize(width: targetEdge, height: targetEdge), format: format).image { _ in
+            UIImage(cgImage: square).draw(in: CGRect(x: 0, y: 0, width: targetEdge, height: targetEdge))
+        }
+        guard let jpeg = resized.jpegData(compressionQuality: jpegQuality) else {
+            throw ImagePipelineError.encodeFailed
+        }
+        return jpeg
+    }
 }

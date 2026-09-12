@@ -5,6 +5,8 @@ import SwiftUI
 struct AccountView: View {
     @State private var model: AccountModel
     @State private var editing: VerdictSheetModel?
+    @State private var isProfileSheetPresented = false
+    @Environment(AppEnvironment.self) private var env
     private let apiClient: any APIClient
 
     init(api: any APIClient) {
@@ -14,6 +16,33 @@ struct AccountView: View {
 
     var body: some View {
         List {
+            Section {
+                Button {
+                    isProfileSheetPresented = true
+                } label: {
+                    HStack(spacing: 14) {
+                        AvatarView(url: model.profileSummary?.avatarUrl,
+                                   displayName: env.currentUser?.displayName ?? "",
+                                   size: 56)
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(env.currentUser?.displayName ?? "")
+                                .font(.roundedLabel(19, weight: .bold))
+                            if let rank = model.myRank, let total = model.myTotal {
+                                Text("Hạng \(rank) · \(total) điểm")
+                                    .font(.roundedLabel(13, weight: .medium))
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.vertical, 4)
+                }
+                .buttonStyle(.plain)
+            }
+
             if let errorMessage = model.errorMessage {
                 Section {
                     Label(errorMessage, systemImage: "exclamationmark.triangle.fill")
@@ -73,6 +102,20 @@ struct AccountView: View {
         .sheet(item: $editing) { sheetModel in
             VerdictSheet(model: sheetModel, placeResolver: nil) { _ in
                 Task { await model.reloadAfterEdit() }
+            }
+        }
+        .sheet(isPresented: $isProfileSheetPresented) {
+            if let user = env.currentUser {
+                ProfileEditSheet(
+                    api: apiClient,
+                    user: user,
+                    currentAvatarURL: model.profileSummary?.avatarUrl
+                ) { _ in
+                    Task {
+                        await env.refreshMe()
+                        await model.loadFirstPage()
+                    }
+                }
             }
         }
     }
