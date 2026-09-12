@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
-import { and, desc, eq, lt } from 'drizzle-orm';
+import { and, desc, eq, gte, isNotNull, lt } from 'drizzle-orm';
 import { computeScore, isoWeekKey, addDays, schema, type Category, type ScoreResult, CATEGORIES } from '@skinny/shared';
 import { db } from '../db.js';
 import { validate, uuidParam } from '../validate.js';
@@ -117,6 +117,21 @@ readRoutes.get('/feed', validate('query', z.object({ cursor: z.string().datetime
   }
   const nextCursor = rows.length === 30 ? rows[rows.length - 1]!.entry.createdAt.toISOString() : null;
   return c.json({ entries, nextCursor });
+});
+
+readRoutes.get('/entries/map', validate('query', z.object({ days: z.coerce.number().int().min(1).max(90).default(30) })), async (c) => {
+  const { days } = c.req.valid('query');
+  const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+  const rows = await db.select({ entry: schema.entries, user: schema.users })
+    .from(schema.entries).innerJoin(schema.users, eq(schema.users.id, schema.entries.userId))
+    .where(and(eq(schema.entries.status, 'confirmed'), eq(schema.users.status, 'active'), isNotNull(schema.entries.lat), isNotNull(schema.entries.lng), gte(schema.entries.takenAt, since)))
+    .orderBy(desc(schema.entries.takenAt)).limit(500);
+  const pins = [];
+  for (const { entry, user } of rows) {
+    const cats = (await db.select().from(schema.entryCategories).where(eq(schema.entryCategories.entryId, entry.id))).map((r) => r.category as Category);
+    pins.push({ entryId: entry.id, lat: entry.lat, lng: entry.lng, placeName: entry.placeName, takenAt: entry.takenAt.toISOString(), localDate: entry.localDate, categories: cats, thumbUrl: entry.thumbKey ? await storage.publicUrl(entry.thumbKey) : null, user: await userDto(user) });
+  }
+  return c.json({ pins });
 });
 
 const historyQuery = z.object({ cursor: z.string().datetime({ offset: true }).optional() });

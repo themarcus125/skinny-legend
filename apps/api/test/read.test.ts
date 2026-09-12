@@ -19,6 +19,15 @@ async function confirmed(headers: Record<string, string>, takenAt: string, categ
   return created.entry.id as string;
 }
 
+async function confirmedAt(headers: Record<string, string>, takenAt: string, categories: string[], extra: Record<string, unknown> = {}) {
+  const h = { ...headers, 'content-type': 'application/json' };
+  const presign = await (await app.request('/uploads/presign', { method: 'POST', headers: h, body: JSON.stringify({ kind: 'photo', contentType: 'image/png' }) })).json();
+  await storage.putObject(presign.key, png, 'image/png');
+  const created = await (await app.request('/entries', { method: 'POST', headers: h, body: JSON.stringify({ photoKey: presign.key, takenAt, ...extra }) })).json();
+  await app.request(`/entries/${created.entry.id}`, { method: 'PATCH', headers: h, body: JSON.stringify({ categories }) });
+  return created.entry.id as string;
+}
+
 // Freeze "today" at 2026-09-10 08:00 Vietnam time.
 vi.useFakeTimers({ now: new Date('2026-09-10T01:00:00Z'), toFake: ['Date'] });
 
@@ -148,5 +157,28 @@ describe('GET /feed and GET /users/:id/entries', () => {
     await app.request('/entries', { method: 'POST', headers: h, body: JSON.stringify({ photoKey: presign.key, takenAt: '2026-09-09T01:00:00Z' }) });
     const feed = await (await app.request('/feed', { headers: a.headers })).json();
     expect(feed.entries).toEqual([]);
+  });
+});
+
+describe('GET /entries/map', () => {
+  it('returns confirmed pins with coordinates, newest first, with user info', async () => {
+    const a = await asUser('a', { activate: true, name: 'A' });
+    const b = await asUser('b', { activate: true, name: 'B' });
+    await confirmedAt(a.headers, '2026-09-09T01:00:00Z', ['exercise'], { lat: 10.77, lng: 106.70, placeName: 'Gym X' });
+    await confirmedAt(b.headers, '2026-09-10T01:00:00Z', ['meal'], { lat: 10.78, lng: 106.71 });
+    await confirmedAt(a.headers, '2026-09-08T01:00:00Z', ['group'], {}); // no coords → excluded
+    const body = await (await app.request('/entries/map?days=30', { headers: a.headers })).json();
+    expect(body.pins.map((p: { user: { displayName: string } }) => p.user.displayName)).toEqual(['B', 'A']);
+    expect(body.pins[1]).toMatchObject({ lat: 10.77, lng: 106.7, placeName: 'Gym X', categories: ['exercise'] });
+  });
+  it('excludes pending entries and entries outside the window', async () => {
+    const a = await asUser('a', { activate: true });
+    await confirmedAt(a.headers, '2026-08-01T01:00:00Z', ['exercise'], { lat: 1, lng: 1 });
+    const body = await (await app.request('/entries/map?days=7', { headers: a.headers })).json();
+    expect(body.pins).toEqual([]);
+  });
+  it('rejects days outside 1–90', async () => {
+    const a = await asUser('a', { activate: true });
+    expect((await app.request('/entries/map?days=0', { headers: a.headers })).status).toBe(400);
   });
 });
