@@ -211,7 +211,8 @@ struct LocalizationLintTests {
     }
 
     @Test func noEnglishValueIsIdenticalToItsVietnameseKey() throws {
-        let properNouns: Set<String> = ["Skinny Legend", "Momo", "Google", "Strava"]
+        // `Tiếng Việt` / `English` are language endonyms — they read the same in both languages.
+        let properNouns: Set<String> = ["Skinny Legend", "Momo", "Google", "Strava", "Tiếng Việt", "English"]
         let echoes = try Self.catalog().strings
             .filter { key, entry in
                 guard let value = entry.localizations?["en"]?.stringUnit?.value else { return false }

@@ -3,6 +3,10 @@ import SwiftUI
 /// Spec §7: today's points, streak counter, delta vs yesterday, rank, and a checklist of what
 /// can still score today.
 struct DashboardView: View {
+    /// Declared so this body re-runs when the Account picker changes the language: it renders
+    /// `String`s from `Localized` (labels, `LocalDay.display`), and `Text(String)` carries no
+    /// locale dependency of its own the way `Text(LocalizedStringKey)` does.
+    @Environment(\.locale) private var locale
     @State private var model: DashboardModel
     private let apiClient: any APIClient
 
@@ -30,7 +34,10 @@ struct DashboardView: View {
                 content(dashboard)
             }
         }
-        .navigationTitle("Tổng quan")
+        // A `String` title on purpose: a `LocalizedStringKey` title is bridged to the navigation bar
+        // once and never re-resolves when the in-app language changes; this one is recomputed
+        // because the view declares `@Environment(\.locale)`.
+        .navigationTitle(Localized.string("Tổng quan"))
         .task { await model.load() }
         .refreshable { await model.load() }
     }
@@ -156,20 +163,7 @@ struct DashboardView: View {
                     .font(.roundedLabel(13, weight: .bold))
                     .foregroundStyle(.secondary)
                 ForEach(Category.allCases) { category in
-                    let isDone = dashboard.capsHit[category]
-                    HStack(spacing: 10) {
-                        Image(systemName: isDone ? "checkmark.circle.fill" : "circle")
-                            .font(.system(size: 18, weight: .bold))
-                            .foregroundStyle(isDone ? Theme.meal : Color.secondary)
-                        Text(category.label)
-                            .font(.roundedLabel(16, weight: .medium))
-                            .strikethrough(isDone, color: .secondary)
-                            .foregroundStyle(isDone ? Color.secondary : Color.primary)
-                        Spacer()
-                        Text(isDone ? "đã đủ \(Rulebook.capNoun(for: category))" : "+\(Rulebook.points(for: category))")
-                            .font(.roundedLabel(14, weight: .bold))
-                            .foregroundStyle(isDone ? Color.secondary : Theme.flame)
-                    }
+                    ChecklistRow(category: category, isDone: dashboard.capsHit[category])
                 }
             }
         }
@@ -195,6 +189,32 @@ struct DashboardView: View {
                     ? "Tổng điểm: \(dashboard.total)"
                     : "Tổng điểm: \(dashboard.total) (thưởng chuỗi \(dashboard.streak.bonusPoints))"
             )
+        }
+    }
+}
+
+/// One line of the "still scorable today" checklist. A separate view on purpose: `Category` is
+/// a plain enum, and SwiftUI skips re-evaluating a `ForEach` row whose element is unchanged even
+/// when the parent body re-runs — so the row itself has to depend on the environment locale for
+/// `Category.label` and `Rulebook.capNoun` (both `Localized` strings) to follow the picker.
+private struct ChecklistRow: View {
+    let category: Category
+    let isDone: Bool
+    @Environment(\.locale) private var locale
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: isDone ? "checkmark.circle.fill" : "circle")
+                .font(.system(size: 18, weight: .bold))
+                .foregroundStyle(isDone ? Theme.meal : Color.secondary)
+            Text(category.label)
+                .font(.roundedLabel(16, weight: .medium))
+                .strikethrough(isDone, color: .secondary)
+                .foregroundStyle(isDone ? Color.secondary : Color.primary)
+            Spacer()
+            Text(isDone ? "đã đủ \(Rulebook.capNoun(for: category))" : "+\(Rulebook.points(for: category))")
+                .font(.roundedLabel(14, weight: .bold))
+                .foregroundStyle(isDone ? Color.secondary : Theme.flame)
         }
     }
 }

@@ -58,7 +58,7 @@ struct PendingApprovalView: View {
 #Preview("Chờ duyệt") {
     ZStack {
         WarmBackground()
-        PendingApprovalView(user: UserDTO(id: "u1", firebaseUid: "f1", displayName: "Khoa", avatarKey: nil, role: .member, status: .pending, createdAt: Date()))
+        PendingApprovalView(user: UserDTO(id: "u1", firebaseUid: "f1", displayName: "Khoa", avatarKey: nil, role: .member, status: .pending, locale: .vi, createdAt: Date()))
     }
     .environment(AppEnvironment(api: MockAPIClient(), auth: MockAuthService(startSignedIn: false)))
 }

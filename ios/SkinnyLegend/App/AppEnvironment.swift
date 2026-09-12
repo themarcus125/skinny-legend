@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import OSLog
 
 /// The single object every screen reads from `@Environment`. Owns the API client, the auth
 /// service and the signed-in session state.
@@ -29,8 +30,24 @@ final class AppEnvironment {
     let auth: any AuthService
     let placeSearch: any PlaceSearching
     let locator: any LocationFixing
+    /// Where the language choice is persisted, under `AppLocale.storageKey`. Injected so tests
+    /// can hand in a throwaway suite instead of writing to the process-wide defaults.
+    private let defaults: UserDefaults
+    private let log = Logger(subsystem: "com.themarcus125.skinnylegend", category: "locale")
 
     var session: SessionState = .loading
+
+    /// The user's language choice (spec §D). `.system` follows the device; `vi`/`en` pin it.
+    /// This is local state — the server only ever sees the *resolved* `UserDTO.Locale`.
+    private(set) var appLocale: AppLocale
+
+    /// What the whole view tree runs under (`.environment(\.locale, …)` at the root), so every
+    /// `Text`/`LocalizedStringKey` re-renders the moment the picker changes.
+    var resolvedLocale: Locale { appLocale.resolved().locale }
+
+    /// The concrete language the server is told about — `.system` still resolves to one, because
+    /// server-side copy (AI reasons, push templates) cannot follow "whatever this phone is set to".
+    var serverLocale: UserDTO.Locale { UserDTO.Locale(appLocale.resolved()) }
 
     var currentUser: UserDTO? {
         switch session {
@@ -39,11 +56,19 @@ final class AppEnvironment {
         }
     }
 
-    init(api: any APIClient, auth: any AuthService, placeSearch: any PlaceSearching = MapKitPlaceSearch(), locator: any LocationFixing = CoreLocationFixer()) {
+    init(
+        api: any APIClient,
+        auth: any AuthService,
+        placeSearch: any PlaceSearching = MapKitPlaceSearch(),
+        locator: any LocationFixing = CoreLocationFixer(),
+        defaults: UserDefaults = .standard
+    ) {
         self.api = api
         self.auth = auth
         self.placeSearch = placeSearch
         self.locator = locator
+        self.defaults = defaults
+        self.appLocale = AppLocale(rawValue: defaults.string(forKey: AppLocale.storageKey) ?? "") ?? .system
     }
 
     /// Chooses mock or live wiring once, at launch (spec §14). Gated on `useLiveBackend`
@@ -67,6 +92,44 @@ final class AppEnvironment {
                               placeSearch: MockPlaceSearch(), locator: MockLocationFixer())
     }
 
+    // MARK: - Language
+
+    /// Points `Localized` (the lookup every plain-`String` site reads) at the stored choice.
+    /// Called once at launch by `make()` rather than from `init`, because `Localized` is
+    /// process-global and test suites construct environments in parallel.
+    func activateLocale() {
+        Localized.setLanguage(appLocale.resolved())
+    }
+
+    /// Applies the choice locally first — `Localized` before `appLocale`, so the re-render the
+    /// observable change triggers already reads the new language — persists it, and then tells
+    /// the server. A failed `PATCH` is logged, not surfaced: the local preference is the source
+    /// of truth for this device, and `reconcileServerLocale` retries on the next sign-in.
+    func setAppLocale(_ choice: AppLocale) async {
+        Localized.setLanguage(choice.resolved())
+        appLocale = choice
+        defaults.set(choice.rawValue, forKey: AppLocale.storageKey)
+        guard currentUser != nil else { return }
+        await pushLocale(serverLocale)
+    }
+
+    /// The stored preference wins over whatever the server holds: if `me.locale` disagrees with
+    /// the resolved choice (the console changed it, or a `PATCH` was dropped), push ours.
+    private func reconcileServerLocale(with user: UserDTO) async {
+        guard user.status != .disabled, user.locale != serverLocale else { return }
+        await pushLocale(serverLocale)
+    }
+
+    /// Best-effort `PATCH /me { locale }`; the returned row replaces the session's copy.
+    private func pushLocale(_ locale: UserDTO.Locale) async {
+        do {
+            let user = try await api.updateMe(displayName: nil, avatarKey: nil, locale: locale)
+            if currentUser != nil { apply(user) }
+        } catch {
+            log.error("PATCH /me locale=\(locale.rawValue, privacy: .public) failed: \(String(describing: error), privacy: .public)")
+        }
+    }
+
     /// Restores the Firebase session, then upserts the user through `POST /auth/session`.
     func bootstrap() async {
         session = .loading
@@ -86,7 +149,9 @@ final class AppEnvironment {
     /// Re-reads `GET /me` after a profile edit or an admin approval.
     func refreshMe() async {
         do {
-            apply(try await api.me())
+            let user = try await api.me()
+            apply(user)
+            await reconcileServerLocale(with: user)
         } catch let error as APIError {
             handle(error)
         } catch {
@@ -101,7 +166,9 @@ final class AppEnvironment {
 
     private func loadSession() async {
         do {
-            apply(try await api.session())
+            let user = try await api.session()
+            apply(user)
+            await reconcileServerLocale(with: user)
         } catch let error as APIError {
             handle(error)
         } catch {

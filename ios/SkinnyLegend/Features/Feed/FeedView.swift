@@ -3,6 +3,10 @@ import SwiftUI
 /// Spec §7: group entries with photo, author, categories and place name. Coordinates are never
 /// shown — only `placeName` (spec §8 step 7).
 struct FeedView: View {
+    /// Declared so this body re-runs when the Account picker changes the language: it renders
+    /// `String`s from `Localized` (labels, `LocalDay.display`), and `Text(String)` carries no
+    /// locale dependency of its own the way `Text(LocalizedStringKey)` does.
+    @Environment(\.locale) private var locale
     @State private var model: FeedModel
     private let api: any APIClient
 
@@ -32,7 +36,10 @@ struct FeedView: View {
                 list
             }
         }
-        .navigationTitle("Nhật ký nhóm")
+        // A `String` title on purpose: a `LocalizedStringKey` title is bridged to the navigation bar
+        // once and never re-resolves when the in-app language changes; this one is recomputed
+        // because the view declares `@Environment(\.locale)`.
+        .navigationTitle(Localized.string("Nhật ký nhóm"))
         .task { if model.entries.isEmpty { await model.loadFirstPage() } }
         .refreshable { await model.loadFirstPage() }
         .toolbar {
@@ -63,6 +70,10 @@ struct FeedView: View {
 }
 
 private struct FeedRow: View {
+    /// Declared so this body re-runs when the Account picker changes the language: it renders
+    /// `String`s from `Localized` (labels, `LocalDay.display`), and `Text(String)` carries no
+    /// locale dependency of its own the way `Text(LocalizedStringKey)` does.
+    @Environment(\.locale) private var locale
     let entry: FeedEntryDTO
 
     var body: some View {

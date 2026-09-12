@@ -1,6 +1,10 @@
 import SwiftUI
 
 struct DayEntriesView: View {
+    /// Declared so this body re-runs when the Account picker changes the language: it renders
+    /// `String`s from `Localized` (labels, `LocalDay.display`), and `Text(String)` carries no
+    /// locale dependency of its own the way `Text(LocalizedStringKey)` does.
+    @Environment(\.locale) private var locale
     @State private var model: DayEntriesModel
 
     init(api: any APIClient, date: LocalDate) {

@@ -37,3 +37,10 @@ enum AppLocale: String, CaseIterable, Sendable, Hashable {
 
     func resolved() -> Resolved { resolved(deviceLanguageCode: Self.deviceLanguageCode) }
 }
+
+extension UserDTO.Locale {
+    /// The wire value for a resolved app language — the two enums share raw values by design.
+    init(_ resolved: AppLocale.Resolved) {
+        self = resolved == .en ? .en : .vi
+    }
+}

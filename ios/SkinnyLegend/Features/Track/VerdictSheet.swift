@@ -3,6 +3,10 @@ import SwiftUI
 /// Spec §7: photo, AI reason, detected categories as toggleable chips, projected points,
 /// cap warnings, and the location chip. "Không đúng?" expands the chips for editing.
 struct VerdictSheet: View {
+    /// Declared so this body re-runs when the Account picker changes the language: it renders
+    /// `String`s from `Localized` (labels, `LocalDay.display`), and `Text(String)` carries no
+    /// locale dependency of its own the way `Text(LocalizedStringKey)` does.
+    @Environment(\.locale) private var locale
     @Bindable var model: VerdictSheetModel
     var placeResolver: PlaceResolver?
     let onConfirmed: (EntryDTO) -> Void

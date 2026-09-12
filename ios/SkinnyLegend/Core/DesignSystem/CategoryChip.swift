@@ -4,6 +4,10 @@ import SwiftUI
 /// `isOn == false` renders as a plain outline so an un-selected chip never reads as an active state.
 /// Interactive glass is used only when an `action` exists.
 struct CategoryChip: View {
+    /// Declared so this body re-runs when the Account picker changes the language: it renders
+    /// `String`s from `Localized` (labels, `LocalDay.display`), and `Text(String)` carries no
+    /// locale dependency of its own the way `Text(LocalizedStringKey)` does.
+    @Environment(\.locale) private var locale
     let category: Category
     var isOn: Bool = true
     var isCapped: Bool = false

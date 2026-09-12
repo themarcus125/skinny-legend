@@ -30,13 +30,18 @@ struct LiveAPIClient: APIClient {
         try await send(UserEnvelope.self, "GET", "/me").user
     }
 
-    func updateMe(displayName: String?, avatarKey: String?) async throws -> UserDTO {
+    /// `PATCH /me`. Every field is optional and a `nil` one is left out of the body (synthesised
+    /// `Encodable` uses `encodeIfPresent`), which is what the route's "at least one field"
+    /// refinement needs — so an all-nil call is answered from `GET /me` instead.
+    func updateMe(displayName: String?, avatarKey: String?, locale: UserDTO.Locale?) async throws -> UserDTO {
         struct Body: Encodable {
             let displayName: String?
             let avatarKey: String?
+            let locale: UserDTO.Locale?
         }
-        guard displayName != nil || avatarKey != nil else { return try await me() }
-        return try await send(UserEnvelope.self, "PATCH", "/me", body: Body(displayName: displayName, avatarKey: avatarKey)).user
+        guard displayName != nil || avatarKey != nil || locale != nil else { return try await me() }
+        let body = Body(displayName: displayName, avatarKey: avatarKey, locale: locale)
+        return try await send(UserEnvelope.self, "PATCH", "/me", body: body).user
     }
 
     // MARK: - Uploads

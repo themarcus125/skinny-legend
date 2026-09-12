@@ -13,7 +13,21 @@ struct DTODecodingTests {
         #expect(user.avatarKey == "avatars/11111111-1111-4111-8111-111111111111/a1.jpg")
         #expect(user.role == .member)
         #expect(user.status == .active)
+        #expect(user.locale == .vi)
         #expect(user.createdAt.timeIntervalSince1970 == 1788833503.512)
+    }
+
+    @Test("Decodes the user's locale from the API's `locale` field, and rejects a language the app does not ship")
+    func decodesUserLocale() throws {
+        func envelope(_ locale: String) -> Data {
+            Data("""
+            {"user": {"id": "u1", "firebaseUid": "f1", "displayName": "Khoa", "avatarKey": null,
+                      "role": "member", "status": "active", "locale": "\(locale)", "createdAt": "2026-09-08T02:11:43.512Z"}}
+            """.utf8)
+        }
+        let decoder = JSONCoding.makeDecoder()
+        #expect(try decoder.decode(UserEnvelope.self, from: envelope("en")).user.locale == .en)
+        #expect(throws: DecodingError.self) { try decoder.decode(UserEnvelope.self, from: envelope("fr")) }
     }
 
     @Test("Decodes POST /entries with its verdict, projection and caps")

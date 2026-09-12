@@ -3,6 +3,10 @@ import SwiftUI
 /// Spec §7 Account: history grouped by day with edit via the same verdict sheet. The profile
 /// and settings sections are added by the next two tasks into this same list.
 struct AccountView: View {
+    /// Declared so this body re-runs when the Account picker changes the language: it renders
+    /// `String`s from `Localized` (labels, `LocalDay.display`), and `Text(String)` carries no
+    /// locale dependency of its own the way `Text(LocalizedStringKey)` does.
+    @Environment(\.locale) private var locale
     @State private var model: AccountModel
     @State private var editing: VerdictSheetModel?
     @State private var isProfileSheetPresented = false
@@ -51,6 +55,20 @@ struct AccountView: View {
             }
 
             Section {
+                Picker(selection: Binding(
+                    get: { env.appLocale },
+                    set: { choice in Task { await env.setAppLocale(choice) } }
+                )) {
+                    Text("Hệ thống").tag(AppLocale.system)
+                    Text("Tiếng Việt").tag(AppLocale.vi)
+                    Text("English").tag(AppLocale.en)
+                } label: {
+                    Label("Ngôn ngữ", systemImage: "globe")
+                        .font(.roundedLabel(16, weight: .medium))
+                }
+                .pickerStyle(.menu)
+                .accessibilityHint("Đổi ngôn ngữ hiển thị của ứng dụng")
+
                 Link(destination: AppMode.momoFundURL) {
                     Label("Quỹ nhóm", systemImage: "banknote")
                         .font(.roundedLabel(16, weight: .medium))
@@ -137,7 +155,10 @@ struct AccountView: View {
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
         .background { WarmBackground() }
-        .navigationTitle("Tài khoản")
+        // A `String` title on purpose: a `LocalizedStringKey` title is bridged to the navigation bar
+        // once and never re-resolves when the in-app language changes; this one is recomputed
+        // because the view declares `@Environment(\.locale)`.
+        .navigationTitle(Localized.string("Tài khoản"))
         .task { if model.entries.isEmpty { await model.loadFirstPage() } }
         .refreshable { await model.loadFirstPage() }
         .sheet(item: $editing) { sheetModel in
@@ -190,6 +211,10 @@ struct AccountView: View {
 }
 
 private struct HistoryRow: View {
+    /// Declared so this body re-runs when the Account picker changes the language: it renders
+    /// `String`s from `Localized` (labels, `LocalDay.display`), and `Text(String)` carries no
+    /// locale dependency of its own the way `Text(LocalizedStringKey)` does.
+    @Environment(\.locale) private var locale
     let entry: HistoryEntryDTO
     let onDelete: () -> Void
 

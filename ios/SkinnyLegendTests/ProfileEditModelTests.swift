@@ -8,7 +8,7 @@ struct ProfileEditModelTests {
     private func user(displayName: String = "Khoa") -> UserDTO {
         UserDTO(
             id: "u1", firebaseUid: "fb1", displayName: displayName, avatarKey: nil,
-            role: .member, status: .active, createdAt: Date()
+            role: .member, status: .active, locale: .vi, createdAt: Date()
         )
     }
 
@@ -111,7 +111,7 @@ struct ProfileEditModelTests {
 /// precisely (which fields it sends, which upload kind it presigns) without inspecting a full
 /// mock backend. Same recording-stub shape as the other model test suites.
 actor RecordingAPIClient: APIClient {
-    private(set) var updateMeCalls: [(displayName: String?, avatarKey: String?)] = []
+    private(set) var updateMeCalls: [(displayName: String?, avatarKey: String?, locale: UserDTO.Locale?)] = []
     private(set) var presignKinds: [UploadKind] = []
     private(set) var uploadedContentType: String?
 
@@ -126,8 +126,8 @@ actor RecordingAPIClient: APIClient {
     func session() async throws -> UserDTO { fatalError("unused in this test") }
     func me() async throws -> UserDTO { fatalError("unused in this test") }
 
-    func updateMe(displayName: String?, avatarKey: String?) async throws -> UserDTO {
-        updateMeCalls.append((displayName, avatarKey))
+    func updateMe(displayName: String?, avatarKey: String?, locale: UserDTO.Locale?) async throws -> UserDTO {
+        updateMeCalls.append((displayName, avatarKey, locale))
         if let updateMeError { throw updateMeError }
         return resultUser
     }

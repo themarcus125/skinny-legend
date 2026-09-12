@@ -50,7 +50,7 @@ actor SlowDashboardClient: APIClient {
 
     func session() async throws -> UserDTO { fatalError("unused in this test") }
     func me() async throws -> UserDTO { fatalError("unused in this test") }
-    func updateMe(displayName: String?, avatarKey: String?) async throws -> UserDTO { fatalError("unused in this test") }
+    func updateMe(displayName: String?, avatarKey: String?, locale: UserDTO.Locale?) async throws -> UserDTO { fatalError("unused in this test") }
     func presign(kind: UploadKind, contentType: String) async throws -> PresignDTO { fatalError("unused in this test") }
     func upload(_ data: Data, to presign: PresignDTO, contentType: String, onProgress: @escaping @Sendable (Double) -> Void) async throws { fatalError("unused in this test") }
     func createEntry(_ input: CreateEntryInput) async throws -> CreateEntryResponse { fatalError("unused in this test") }
@@ -88,7 +88,7 @@ struct FailingClient: APIClient {
 
     func session() async throws -> UserDTO { throw error }
     func me() async throws -> UserDTO { throw error }
-    func updateMe(displayName: String?, avatarKey: String?) async throws -> UserDTO { throw error }
+    func updateMe(displayName: String?, avatarKey: String?, locale: UserDTO.Locale?) async throws -> UserDTO { throw error }
     func presign(kind: UploadKind, contentType: String) async throws -> PresignDTO { throw error }
     func upload(_ data: Data, to presign: PresignDTO, contentType: String, onProgress: @escaping @Sendable (Double) -> Void) async throws { throw error }
     func createEntry(_ input: CreateEntryInput) async throws -> CreateEntryResponse { throw error }

@@ -10,14 +10,15 @@ enum MockSeed {
         avatarKey: nil,
         role: .member,
         status: .active,
+        locale: .vi,
         createdAt: Date(timeIntervalSince1970: 1_788_600_000)
     )
 
     static let others: [UserDTO] = [
-        UserDTO(id: "22222222-2222-4222-8222-22222222aaaa", firebaseUid: "mock-linh", displayName: "Linh", avatarKey: nil, role: .member, status: .active, createdAt: Date(timeIntervalSince1970: 1_788_600_100)),
-        UserDTO(id: "33333333-3333-4333-8333-33333333bbbb", firebaseUid: "mock-tuan", displayName: "Tuấn", avatarKey: nil, role: .member, status: .active, createdAt: Date(timeIntervalSince1970: 1_788_600_200)),
-        UserDTO(id: "44444444-4444-4444-8444-44444444cccc", firebaseUid: "mock-mai", displayName: "Mai", avatarKey: nil, role: .member, status: .active, createdAt: Date(timeIntervalSince1970: 1_788_600_300)),
-        UserDTO(id: "55555555-5555-4555-8555-55555555dddd", firebaseUid: "mock-duc", displayName: "Đức", avatarKey: nil, role: .member, status: .active, createdAt: Date(timeIntervalSince1970: 1_788_600_400)),
+        UserDTO(id: "22222222-2222-4222-8222-22222222aaaa", firebaseUid: "mock-linh", displayName: "Linh", avatarKey: nil, role: .member, status: .active, locale: .vi, createdAt: Date(timeIntervalSince1970: 1_788_600_100)),
+        UserDTO(id: "33333333-3333-4333-8333-33333333bbbb", firebaseUid: "mock-tuan", displayName: "Tuấn", avatarKey: nil, role: .member, status: .active, locale: .vi, createdAt: Date(timeIntervalSince1970: 1_788_600_200)),
+        UserDTO(id: "44444444-4444-4444-8444-44444444cccc", firebaseUid: "mock-mai", displayName: "Mai", avatarKey: nil, role: .member, status: .active, locale: .vi, createdAt: Date(timeIntervalSince1970: 1_788_600_300)),
+        UserDTO(id: "55555555-5555-4555-8555-55555555dddd", firebaseUid: "mock-duc", displayName: "Đức", avatarKey: nil, role: .member, status: .active, locale: .vi, createdAt: Date(timeIntervalSince1970: 1_788_600_400)),
     ]
 
     static var members: [UserDTO] { [me] + others }

@@ -6,6 +6,10 @@ import CoreLocation
 /// places within 50 m), so the group can see where everyone has been without exposing raw
 /// coordinates anywhere but here.
 struct MapScreen: View {
+    /// Declared so this body re-runs when the Account picker changes the language: it renders
+    /// `String`s from `Localized` (labels, `LocalDay.display`), and `Text(String)` carries no
+    /// locale dependency of its own the way `Text(LocalizedStringKey)` does.
+    @Environment(\.locale) private var locale
     @State private var model: MapModel
     @State private var camera: MapCameraPosition = .automatic
     @State private var selectedCluster: MapCluster?
@@ -36,7 +40,10 @@ struct MapScreen: View {
                 mapView(clusters)
             }
         }
-        .navigationTitle("Bản đồ")
+        // A `String` title on purpose: a `LocalizedStringKey` title is bridged to the navigation bar
+        // once and never re-resolves when the in-app language changes; this one is recomputed
+        // because the view declares `@Environment(\.locale)`.
+        .navigationTitle(Localized.string("Bản đồ"))
         .toolbar {
             // `.refreshable` is inert on a ZStack over a `Map` (nothing scrolls), so refresh lives here.
             Button {
@@ -94,6 +101,10 @@ struct MapScreen: View {
 /// when several entries clustered together. VoiceOver reads it as one button (name, entry count,
 /// place) rather than avatar initials and a bare number.
 private struct ClusterPin: View {
+    /// Declared so this body re-runs when the Account picker changes the language: it renders
+    /// `String`s from `Localized` (labels, `LocalDay.display`), and `Text(String)` carries no
+    /// locale dependency of its own the way `Text(LocalizedStringKey)` does.
+    @Environment(\.locale) private var locale
     let cluster: MapCluster
 
     var body: some View {
@@ -138,6 +149,10 @@ private struct ClusterPin: View {
 
 /// A multi-pin cluster's detail: compact rows that each open the full `MapPinCard`.
 private struct MapPinListSheet: View {
+    /// Declared so this body re-runs when the Account picker changes the language: it renders
+    /// `String`s from `Localized` (labels, `LocalDay.display`), and `Text(String)` carries no
+    /// locale dependency of its own the way `Text(LocalizedStringKey)` does.
+    @Environment(\.locale) private var locale
     let cluster: MapCluster
     @State private var selectedPin: MapPinDTO?
 

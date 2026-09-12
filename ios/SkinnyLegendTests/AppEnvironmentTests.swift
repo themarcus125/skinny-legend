@@ -9,7 +9,7 @@ private struct StubAPIClient: APIClient {
 
     func session() async throws -> UserDTO { try sessionResult.get() }
     func me() async throws -> UserDTO { try sessionResult.get() }
-    func updateMe(displayName: String?, avatarKey: String?) async throws -> UserDTO { try sessionResult.get() }
+    func updateMe(displayName: String?, avatarKey: String?, locale: UserDTO.Locale?) async throws -> UserDTO { try sessionResult.get() }
     func presign(kind: UploadKind, contentType: String) async throws -> PresignDTO { throw APIError.malformedResponse }
     func upload(_ data: Data, to presign: PresignDTO, contentType: String, onProgress: @escaping @Sendable (Double) -> Void) async throws {}
     func createEntry(_ input: CreateEntryInput) async throws -> CreateEntryResponse { throw APIError.malformedResponse }
@@ -26,15 +26,15 @@ private struct StubAPIClient: APIClient {
 }
 
 private func pendingUser() -> UserDTO {
-    UserDTO(id: "u1", firebaseUid: "f1", displayName: "Khoa", avatarKey: nil, role: .member, status: .pending, createdAt: Date())
+    UserDTO(id: "u1", firebaseUid: "f1", displayName: "Khoa", avatarKey: nil, role: .member, status: .pending, locale: .vi, createdAt: Date())
 }
 
 private func activeUser() -> UserDTO {
-    UserDTO(id: "u1", firebaseUid: "f1", displayName: "Khoa", avatarKey: nil, role: .member, status: .active, createdAt: Date())
+    UserDTO(id: "u1", firebaseUid: "f1", displayName: "Khoa", avatarKey: nil, role: .member, status: .active, locale: .vi, createdAt: Date())
 }
 
 private func disabledUser() -> UserDTO {
-    UserDTO(id: "u1", firebaseUid: "f1", displayName: "Khoa", avatarKey: nil, role: .member, status: .disabled, createdAt: Date())
+    UserDTO(id: "u1", firebaseUid: "f1", displayName: "Khoa", avatarKey: nil, role: .member, status: .disabled, locale: .vi, createdAt: Date())
 }
 
 @Suite("AppEnvironment")

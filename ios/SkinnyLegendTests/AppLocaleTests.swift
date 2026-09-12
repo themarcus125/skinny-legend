@@ -36,6 +36,13 @@ struct AppLocaleTests {
 /// puts the default back before it returns.
 @Suite("Localized", .serialized)
 struct LocalizedTests {
+    /// The test host is the real app, whose launch seeds `Localized` from whatever language was
+    /// last picked in that Simulator's container — so every test here starts from the source
+    /// language explicitly rather than trusting the process default.
+    init() {
+        Localized.setLanguage(.vi)
+    }
+
     @Test func defaultsToVietnamese() {
         defer { Localized.setLanguage(.vi) }
         #expect(Localized.language == .vi)
@@ -318,7 +325,7 @@ struct LocalizedTests {
         defer { Localized.setLanguage(.vi) }
         let error = URLError(.badServerResponse)
         let user = UserDTO(id: "u1", firebaseUid: "fb1", displayName: "Khoa", avatarKey: nil,
-                           role: .member, status: .active, createdAt: Date())
+                           role: .member, status: .active, locale: .vi, createdAt: Date())
         let profile = ProfileEditModel(api: RecordingAPIClient(resultUser: user, updateMeError: error), user: user)
         profile.displayName = "Khoa Mới"
         let feedback = FeedbackModel(api: FailingClient(error: error))
@@ -355,5 +362,101 @@ struct LocalizedTests {
         await map.load()
         #expect(map.state == .failed("Couldn't load the map."))
         #expect(Localized.string("\(3) mục ghi") == "3 entries")
+    }
+
+    // MARK: - The Account language picker (Task 6): `AppLocale` is the local, three-way choice;
+    // the server only ever receives the resolved `UserDTO.Locale`. These flip `Localized`, so
+    // they belong in this suite too.
+
+    /// A throwaway `UserDefaults` suite so the choice never leaks into the process-wide defaults
+    /// that every other environment in this test run reads from.
+    private final class ScratchDefaults {
+        let name = "LocalePreferenceTests.\(UUID().uuidString)"
+        let defaults: UserDefaults
+        init() { defaults = UserDefaults(suiteName: name) ?? .standard }
+        deinit { defaults.removePersistentDomain(forName: name) }
+    }
+
+    @MainActor @Test func choosingEnglishPatchesTheServerAndMovesTheEnvironment() async throws {
+        defer { Localized.setLanguage(.vi) }
+        let scratch = ScratchDefaults()
+        let client = MockAPIClient()
+        let env = AppEnvironment(api: client, auth: MockAuthService(startSignedIn: true),
+                                 placeSearch: MockPlaceSearch(), locator: MockLocationFixer(), defaults: scratch.defaults)
+        await env.bootstrap()
+        #expect(env.currentUser?.locale == .vi)
+
+        await env.setAppLocale(.en)
+
+        #expect(env.appLocale == .en)
+        #expect(env.resolvedLocale.identifier.hasPrefix("en"))
+        #expect(env.serverLocale == .en)
+        #expect(scratch.defaults.string(forKey: AppLocale.storageKey) == "en")
+        #expect(Localized.language == .en)
+        #expect(Localized.string("Ngôn ngữ") == "Language")
+        let me = try await client.me()
+        #expect(me.locale == .en)
+        #expect(env.currentUser?.locale == .en)
+    }
+
+    @MainActor @Test func choosingSystemResolvesFromTheDeviceLanguage() async throws {
+        defer { Localized.setLanguage(.vi) }
+        let scratch = ScratchDefaults()
+        let client = MockAPIClient()
+        let env = AppEnvironment(api: client, auth: MockAuthService(startSignedIn: true),
+                                 placeSearch: MockPlaceSearch(), locator: MockLocationFixer(), defaults: scratch.defaults)
+        await env.bootstrap()
+        await env.setAppLocale(.en)
+
+        await env.setAppLocale(.system)
+
+        let device = AppLocale.system.resolved()
+        #expect(env.appLocale == .system)
+        #expect(env.resolvedLocale.identifier == device.locale.identifier)
+        #expect(Localized.language == device)
+        #expect(scratch.defaults.string(forKey: AppLocale.storageKey) == "system")
+        // `.system` still sends a concrete language so server-side copy has one.
+        let me = try await client.me()
+        #expect(me.locale == UserDTO.Locale(device))
+        #expect(me.locale.rawValue == device.rawValue)
+    }
+
+    @MainActor @Test func signingInWithAMismatchedServerLocalePatchesTheServer() async throws {
+        defer { Localized.setLanguage(.vi) }
+        let scratch = ScratchDefaults()
+        scratch.defaults.set(AppLocale.en.rawValue, forKey: AppLocale.storageKey)
+        let client = MockAPIClient()   // seeded profile is `vi`
+        let env = AppEnvironment(api: client, auth: MockAuthService(startSignedIn: true),
+                                 placeSearch: MockPlaceSearch(), locator: MockLocationFixer(), defaults: scratch.defaults)
+        #expect(env.appLocale == .en)
+        env.activateLocale()
+        #expect(Localized.language == .en)
+
+        await env.bootstrap()
+
+        let me = try await client.me()
+        #expect(me.locale == .en)
+        #expect(env.currentUser?.locale == .en)
+        #expect(env.currentUser?.status == .active)
+    }
+
+    @MainActor @Test func aFailedPatchLeavesThePreferenceApplied() async throws {
+        // A dropped network call must not strand the UI in the old language.
+        defer { Localized.setLanguage(.vi) }
+        let scratch = ScratchDefaults()
+        let client = MockAPIClient(updateMeError: APIError.network(URLError(.notConnectedToInternet)))
+        let env = AppEnvironment(api: client, auth: MockAuthService(startSignedIn: true),
+                                 placeSearch: MockPlaceSearch(), locator: MockLocationFixer(), defaults: scratch.defaults)
+        await env.bootstrap()
+
+        await env.setAppLocale(.en)
+
+        #expect(env.appLocale == .en)
+        #expect(Localized.language == .en)
+        #expect(Localized.string("Hệ thống") == "System")
+        #expect(scratch.defaults.string(forKey: AppLocale.storageKey) == "en")
+        let me = try await client.me()
+        #expect(me.locale == .vi)
+        #expect(env.currentUser?.status == .active)
     }
 }

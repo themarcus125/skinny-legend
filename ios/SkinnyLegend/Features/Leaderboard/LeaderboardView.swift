@@ -2,6 +2,10 @@ import SwiftUI
 
 /// Spec §7: ranked list with avatar, total and weekly delta; tapping a member opens their entries.
 struct LeaderboardView: View {
+    /// Declared so this body re-runs when the Account picker changes the language: it renders
+    /// `String`s from `Localized` (labels, `LocalDay.display`), and `Text(String)` carries no
+    /// locale dependency of its own the way `Text(LocalizedStringKey)` does.
+    @Environment(\.locale) private var locale
     @State private var model: LeaderboardModel
     private let apiClient: any APIClient
 
@@ -43,13 +47,20 @@ struct LeaderboardView: View {
                 }
             }
         }
-        .navigationTitle("Xếp hạng")
+        // A `String` title on purpose: a `LocalizedStringKey` title is bridged to the navigation bar
+        // once and never re-resolves when the in-app language changes; this one is recomputed
+        // because the view declares `@Environment(\.locale)`.
+        .navigationTitle(Localized.string("Xếp hạng"))
         .task { await model.load() }
         .refreshable { await model.load() }
     }
 }
 
 struct LeaderboardRowView: View {
+    /// Declared so this body re-runs when the Account picker changes the language: it renders
+    /// `String`s from `Localized` (labels, `LocalDay.display`), and `Text(String)` carries no
+    /// locale dependency of its own the way `Text(LocalizedStringKey)` does.
+    @Environment(\.locale) private var locale
     let row: LeaderboardRow
 
     var body: some View {

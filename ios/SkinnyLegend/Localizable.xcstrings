@@ -386,6 +386,17 @@
         }
       }
     },
+    "English" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "English"
+          }
+        }
+      }
+    },
     "Ghi nhận" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1189,6 +1200,17 @@
         }
       }
     },
+    "Tiếng Việt" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tiếng Việt"
+          }
+        }
+      }
+    },
     "Trung bình nhóm" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1867,6 +1889,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Change"
+          }
+        }
+      }
+    },
+    "Đổi ngôn ngữ hiển thị của ứng dụng" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Change the app's display language"
           }
         }
       }

@@ -108,8 +108,8 @@ struct LeaderboardFailingClient: APIClient {
 
     func session() async throws -> UserDTO { try await inner.session() }
     func me() async throws -> UserDTO { try await inner.me() }
-    func updateMe(displayName: String?, avatarKey: String?) async throws -> UserDTO {
-        try await inner.updateMe(displayName: displayName, avatarKey: avatarKey)
+    func updateMe(displayName: String?, avatarKey: String?, locale: UserDTO.Locale?) async throws -> UserDTO {
+        try await inner.updateMe(displayName: displayName, avatarKey: avatarKey, locale: locale)
     }
     func presign(kind: UploadKind, contentType: String) async throws -> PresignDTO {
         try await inner.presign(kind: kind, contentType: contentType)
@@ -150,8 +150,8 @@ struct HistoryFailingClient: APIClient {
 
     func session() async throws -> UserDTO { try await inner.session() }
     func me() async throws -> UserDTO { try await inner.me() }
-    func updateMe(displayName: String?, avatarKey: String?) async throws -> UserDTO {
-        try await inner.updateMe(displayName: displayName, avatarKey: avatarKey)
+    func updateMe(displayName: String?, avatarKey: String?, locale: UserDTO.Locale?) async throws -> UserDTO {
+        try await inner.updateMe(displayName: displayName, avatarKey: avatarKey, locale: locale)
     }
     func presign(kind: UploadKind, contentType: String) async throws -> PresignDTO {
         try await inner.presign(kind: kind, contentType: contentType)

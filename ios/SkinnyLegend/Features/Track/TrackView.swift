@@ -2,6 +2,10 @@ import PhotosUI
 import SwiftUI
 
 struct TrackView: View {
+    /// Declared so this body re-runs when the Account picker changes the language: it renders
+    /// `String`s from `Localized` (labels, `LocalDay.display`), and `Text(String)` carries no
+    /// locale dependency of its own the way `Text(LocalizedStringKey)` does.
+    @Environment(\.locale) private var locale
     @State private var model: TrackModel
     @State private var places: PlaceResolver
     @State private var pickerItem: PhotosPickerItem?
@@ -38,7 +42,10 @@ struct TrackView: View {
                 .padding(.bottom, 120)
             }
         }
-        .navigationTitle("Ghi nhận")
+        // A `String` title on purpose: a `LocalizedStringKey` title is bridged to the navigation bar
+        // once and never re-resolves when the in-app language changes; this one is recomputed
+        // because the view declares `@Environment(\.locale)`.
+        .navigationTitle(Localized.string("Ghi nhận"))
         .onChange(of: pickerItem) { _, item in
             guard let item else { return }
             loadTask?.cancel()

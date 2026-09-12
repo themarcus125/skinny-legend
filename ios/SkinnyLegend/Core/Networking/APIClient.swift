@@ -41,7 +41,7 @@ typealias TokenProvider = @Sendable () async throws -> String
 protocol APIClient: Sendable {
     func session() async throws -> UserDTO
     func me() async throws -> UserDTO
-    func updateMe(displayName: String?, avatarKey: String?) async throws -> UserDTO
+    func updateMe(displayName: String?, avatarKey: String?, locale: UserDTO.Locale?) async throws -> UserDTO
 
     func presign(kind: UploadKind, contentType: String) async throws -> PresignDTO
     func upload(_ data: Data, to presign: PresignDTO, contentType: String, onProgress: @escaping @Sendable (Double) -> Void) async throws
@@ -59,4 +59,11 @@ protocol APIClient: Sendable {
     func mapPins(days: Int) async throws -> MapPinsPage
 
     func sendFeedback(message: String, screenshotKey: String?, appVersion: String) async throws
+}
+
+extension APIClient {
+    /// Profile-only update — `ProfileEditSheet` never touches the language.
+    func updateMe(displayName: String?, avatarKey: String?) async throws -> UserDTO {
+        try await updateMe(displayName: displayName, avatarKey: avatarKey, locale: nil)
+    }
 }

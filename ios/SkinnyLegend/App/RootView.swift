@@ -29,6 +29,9 @@ struct RootView: View {
                 }
             }
         }
+        // The in-app language: every `Text`/`LocalizedStringKey` below re-resolves against this
+        // the moment the Account picker changes it — no relaunch (spec §D).
+        .environment(\.locale, env.resolvedLocale)
         .animation(.smooth(duration: 0.3), value: env.session)
         .task { await env.bootstrap() }
     }

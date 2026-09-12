@@ -26,10 +26,13 @@ actor MockAPIClient: APIClient {
     /// The mock's notion of "today", frozen for tests so scoring never depends on the wall clock
     /// (Task 2 controller ruling); defaults to the real local day in production.
     private let today: LocalDate
+    /// Injected failure for `updateMe`, so a dropped `PATCH /me` can be exercised offline.
+    private let updateMeError: (any Error)?
 
-    init(historyPageSize: Int = 50, today: LocalDate = LocalDay.today) {
+    init(historyPageSize: Int = 50, today: LocalDate = LocalDay.today, updateMeError: (any Error)? = nil) {
         self.historyPageSize = historyPageSize
         self.today = today
+        self.updateMeError = updateMeError
         self.profile = MockSeed.me
         self.members = MockSeed.members
         self.store = MockSeed.entries(today: today).map {
@@ -44,7 +47,8 @@ actor MockAPIClient: APIClient {
     func session() async throws -> UserDTO { profile }
     func me() async throws -> UserDTO { profile }
 
-    func updateMe(displayName: String?, avatarKey: String?) async throws -> UserDTO {
+    func updateMe(displayName: String?, avatarKey: String?, locale: UserDTO.Locale?) async throws -> UserDTO {
+        if let updateMeError { throw updateMeError }
         profile = UserDTO(
             id: profile.id,
             firebaseUid: profile.firebaseUid,
@@ -52,6 +56,7 @@ actor MockAPIClient: APIClient {
             avatarKey: avatarKey ?? profile.avatarKey,
             role: profile.role,
             status: profile.status,
+            locale: locale ?? profile.locale,
             createdAt: profile.createdAt
         )
         members = members.map { $0.id == profile.id ? profile : $0 }

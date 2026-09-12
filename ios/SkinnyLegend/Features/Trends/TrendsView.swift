@@ -4,6 +4,10 @@ import SwiftUI
 /// Spec §7: weekly bars (self vs group average), calendar heatmap of active days, category
 /// breakdown and a rank-over-time line.
 struct TrendsView: View {
+    /// Declared so this body re-runs when the Account picker changes the language: it renders
+    /// `String`s from `Localized` (labels, `LocalDay.display`), and `Text(String)` carries no
+    /// locale dependency of its own the way `Text(LocalizedStringKey)` does.
+    @Environment(\.locale) private var locale
     @State private var model: TrendsModel
     @State private var selectedDay: DaySelection?
     private let apiClient: any APIClient
@@ -42,7 +46,10 @@ struct TrendsView: View {
                 }
             }
         }
-        .navigationTitle("Xu hướng")
+        // A `String` title on purpose: a `LocalizedStringKey` title is bridged to the navigation bar
+        // once and never re-resolves when the in-app language changes; this one is recomputed
+        // because the view declares `@Environment(\.locale)`.
+        .navigationTitle(Localized.string("Xu hướng"))
         .task { await model.load() }
         .refreshable { await model.load() }
         .navigationDestination(item: $selectedDay) { selection in
@@ -161,14 +168,17 @@ struct TrendsView: View {
 
     // MARK: - Category breakdown
 
+    /// `label` is carried as data (like `WeeklyBar.series`) so the chart's input changes with the
+    /// language instead of relying on a per-mark `shortLabel` lookup being re-evaluated.
     private struct CategorySlice: Identifiable {
         let id: Category
+        let label: String
         let points: Int
     }
 
     private func categoryBreakdown(_ trends: TrendsDTO) -> some View {
         let slices = Category.allCases
-            .map { CategorySlice(id: $0, points: trends.byCategory[$0]) }
+            .map { CategorySlice(id: $0, label: $0.shortLabel, points: trends.byCategory[$0]) }
             .filter { $0.points > 0 }
         return GlassCard {
             VStack(alignment: .leading, spacing: 12) {
@@ -182,7 +192,7 @@ struct TrendsView: View {
                 } else {
                     Chart(slices) { slice in
                         SectorMark(angle: .value("Điểm", slice.points), innerRadius: .ratio(0.618), angularInset: 2)
-                            .foregroundStyle(by: .value("Hạng mục", slice.id.shortLabel))
+                            .foregroundStyle(by: .value("Hạng mục", slice.label))
                             .cornerRadius(4)
                     }
                     .chartForegroundStyleScale([

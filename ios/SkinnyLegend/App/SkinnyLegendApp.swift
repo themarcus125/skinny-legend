@@ -11,7 +11,9 @@ struct SkinnyLegendApp: App {
         if AppMode.useLiveBackend {
             FirebaseApp.configure()
         }
-        _env = State(initialValue: AppEnvironment.make())
+        let env = AppEnvironment.make()
+        env.activateLocale()
+        _env = State(initialValue: env)
     }
 
     var body: some Scene {

@@ -1,6 +1,10 @@
 import SwiftUI
 
 struct MemberDetailView: View {
+    /// Declared so this body re-runs when the Account picker changes the language: it renders
+    /// `String`s from `Localized` (labels, `LocalDay.display`), and `Text(String)` carries no
+    /// locale dependency of its own the way `Text(LocalizedStringKey)` does.
+    @Environment(\.locale) private var locale
     @State private var model: MemberDetailModel
     private let member: UserSummary
     private let rank: Int
@@ -66,6 +70,10 @@ struct MemberDetailView: View {
 }
 
 private struct MemberEntryRow: View {
+    /// Declared so this body re-runs when the Account picker changes the language: it renders
+    /// `String`s from `Localized` (labels, `LocalDay.display`), and `Text(String)` carries no
+    /// locale dependency of its own the way `Text(LocalizedStringKey)` does.
+    @Environment(\.locale) private var locale
     let entry: EntryDTO
 
     var body: some View {
