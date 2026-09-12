@@ -8,6 +8,13 @@
       "when": 1789094458355,
       "tag": "0000_silly_franklin_storm",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1789192633305,
+      "tag": "0001_far_weapon_omega",
+      "breakpoints": true
     }
   ]
 }

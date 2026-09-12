@@ -83,6 +83,35 @@ export const feedback = pgTable('feedback', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
+/**
+ * Push (spec §E). `device_locale` is deliberately NOT named `locale`: SKI-46 adds a
+ * `users.locale` enum of its own and the two must not collide.
+ */
+export const deviceLocaleEnum = pgEnum('device_locale', ['vi', 'en']);
+export const devicePlatformEnum = pgEnum('device_platform', ['ios']);
+export const notificationKindEnum = pgEnum('notification_kind', ['inactive_1d', 'inactive_3d', 'inactive_7d', 'rank_nudge']);
+
+export const deviceTokens = pgTable('device_tokens', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id),
+  token: text('token').notNull(),
+  platform: devicePlatformEnum('platform').notNull().default('ios'),
+  locale: deviceLocaleEnum('locale').notNull().default('vi'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  lastSeenAt: timestamp('last_seen_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [uniqueIndex('device_tokens_token_idx').on(t.token), index('device_tokens_user_idx').on(t.userId)]);
+
+/** One row per notification actually delivered. Drives the 24h dedupe rule and the admin table. */
+export const notificationLog = pgTable('notification_log', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id),
+  kind: notificationKindEnum('kind').notNull(),
+  payloadJson: jsonb('payload_json')
+    .$type<{ title: string; body: string; locale: 'vi' | 'en'; vars: Record<string, string | number> }>()
+    .notNull(),
+  sentAt: timestamp('sent_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [index('notification_log_user_kind_sent_idx').on(t.userId, t.kind, t.sentAt)]);
+
 export const auditLog = pgTable('audit_log', {
   id: uuid('id').primaryKey().defaultRandom(),
   actorId: uuid('actor_id').notNull().references(() => users.id),

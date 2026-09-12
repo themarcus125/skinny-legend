@@ -7,6 +7,8 @@ export const app = createApp();
 
 export async function resetDb() {
   await db.delete(schema.auditLog);
+  await db.delete(schema.notificationLog);
+  await db.delete(schema.deviceTokens);
   await db.delete(schema.feedback);
   await db.delete(schema.aiVerdicts);
   await db.delete(schema.entryCategories);
