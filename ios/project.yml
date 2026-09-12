@@ -6,6 +6,7 @@ options:
   createIntermediateGroups: true
   groupSortPosition: top
   minimumXcodeGenVersion: "2.42.0"
+  developmentLanguage: vi
 
 settings:
   base:
@@ -48,6 +49,10 @@ targets:
       path: SkinnyLegend/Info.plist
       properties:
         CFBundleDisplayName: Skinny Legend
+        CFBundleDevelopmentRegion: vi
+        CFBundleLocalizations:
+          - vi
+          - en
         CFBundleShortVersionString: "1.0"
         CFBundleVersion: "1"
         UILaunchScreen: {}
@@ -99,5 +104,9 @@ schemes:
     test:
       config: Debug
       gatherCoverageData: false
+      commandLineArguments:
+        "-mockAPI": true
+        "-AppleLanguages (vi)": true
+        "-AppleLocale vi_VN": true
       targets:
         - SkinnyLegendTests

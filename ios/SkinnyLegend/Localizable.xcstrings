@@ -1,0 +1,28 @@
+{
+  "sourceLanguage" : "vi",
+  "strings" : {
+    "Hệ thống" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "System"
+          }
+        }
+      }
+    },
+    "Ngôn ngữ" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Language"
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}
