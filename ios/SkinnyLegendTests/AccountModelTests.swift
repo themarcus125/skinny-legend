@@ -133,6 +133,10 @@ struct LeaderboardFailingClient: APIClient {
     func sendFeedback(message: String, screenshotKey: String?, appVersion: String) async throws {
         try await inner.sendFeedback(message: message, screenshotKey: screenshotKey, appVersion: appVersion)
     }
+    func registerDevice(token: String, platform: DevicePlatform, locale: DeviceLocale) async throws {
+        try await inner.registerDevice(token: token, platform: platform, locale: locale)
+    }
+    func unregisterDevice(token: String) async throws { try await inner.unregisterDevice(token: token) }
     func mapPins(days: Int) async throws -> MapPinsPage { try await inner.mapPins(days: days) }
 }
 
@@ -175,5 +179,9 @@ struct HistoryFailingClient: APIClient {
     func sendFeedback(message: String, screenshotKey: String?, appVersion: String) async throws {
         try await inner.sendFeedback(message: message, screenshotKey: screenshotKey, appVersion: appVersion)
     }
+    func registerDevice(token: String, platform: DevicePlatform, locale: DeviceLocale) async throws {
+        try await inner.registerDevice(token: token, platform: platform, locale: locale)
+    }
+    func unregisterDevice(token: String) async throws { try await inner.unregisterDevice(token: token) }
     func mapPins(days: Int) async throws -> MapPinsPage { try await inner.mapPins(days: days) }
 }

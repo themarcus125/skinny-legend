@@ -111,5 +111,6 @@ struct SignInView: View {
 
 #Preview("Đăng nhập") {
     SignInView()
-        .environment(AppEnvironment(api: MockAPIClient(), auth: MockAuthService(startSignedIn: false)))
+        .environment(AppEnvironment(api: MockAPIClient(), auth: MockAuthService(startSignedIn: false),
+                                push: PushRegistrar(api: MockAPIClient(), authorizer: MockPushAuthorizer(), tokens: MockPushTokenSource())))
 }

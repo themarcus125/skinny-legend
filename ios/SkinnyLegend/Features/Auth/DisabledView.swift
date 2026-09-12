@@ -48,5 +48,6 @@ struct DisabledView: View {
         WarmBackground()
         DisabledView(message: "Tài khoản của bạn đã bị khoá. Liên hệ quản trị viên.")
     }
-    .environment(AppEnvironment(api: MockAPIClient(), auth: MockAuthService(startSignedIn: false)))
+    .environment(AppEnvironment(api: MockAPIClient(), auth: MockAuthService(startSignedIn: false),
+                                push: PushRegistrar(api: MockAPIClient(), authorizer: MockPushAuthorizer(), tokens: MockPushTokenSource())))
 }

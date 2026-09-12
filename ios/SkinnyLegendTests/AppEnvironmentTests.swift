@@ -22,7 +22,22 @@ private struct StubAPIClient: APIClient {
     func feed(cursor: String?) async throws -> FeedPage { FeedPage(entries: [], nextCursor: nil) }
     func entries(ofUser userID: String, cursor: String?) async throws -> EntryPage { EntryPage(entries: [], nextCursor: nil) }
     func sendFeedback(message: String, screenshotKey: String?, appVersion: String) async throws {}
+    func registerDevice(token: String, platform: DevicePlatform, locale: DeviceLocale) async throws {}
+    func unregisterDevice(token: String) async throws {}
     func mapPins(days: Int) async throws -> MapPinsPage { MapPinsPage(pins: []) }
+}
+
+/// A registrar on mocks and a throwaway defaults suite, so no environment built in a test can
+/// reach the system permission prompt or the process-wide defaults. Shared with `AppLocaleTests`.
+@MainActor
+func stubPush(_ api: any APIClient) -> PushRegistrar {
+    PushRegistrar(api: api, authorizer: MockPushAuthorizer(), tokens: MockPushTokenSource(),
+                  defaults: UserDefaults(suiteName: "env-tests-\(UUID().uuidString)")!, locale: .vi)
+}
+
+@MainActor
+private func makeEnvironment(api: any APIClient, auth: MockAuthService) -> AppEnvironment {
+    AppEnvironment(api: api, auth: auth, push: stubPush(api))
 }
 
 private func pendingUser() -> UserDTO {
@@ -43,14 +58,14 @@ struct AppEnvironmentTests {
     @Test("A signed-out auth service leaves the app on the sign-in screen")
     func signedOut() async {
         let auth = MockAuthService(startSignedIn: false)
-        let env = AppEnvironment(api: MockAPIClient(), auth: auth)
+        let env = makeEnvironment(api: MockAPIClient(), auth: auth)
         await env.bootstrap()
         #expect(env.session == .signedOut)
     }
 
     @Test("An active member lands on the tabs")
     func activeMember() async {
-        let env = AppEnvironment(api: MockAPIClient(), auth: MockAuthService(startSignedIn: true))
+        let env = makeEnvironment(api: MockAPIClient(), auth: MockAuthService(startSignedIn: true))
         await env.bootstrap()
         #expect(env.currentUser?.status == .active)
         if case .active = env.session {} else { Issue.record("Expected .active, got \(env.session)") }
@@ -58,7 +73,7 @@ struct AppEnvironmentTests {
 
     @Test("A session response with status active routes to the active state")
     func sessionStatusActiveRoutesToActive() async {
-        let env = AppEnvironment(api: StubAPIClient(sessionResult: .success(activeUser())), auth: MockAuthService(startSignedIn: true))
+        let env = makeEnvironment(api: StubAPIClient(sessionResult: .success(activeUser())), auth: MockAuthService(startSignedIn: true))
         await env.bootstrap()
         if case .active(let user) = env.session {
             #expect(user.status == .active)
@@ -69,7 +84,7 @@ struct AppEnvironmentTests {
 
     @Test("A pending member sees the waiting-for-approval state")
     func pendingMember() async {
-        let env = AppEnvironment(api: StubAPIClient(sessionResult: .success(pendingUser())), auth: MockAuthService(startSignedIn: true))
+        let env = makeEnvironment(api: StubAPIClient(sessionResult: .success(pendingUser())), auth: MockAuthService(startSignedIn: true))
         await env.bootstrap()
         if case .pending(let user) = env.session {
             #expect(user.status == .pending)
@@ -80,7 +95,7 @@ struct AppEnvironmentTests {
 
     @Test("A disabled member (status in the session body) sees a sign-out screen, not the tabs")
     func disabledMember() async {
-        let env = AppEnvironment(api: StubAPIClient(sessionResult: .success(disabledUser())), auth: MockAuthService(startSignedIn: true))
+        let env = makeEnvironment(api: StubAPIClient(sessionResult: .success(disabledUser())), auth: MockAuthService(startSignedIn: true))
         await env.bootstrap()
         if case .disabled(let message) = env.session {
             #expect(message.isEmpty == false)
@@ -92,7 +107,7 @@ struct AppEnvironmentTests {
     @Test("A 403 disabled from the API (the real shape: authenticate rejects before a body) also routes to disabled")
     func disabledFromAPIError() async {
         let error = APIError(status: 403, code: "disabled", message: "Account disabled")
-        let env = AppEnvironment(api: StubAPIClient(sessionResult: .failure(error)), auth: MockAuthService(startSignedIn: true))
+        let env = makeEnvironment(api: StubAPIClient(sessionResult: .failure(error)), auth: MockAuthService(startSignedIn: true))
         await env.bootstrap()
         if case .disabled(let message) = env.session {
             #expect(message.isEmpty == false)
@@ -104,7 +119,7 @@ struct AppEnvironmentTests {
     @Test("Signing out from the disabled state returns to signed-out")
     func signOutFromDisabled() async {
         let error = APIError(status: 403, code: "disabled", message: "Account disabled")
-        let env = AppEnvironment(api: StubAPIClient(sessionResult: .failure(error)), auth: MockAuthService(startSignedIn: true))
+        let env = makeEnvironment(api: StubAPIClient(sessionResult: .failure(error)), auth: MockAuthService(startSignedIn: true))
         await env.bootstrap()
         env.signOut()
         #expect(env.session == .signedOut)
@@ -114,7 +129,7 @@ struct AppEnvironmentTests {
     @Test("A network failure surfaces a retryable error state")
     func networkFailure() async {
         let error = APIError(status: 0, code: "network", message: "offline")
-        let env = AppEnvironment(api: StubAPIClient(sessionResult: .failure(error)), auth: MockAuthService(startSignedIn: true))
+        let env = makeEnvironment(api: StubAPIClient(sessionResult: .failure(error)), auth: MockAuthService(startSignedIn: true))
         await env.bootstrap()
         if case .failed(let message) = env.session {
             #expect(message == error.userMessage)
@@ -126,7 +141,7 @@ struct AppEnvironmentTests {
     @Test("A 403 pending_approval error is surfaced as a generic failure")
     func pendingApprovalErrorSurfacesAsFailure() async {
         let error = APIError(status: 403, code: "pending_approval", message: "Account awaiting admin approval")
-        let env = AppEnvironment(api: StubAPIClient(sessionResult: .failure(error)), auth: MockAuthService(startSignedIn: true))
+        let env = makeEnvironment(api: StubAPIClient(sessionResult: .failure(error)), auth: MockAuthService(startSignedIn: true))
         await env.bootstrap()
         if case .failed(let message) = env.session {
             #expect(message == error.userMessage)
@@ -137,14 +152,14 @@ struct AppEnvironmentTests {
 
     @Test("A 401 signs the user out rather than showing an error")
     func unauthenticatedSignsOut() async {
-        let env = AppEnvironment(api: StubAPIClient(sessionResult: .failure(APIError.unauthenticated)), auth: MockAuthService(startSignedIn: true))
+        let env = makeEnvironment(api: StubAPIClient(sessionResult: .failure(APIError.unauthenticated)), auth: MockAuthService(startSignedIn: true))
         await env.bootstrap()
         #expect(env.session == .signedOut)
     }
 
     @Test("Signing out clears the session")
     func signOut() async {
-        let env = AppEnvironment(api: MockAPIClient(), auth: MockAuthService(startSignedIn: true))
+        let env = makeEnvironment(api: MockAPIClient(), auth: MockAuthService(startSignedIn: true))
         await env.bootstrap()
         env.signOut()
         #expect(env.session == .signedOut)

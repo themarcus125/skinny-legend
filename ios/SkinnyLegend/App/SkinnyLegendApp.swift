@@ -3,6 +3,7 @@ import FirebaseCore
 
 @main
 struct SkinnyLegendApp: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @State private var env: AppEnvironment
 
     init() {

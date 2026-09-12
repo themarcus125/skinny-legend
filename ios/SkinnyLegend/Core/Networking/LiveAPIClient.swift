@@ -127,6 +127,27 @@ struct LiveAPIClient: APIClient {
         _ = try await send(FeedbackEnvelope.self, "POST", "/feedback", body: Body(message: message, screenshotKey: screenshotKey, appVersion: appVersion))
     }
 
+    // MARK: - Push devices
+
+    /// `POST /me/devices` → 201 `{ device }` (apps/api/src/routes/me.ts). The row is returned
+    /// but nothing here needs it beyond confirming the shape decoded.
+    func registerDevice(token: String, platform: DevicePlatform, locale: DeviceLocale) async throws {
+        struct Body: Encodable {
+            let token: String
+            let platform: String
+            let locale: String
+        }
+        _ = try await send(DeviceEnvelope.self, "POST", "/me/devices",
+                           body: Body(token: token, platform: platform.rawValue, locale: locale.rawValue))
+    }
+
+    /// `DELETE /me/devices/:token` → 204. FCM tokens contain ':' and '_', which are legal in a
+    /// path segment, but percent-encode anyway so an unexpected character can never split the path.
+    func unregisterDevice(token: String) async throws {
+        let escaped = token.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? token
+        _ = try await perform(makeRequest("DELETE", "/me/devices/\(escaped)"))
+    }
+
     // MARK: - Plumbing
 
     private func cursorQuery(_ cursor: String?) -> [URLQueryItem] {

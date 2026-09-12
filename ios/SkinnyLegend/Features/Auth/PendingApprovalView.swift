@@ -60,5 +60,6 @@ struct PendingApprovalView: View {
         WarmBackground()
         PendingApprovalView(user: UserDTO(id: "u1", firebaseUid: "f1", displayName: "Khoa", avatarKey: nil, role: .member, status: .pending, locale: .vi, createdAt: Date()))
     }
-    .environment(AppEnvironment(api: MockAPIClient(), auth: MockAuthService(startSignedIn: false)))
+    .environment(AppEnvironment(api: MockAPIClient(), auth: MockAuthService(startSignedIn: false),
+                                push: PushRegistrar(api: MockAPIClient(), authorizer: MockPushAuthorizer(), tokens: MockPushTokenSource())))
 }

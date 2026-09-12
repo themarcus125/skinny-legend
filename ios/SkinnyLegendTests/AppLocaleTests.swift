@@ -381,7 +381,7 @@ struct LocalizedTests {
         defer { Localized.setLanguage(.vi) }
         let scratch = ScratchDefaults()
         let client = MockAPIClient()
-        let env = AppEnvironment(api: client, auth: MockAuthService(startSignedIn: true),
+        let env = AppEnvironment(api: client, auth: MockAuthService(startSignedIn: true), push: stubPush(client),
                                  placeSearch: MockPlaceSearch(), locator: MockLocationFixer(), defaults: scratch.defaults)
         await env.bootstrap()
         #expect(env.currentUser?.locale == .vi)
@@ -403,7 +403,7 @@ struct LocalizedTests {
         defer { Localized.setLanguage(.vi) }
         let scratch = ScratchDefaults()
         let client = MockAPIClient()
-        let env = AppEnvironment(api: client, auth: MockAuthService(startSignedIn: true),
+        let env = AppEnvironment(api: client, auth: MockAuthService(startSignedIn: true), push: stubPush(client),
                                  placeSearch: MockPlaceSearch(), locator: MockLocationFixer(), defaults: scratch.defaults)
         await env.bootstrap()
         await env.setAppLocale(.en)
@@ -426,7 +426,7 @@ struct LocalizedTests {
         let scratch = ScratchDefaults()
         scratch.defaults.set(AppLocale.en.rawValue, forKey: AppLocale.storageKey)
         let client = MockAPIClient()   // seeded profile is `vi`
-        let env = AppEnvironment(api: client, auth: MockAuthService(startSignedIn: true),
+        let env = AppEnvironment(api: client, auth: MockAuthService(startSignedIn: true), push: stubPush(client),
                                  placeSearch: MockPlaceSearch(), locator: MockLocationFixer(), defaults: scratch.defaults)
         #expect(env.appLocale == .en)
         env.activateLocale()
@@ -445,7 +445,7 @@ struct LocalizedTests {
         defer { Localized.setLanguage(.vi) }
         let scratch = ScratchDefaults()
         let client = MockAPIClient(updateMeError: APIError.network(URLError(.notConnectedToInternet)))
-        let env = AppEnvironment(api: client, auth: MockAuthService(startSignedIn: true),
+        let env = AppEnvironment(api: client, auth: MockAuthService(startSignedIn: true), push: stubPush(client),
                                  placeSearch: MockPlaceSearch(), locator: MockLocationFixer(), defaults: scratch.defaults)
         await env.bootstrap()
 

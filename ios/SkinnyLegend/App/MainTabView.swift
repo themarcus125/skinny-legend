@@ -1,7 +1,7 @@
 import SwiftUI
 import UIKit
 
-enum AppTab: Hashable {
+enum AppTab: Hashable, Sendable {
     case track
     case dashboard
     case leaderboard
@@ -16,6 +16,7 @@ enum AppTab: Hashable {
 struct MainTabView: View {
     @Environment(AppEnvironment.self) private var env
     @State private var selection: AppTab = .dashboard
+    private let router = PushRouter.shared
 
     var body: some View {
         TabView(selection: $selection) {
@@ -43,6 +44,12 @@ struct MainTabView: View {
             }
         }
         .tabBarMinimizeBehavior(.never)
+        // A tapped reminder deep links to Track (spec §E). `onAppear` covers a cold launch,
+        // where the delegate records the tap before this view exists.
+        .onAppear { if let tab = router.consume() { selection = tab } }
+        .onChange(of: router.requestedTab) { _, tab in
+            if tab != nil, let requested = router.consume() { selection = requested }
+        }
         .tint(Theme.flame)
     }
 }

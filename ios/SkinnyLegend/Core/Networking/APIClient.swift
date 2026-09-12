@@ -59,6 +59,10 @@ protocol APIClient: Sendable {
     func mapPins(days: Int) async throws -> MapPinsPage
 
     func sendFeedback(message: String, screenshotKey: String?, appVersion: String) async throws
+
+    /// Push (spec §E). Registering is idempotent server-side: the same token simply moves owner.
+    func registerDevice(token: String, platform: DevicePlatform, locale: DeviceLocale) async throws
+    func unregisterDevice(token: String) async throws
 }
 
 extension APIClient {

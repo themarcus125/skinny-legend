@@ -628,6 +628,17 @@
         }
       }
     },
+    "Không bật được thông báo, hãy thử lại." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't turn on notifications, please try again."
+          }
+        }
+      }
+    },
     "Không có hoạt động" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -668,6 +679,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Couldn't save, please try again."
+          }
+        }
+      }
+    },
+    "Không lấy được mã thiết bị. Thử lại sau." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't get a device token. Try again later."
           }
         }
       }

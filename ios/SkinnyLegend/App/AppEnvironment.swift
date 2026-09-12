@@ -28,6 +28,8 @@ final class AppEnvironment {
 
     let api: any APIClient
     let auth: any AuthService
+    /// Notification permission and FCM token registration (spec §E).
+    let push: PushRegistrar
     let placeSearch: any PlaceSearching
     let locator: any LocationFixing
     /// Where the language choice is persisted, under `AppLocale.storageKey`. Injected so tests
@@ -59,16 +61,20 @@ final class AppEnvironment {
     init(
         api: any APIClient,
         auth: any AuthService,
+        push: PushRegistrar,
         placeSearch: any PlaceSearching = MapKitPlaceSearch(),
         locator: any LocationFixing = CoreLocationFixer(),
         defaults: UserDefaults = .standard
     ) {
         self.api = api
         self.auth = auth
+        self.push = push
         self.placeSearch = placeSearch
         self.locator = locator
         self.defaults = defaults
         self.appLocale = AppLocale(rawValue: defaults.string(forKey: AppLocale.storageKey) ?? "") ?? .system
+        // The FCM token-refresh callback lands in `AppDelegate`, outside the SwiftUI environment.
+        PushTokenRefresh.shared.registrar = push
     }
 
     /// Chooses mock or live wiring once, at launch (spec §14). Gated on `useLiveBackend`
@@ -83,12 +89,18 @@ final class AppEnvironment {
                 guard let auth else { throw APIError.unauthenticated }
                 return try await auth.idToken()
             })
-            return AppEnvironment(api: client, auth: auth, placeSearch: MapKitPlaceSearch(), locator: CoreLocationFixer())
+            let push = PushRegistrar(api: client, authorizer: SystemPushAuthorizer(), tokens: FirebaseTokenSource())
+            return AppEnvironment(api: client, auth: auth, push: push,
+                                  placeSearch: MapKitPlaceSearch(), locator: CoreLocationFixer())
         }
         if !AppMode.isMock {
             print("[AppEnvironment] No GoogleService-Info.plist found and -mockAPI was not passed; falling back to mock services.")
         }
-        return AppEnvironment(api: MockAPIClient(), auth: MockAuthService(startSignedIn: true),
+        let client = MockAPIClient()
+        // The authorizer stays real in mock mode so the Simulator still shows the system
+        // permission prompt; only the FCM token (which needs an APNs key) is faked.
+        let push = PushRegistrar(api: client, authorizer: SystemPushAuthorizer(), tokens: MockPushTokenSource())
+        return AppEnvironment(api: client, auth: MockAuthService(startSignedIn: true), push: push,
                               placeSearch: MockPlaceSearch(), locator: MockLocationFixer())
     }
 
@@ -111,6 +123,8 @@ final class AppEnvironment {
         defaults.set(choice.rawValue, forKey: AppLocale.storageKey)
         guard currentUser != nil else { return }
         await pushLocale(serverLocale)
+        // The device row carries its own locale (the job's fallback), so keep it in step.
+        if push.isEnabled { await push.registerCurrentToken() }
     }
 
     /// The stored preference wins over whatever the server holds: if `me.locale` disagrees with

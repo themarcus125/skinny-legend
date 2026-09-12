@@ -43,6 +43,8 @@ targets:
         product: FirebaseAuth
       - package: Firebase
         product: FirebaseCore
+      - package: Firebase
+        product: FirebaseMessaging
       - package: GoogleSignIn
         product: GoogleSignIn
     info:
@@ -56,6 +58,8 @@ targets:
         CFBundleShortVersionString: "1.0"
         CFBundleVersion: "1"
         UILaunchScreen: {}
+        UIBackgroundModes:
+          - remote-notification
         UIApplicationSceneManifest:
           UIApplicationSupportsMultipleScenes: false
         UISupportedInterfaceOrientations:

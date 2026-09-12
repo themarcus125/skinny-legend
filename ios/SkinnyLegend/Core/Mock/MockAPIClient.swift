@@ -20,6 +20,7 @@ actor MockAPIClient: APIClient {
     private var members: [UserDTO]
     private var store: [StoredEntry]
     private var uploads: Set<String> = []
+    private var devices: [String: DeviceDTO] = [:]
     private let historyPageSize: Int
     private let feedPageSize = 30
     private var nextID = 1
@@ -263,6 +264,23 @@ actor MockAPIClient: APIClient {
 
     func sendFeedback(message: String, screenshotKey: String?, appVersion: String) async throws {
         try? await Task.sleep(for: .milliseconds(300))
+    }
+
+    // MARK: - Push devices
+
+    func registerDevice(token: String, platform: DevicePlatform, locale: DeviceLocale) async throws {
+        devices[token] = DeviceDTO(id: "device-\(devices.count + 1)", token: token,
+                                   platform: platform.rawValue, locale: locale.rawValue,
+                                   createdAt: Date(), lastSeenAt: Date())
+    }
+
+    func unregisterDevice(token: String) async throws {
+        devices.removeValue(forKey: token)
+    }
+
+    /// Test-only view of what the app registered. Sorted so assertions are order-independent.
+    func registeredTokens() -> [String] {
+        devices.keys.sorted()
     }
 
     // MARK: - Helpers

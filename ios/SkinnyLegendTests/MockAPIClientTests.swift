@@ -8,6 +8,16 @@ private let frozenToday: LocalDate = "2026-09-11"
 
 @Suite("MockAPIClient")
 struct MockAPIClientTests {
+    @Test("Registering and unregistering a device round-trips")
+    func devices() async throws {
+        let client = MockAPIClient()
+        try await client.registerDevice(token: "t1", platform: .ios, locale: .vi)
+        try await client.registerDevice(token: "t2", platform: .ios, locale: .en)
+        #expect(await client.registeredTokens() == ["t1", "t2"])
+        try await client.unregisterDevice(token: "t1")
+        #expect(await client.registeredTokens() == ["t2"])
+    }
+
     @Test("Seeds every screen with data")
     func seeds() async throws {
         let client = MockAPIClient(today: frozenToday)
