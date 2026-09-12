@@ -1,11 +1,11 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { and, desc, eq, gte, isNotNull, lt } from 'drizzle-orm';
-import { computeScore, isoWeekKey, addDays, schema, type Category, type ScoreResult, CATEGORIES } from '@skinny/shared';
+import { isoWeekKey, addDays, schema, type Category, type ScoreResult, CATEGORIES } from '@skinny/shared';
 import { db } from '../db.js';
 import { validate, uuidParam } from '../validate.js';
 import { authenticate, requireActive, type AuthEnv } from '../middleware/auth.js';
-import { loadChallenge, loadConfirmedEntries, todayLocal, type Challenge } from '../services/score.js';
+import { loadChallenge, loadScoreboard, todayLocal } from '../services/score.js';
 import { storage } from '../services/storage.js';
 import { toEntryDto, HISTORY_PAGE_SIZE } from './entries.js';
 
@@ -15,21 +15,8 @@ async function userDto(u: UserRow) {
   return { id: u.id, displayName: u.displayName, avatarUrl: u.avatarKey ? await storage.publicUrl(u.avatarKey) : null };
 }
 
-async function activeUsers() {
-  return db.select().from(schema.users).where(eq(schema.users.status, 'active'));
-}
-
 /** Scores for every active user as of `asOf`. Sorted by total desc, then display name. */
-async function scoreboard(challenge: Challenge, asOf: string) {
-  const users = await activeUsers();
-  const entries = await loadConfirmedEntries(users.map((u) => u.id));
-  const rows = users.map((user) => ({
-    user,
-    score: computeScore({ entries: entries.get(user.id) ?? [], rules: challenge.rules, challenge: challenge.config, asOf }),
-  }));
-  rows.sort((a, b) => b.score.total - a.score.total || a.user.displayName.localeCompare(b.user.displayName) || a.user.id.localeCompare(b.user.id));
-  return rows.map((r) => ({ ...r, rank: 1 + rows.filter((o) => o.score.total > r.score.total).length }));
-}
+const scoreboard = loadScoreboard;
 
 function pointsInWeek(score: ScoreResult, week: string) {
   return Object.entries(score.byDay).filter(([d]) => isoWeekKey(d) === week).reduce((s, [, v]) => s + v.points, 0);

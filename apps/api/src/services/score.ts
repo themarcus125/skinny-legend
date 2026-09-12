@@ -43,3 +43,30 @@ export async function loadUserScore(userId: string, challenge: Challenge, asOf: 
   const entries = (await loadConfirmedEntries([userId])).get(userId) ?? [];
   return computeScore({ entries, rules: challenge.rules, challenge: challenge.config, asOf });
 }
+
+export interface ScoreboardRow {
+  user: typeof schema.users.$inferSelect;
+  score: ScoreResult;
+  rank: number;
+}
+
+/**
+ * Scores for every active member as of `asOf`, sorted by total descending then display name.
+ * Ties share a rank (`1 + the number of members strictly ahead`). Shared by /leaderboard,
+ * /me/dashboard, /me/trends and the daily notify job.
+ */
+export async function loadScoreboard(challenge: Challenge, asOf: LocalDate): Promise<ScoreboardRow[]> {
+  const users = await db.select().from(schema.users).where(eq(schema.users.status, 'active'));
+  const entries = await loadConfirmedEntries(users.map((u) => u.id));
+  const rows = users.map((user) => ({
+    user,
+    score: computeScore({ entries: entries.get(user.id) ?? [], rules: challenge.rules, challenge: challenge.config, asOf }),
+  }));
+  rows.sort(
+    (a, b) =>
+      b.score.total - a.score.total ||
+      a.user.displayName.localeCompare(b.user.displayName) ||
+      a.user.id.localeCompare(b.user.id),
+  );
+  return rows.map((r) => ({ ...r, rank: 1 + rows.filter((o) => o.score.total > r.score.total).length }));
+}

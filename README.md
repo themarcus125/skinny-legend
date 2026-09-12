@@ -77,6 +77,26 @@ Add a second Railway service from the same image with no HTTP port:
 
 It deletes R2 objects older than 24h that no row references.
 
+### Daily push cron
+
+Add a third Railway service from the same image with no HTTP port. Its settings live in
+`railway.notify.json` at the repo root, but Railway only reads that file if the service's
+**Settings → Config as code → "Railway config file path"** is set to `railway.notify.json`; with
+the default path the service would pick up the API's config (HTTP server, no cron) instead.
+
+- Command: `node dist/jobs/notify.js`
+- Schedule: `0 13 * * *` — 13:00 UTC, which is **20:00 Asia/Ho_Chi_Minh** all year (ICT has no DST)
+- Same environment variables as the API service
+
+Each run builds the reminder plan (`packages/shared/src/notifications/plan.ts`) from the current
+standings and the last 24 h of `notification_log`, then sends through FCM.
+
+Delivery only goes out for real once `AUTH_MODE=firebase` and `FIREBASE_PROJECT_ID`,
+`FIREBASE_CLIENT_EMAIL` and `FIREBASE_PRIVATE_KEY` are all set (SKI-40/42) — the same service
+account that verifies ID tokens, plus an **APNs authentication key uploaded to Firebase → Project
+settings → Cloud Messaging**. In any other mode the job runs end to end against an in-memory fake
+sender and writes no `notification_log` rows for undelivered messages, so it is safe to schedule early.
+
 ### Bootstrapping the first admin
 
 Roles are only editable through the admin API, so the first admin is promoted by hand. Sign in
