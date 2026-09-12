@@ -26,11 +26,15 @@ final class MapModel {
         self.api = api
     }
 
+    /// Only the first load shows the spinner: a refresh over already-loaded pins keeps `.loaded`
+    /// (and the `Map` mounted) until the new pins replace the old ones.
     func load(days: Int = 30) async {
         guard !isLoading else { return }
         isLoading = true
         defer { isLoading = false }
-        state = .loading
+        if case .loaded = state {} else {
+            state = .loading
+        }
         do {
             let page = try await api.mapPins(days: days)
             state = .loaded(MapClusterer.cluster(page.pins, radiusMeters: Self.clusterRadiusMeters))

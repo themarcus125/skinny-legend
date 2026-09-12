@@ -37,8 +37,16 @@ struct MapScreen: View {
             }
         }
         .navigationTitle("Bản đồ")
+        .toolbar {
+            // `.refreshable` is inert on a ZStack over a `Map` (nothing scrolls), so refresh lives here.
+            Button {
+                Task { await model.load() }
+            } label: {
+                Label("Tải lại", systemImage: "arrow.clockwise")
+            }
+            .accessibilityLabel("Tải lại")
+        }
         .task { await model.load() }
-        .refreshable { await model.load() }
     }
 
     private func mapView(_ clusters: [MapCluster]) -> some View {
@@ -65,7 +73,7 @@ struct MapScreen: View {
     }
 
     /// Fits the camera to every cluster center on the first successful load only, with 20% padding,
-    /// so a manual pan/zoom afterwards (or a pull-to-refresh) never yanks the map back.
+    /// so a manual pan/zoom afterwards (or a toolbar refresh) never yanks the map back.
     private func fitCameraIfNeeded(_ clusters: [MapCluster]) {
         guard !hasFittedCamera, !clusters.isEmpty else { return }
         hasFittedCamera = true
@@ -83,11 +91,32 @@ struct MapScreen: View {
 }
 
 /// One map annotation: the newest pin's avatar in a glass ring, plus a flame-tinted count badge
-/// when several entries clustered together.
+/// when several entries clustered together. VoiceOver reads it as one button (name, entry count,
+/// place) rather than avatar initials and a bare number.
 private struct ClusterPin: View {
     let cluster: MapCluster
 
     var body: some View {
+        pin
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel(accessibilityLabel)
+            .accessibilityAddTraits(.isButton)
+            .accessibilityHint("Mở chi tiết")
+    }
+
+    private var accessibilityLabel: String {
+        let newest = cluster.pins[0]
+        var parts = [newest.user.displayName]
+        if cluster.pins.count > 1 {
+            parts.append("\(cluster.pins.count) mục ghi")
+        }
+        if let placeName = newest.placeName {
+            parts.append(placeName)
+        }
+        return parts.joined(separator: ", ")
+    }
+
+    private var pin: some View {
         ZStack(alignment: .topTrailing) {
             AvatarView(url: cluster.pins[0].user.avatarUrl, displayName: cluster.pins[0].user.displayName, size: 36)
                 .padding(4)

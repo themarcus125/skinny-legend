@@ -7,6 +7,17 @@ struct MapPinCard: View {
     let pin: MapPinDTO
 
     var body: some View {
+        ScrollView {
+            card
+                .padding(20)
+        }
+        .presentationDetents([.medium, .large])
+        .presentationDragIndicator(.visible)
+    }
+
+    /// Scrolls inside the sheet: a 16:9 photo, header, wrapped chips and place can exceed the
+    /// medium detent on smaller devices.
+    private var card: some View {
         GlassCard(padding: 0) {
             VStack(alignment: .leading, spacing: 0) {
                 RemoteImage(url: pin.thumbUrl)
@@ -45,8 +56,5 @@ struct MapPinCard: View {
                 .padding(16)
             }
         }
-        .padding(20)
-        .presentationDetents([.medium])
-        .presentationDragIndicator(.visible)
     }
 }
