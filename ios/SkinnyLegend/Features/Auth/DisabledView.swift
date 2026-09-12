@@ -28,7 +28,7 @@ struct DisabledView: View {
             .padding(.horizontal, 24)
 
             Button {
-                env.signOut()
+                Task { await env.signOut() }
             } label: {
                 Text("Đăng xuất")
                     .font(.roundedLabel(16))

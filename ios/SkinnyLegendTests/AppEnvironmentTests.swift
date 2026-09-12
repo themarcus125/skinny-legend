@@ -121,7 +121,7 @@ struct AppEnvironmentTests {
         let error = APIError(status: 403, code: "disabled", message: "Account disabled")
         let env = makeEnvironment(api: StubAPIClient(sessionResult: .failure(error)), auth: MockAuthService(startSignedIn: true))
         await env.bootstrap()
-        env.signOut()
+        await env.signOut()
         #expect(env.session == .signedOut)
         #expect(env.currentUser == nil)
     }
@@ -161,9 +161,26 @@ struct AppEnvironmentTests {
     func signOut() async {
         let env = makeEnvironment(api: MockAPIClient(), auth: MockAuthService(startSignedIn: true))
         await env.bootstrap()
-        env.signOut()
+        await env.signOut()
         #expect(env.session == .signedOut)
         #expect(env.currentUser == nil)
+    }
+
+    @Test("Signing out unregisters the device so a signed-out phone gets no reminders")
+    func signOutUnregistersDevice() async {
+        let api = MockAPIClient()
+        let env = makeEnvironment(api: api, auth: MockAuthService(startSignedIn: true))
+        await env.bootstrap()
+        #expect(await env.push.enable())
+        #expect(await api.registeredTokens() == ["mock-fcm-token"])
+
+        await env.signOut()
+
+        #expect(env.session == .signedOut)
+        #expect(!env.push.isEnabled)
+        #expect(!env.push.isRegistrationPending)
+        #expect(env.push.registeredToken == nil)
+        #expect(await api.registeredTokens().isEmpty)
     }
 }
 

@@ -683,17 +683,6 @@
         }
       }
     },
-    "Không lấy được mã thiết bị. Thử lại sau." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Couldn't get a device token. Try again later."
-          }
-        }
-      }
-    },
     "Không mở được cửa sổ đăng nhập." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -958,6 +947,28 @@
         }
       }
     },
+    "Mở Cài đặt" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open Settings"
+          }
+        }
+      }
+    },
+    "Mở Cài đặt để bật lại thông báo" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opens Settings so you can turn notifications back on"
+          }
+        }
+      }
+    },
     "Mở chi tiết" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1068,6 +1079,28 @@
         }
       }
     },
+    "Nhắc bạn ghi nhận hoạt động mỗi tối" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reminds you to log your activity every evening"
+          }
+        }
+      }
+    },
+    "Nhắc nhở" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reminders"
+          }
+        }
+      }
+    },
     "Phiên bản" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1130,6 +1163,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "This member hasn't tracked anything yet."
+          }
+        }
+      }
+    },
+    "Thông báo đang tắt trong Cài đặt. Bật lại ở đó để nhận nhắc nhở." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Notifications are off in Settings. Turn them back on there to get reminders."
           }
         }
       }

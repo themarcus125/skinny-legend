@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// Spec §7 Account: history grouped by day with edit via the same verdict sheet. The profile
 /// and settings sections are added by the next two tasks into this same list.
@@ -13,6 +14,8 @@ struct AccountView: View {
     @State private var isFeedbackSheetPresented = false
     @State private var isSignOutConfirming = false
     @Environment(AppEnvironment.self) private var env
+    @Environment(\.openURL) private var openURL
+    @Environment(\.scenePhase) private var scenePhase
     private let apiClient: any APIClient
 
     init(api: any APIClient) {
@@ -55,6 +58,46 @@ struct AccountView: View {
             }
 
             Section {
+                // Spec §E: the reminders toggle registers/unregisters this device. Permission is
+                // only ever requested from here or after the first confirmed entry.
+                Toggle(isOn: Binding(
+                    get: { env.push.isEnabled },
+                    set: { isOn in
+                        Task {
+                            if isOn { await env.push.enable() } else { await env.push.disable() }
+                        }
+                    }
+                )) {
+                    Label("Nhắc nhở", systemImage: "bell.badge")
+                        .font(.roundedLabel(16, weight: .medium))
+                }
+                .disabled(env.push.isBusy || env.push.permission == .denied)
+                .accessibilityHint("Nhắc bạn ghi nhận hoạt động mỗi tối")
+
+                // Permission revoked in Settings: the toggle cannot turn it back on, so say why
+                // and open the one place that can, instead of bouncing the switch back off.
+                if env.push.permission == .denied {
+                    Button {
+                        if let url = URL(string: UIApplication.openSettingsURLString) { openURL(url) }
+                    } label: {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Label("Mở Cài đặt", systemImage: "gearshape")
+                                .font(.roundedLabel(16, weight: .medium))
+                            Text("Thông báo đang tắt trong Cài đặt. Bật lại ở đó để nhận nhắc nhở.")
+                                .font(.roundedLabel(13, weight: .medium))
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityHint("Mở Cài đặt để bật lại thông báo")
+                }
+
+                if let pushError = env.push.errorMessage {
+                    Label(pushError, systemImage: "exclamationmark.triangle.fill")
+                        .font(.roundedLabel(13, weight: .medium))
+                        .foregroundStyle(Theme.flame)
+                }
+
                 Picker(selection: Binding(
                     get: { env.appLocale },
                     set: { choice in Task { await env.setAppLocale(choice) } }
@@ -159,8 +202,18 @@ struct AccountView: View {
         // once and never re-resolves when the in-app language changes; this one is recomputed
         // because the view declares `@Environment(\.locale)`.
         .navigationTitle(Localized.string("Tài khoản"))
-        .task { if model.entries.isEmpty { await model.loadFirstPage() } }
-        .refreshable { await model.loadFirstPage() }
+        .task {
+            await env.push.refresh()
+            if model.entries.isEmpty { await model.loadFirstPage() }
+        }
+        .refreshable {
+            await env.push.refresh()
+            await model.loadFirstPage()
+        }
+        // Coming back from Settings (the "Mở Cài đặt" row) re-reads the system permission.
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { Task { await env.push.refresh() } }
+        }
         .sheet(item: $editing) { sheetModel in
             VerdictSheet(model: sheetModel, placeResolver: nil) { _ in
                 Task { await model.reloadAfterEdit() }
@@ -184,7 +237,7 @@ struct AccountView: View {
             FeedbackSheet(api: apiClient)
         }
         .confirmationDialog("Đăng xuất khỏi Skinny Legend?", isPresented: $isSignOutConfirming, titleVisibility: .visible) {
-            Button("Đăng xuất", role: .destructive) { env.signOut() }
+            Button("Đăng xuất", role: .destructive) { Task { await env.signOut() } }
             Button("Huỷ", role: .cancel) {}
         }
     }

@@ -173,7 +173,11 @@ final class AppEnvironment {
         }
     }
 
-    func signOut() {
+    /// Unregisters the device first — while the ID token that `DELETE /me/devices` needs is still
+    /// valid — so a signed-out phone stops receiving this account's reminders, and clears the
+    /// install-scoped push flags so the next account is asked afresh (spec §E).
+    func signOut() async {
+        await push.resetForSignOut()
         try? auth.signOut()
         session = .signedOut
     }

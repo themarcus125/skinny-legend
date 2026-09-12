@@ -22,6 +22,17 @@ private func makeRegistrar(
     return (registrar, authorizer, api, defaults)
 }
 
+/// Hands out one answer per call, so a test can play "no token yet, then a token" the way
+/// Firebase does before and after the APNs token lands.
+@MainActor
+private final class SequencedTokenSource: PushTokenSource {
+    private var tokens: [String?]
+    init(tokens: [String?]) { self.tokens = tokens }
+    func currentToken() async throws -> String? {
+        tokens.count > 1 ? tokens.removeFirst() : tokens.first ?? nil
+    }
+}
+
 @Suite("PushRegistrar")
 @MainActor
 struct PushRegistrarTests {
@@ -66,12 +77,79 @@ struct PushRegistrarTests {
         #expect(await api.registeredTokens() == ["fcm-token-1"])
     }
 
-    @Test("A missing FCM token surfaces an error instead of registering an empty string")
-    func missingToken() async {
-        let (registrar, _, api, _) = makeRegistrar(token: nil)
+    @Test("A token that is not available yet leaves the registration pending, with the toggle on and no error")
+    func missingTokenIsPending() async {
+        let (registrar, _, api, defaults) = makeRegistrar(token: nil)
         #expect(!(await registrar.enable()))
-        #expect(registrar.errorMessage != nil)
+        #expect(registrar.isEnabled)
+        #expect(registrar.isRegistrationPending)
+        #expect(registrar.errorMessage == nil)
         #expect(await api.registeredTokens().isEmpty)
+        #expect(defaults.bool(forKey: PushRegistrar.pendingKey))
+    }
+
+    @Test("The FCM token callback completes a registration that was waiting on APNs")
+    func tokenCallbackCompletesPendingRegistration() async {
+        let api = MockAPIClient()
+        let authorizer = MockPushAuthorizer()
+        let tokens = SequencedTokenSource(tokens: [nil, "fcm-token-late"])
+        let defaults = UserDefaults(suiteName: "push-tests-\(UUID().uuidString)")!
+        let registrar = PushRegistrar(api: api, authorizer: authorizer, tokens: tokens, defaults: defaults, locale: .vi)
+
+        #expect(!(await registrar.enable()))
+        #expect(registrar.isRegistrationPending)
+        #expect(authorizer.didRegisterForRemote)
+
+        await registrar.handleTokenRefresh()
+
+        #expect(registrar.isEnabled)
+        #expect(!registrar.isRegistrationPending)
+        #expect(registrar.registeredToken == "fcm-token-late")
+        #expect(registrar.errorMessage == nil)
+        #expect(await api.registeredTokens() == ["fcm-token-late"])
+        #expect(!defaults.bool(forKey: PushRegistrar.pendingKey))
+    }
+
+    @Test("The once-per-install prompt still registers when the token arrives later")
+    func firstEntryPromptSurvivesLateToken() async {
+        let api = MockAPIClient()
+        let tokens = SequencedTokenSource(tokens: [nil, "fcm-token-late"])
+        let defaults = UserDefaults(suiteName: "push-tests-\(UUID().uuidString)")!
+        let registrar = PushRegistrar(api: api, authorizer: MockPushAuthorizer(), tokens: tokens, defaults: defaults, locale: .vi)
+
+        await registrar.requestAfterFirstConfirmedEntry()
+        #expect(defaults.bool(forKey: PushRegistrar.didAskKey))
+        #expect(registrar.isRegistrationPending)
+
+        await registrar.handleTokenRefresh()
+        #expect(await api.registeredTokens() == ["fcm-token-late"])
+    }
+
+    @Test("A rotated token never re-registers a device whose reminders are off")
+    func tokenCallbackRespectsDisable() async {
+        let (registrar, _, api, _) = makeRegistrar()
+        _ = await registrar.enable()
+        await registrar.disable()
+        await registrar.handleTokenRefresh()
+        #expect(!registrar.isEnabled)
+        #expect(await api.registeredTokens().isEmpty)
+    }
+
+    @Test("Sign-out deletes the token and clears every install-scoped flag")
+    func resetForSignOut() async {
+        let (registrar, _, api, defaults) = makeRegistrar()
+        await registrar.requestAfterFirstConfirmedEntry()
+        #expect(await api.registeredTokens() == ["fcm-token-1"])
+
+        await registrar.resetForSignOut()
+
+        #expect(await api.registeredTokens().isEmpty)
+        #expect(!registrar.isEnabled)
+        #expect(!registrar.isRegistrationPending)
+        #expect(registrar.registeredToken == nil)
+        #expect(!defaults.bool(forKey: PushRegistrar.didAskKey))
+        #expect(!defaults.bool(forKey: PushRegistrar.enabledKey))
+        #expect(!defaults.bool(forKey: PushRegistrar.pendingKey))
     }
 
     @Test("Disabling unregisters the token and clears the flag")
@@ -125,5 +203,26 @@ struct PushRegistrarTests {
                                       tokens: MockPushTokenSource(token: "t"), defaults: defaults, locale: .vi)
         await registrar.requestAfterFirstConfirmedEntry()
         #expect(authorizer.requestCount == 0)
+    }
+
+    @Test("A member who already turned notifications off is not re-prompted by a later entry")
+    func doesNotReprompt() async {
+        let (registrar, authorizer, api, _) = makeRegistrar(grant: false)
+        await registrar.requestAfterFirstConfirmedEntry()
+        #expect(authorizer.requestCount == 1)
+        #expect(!registrar.isEnabled)
+
+        // A second confirmed entry must not nag.
+        await registrar.requestAfterFirstConfirmedEntry()
+        #expect(authorizer.requestCount == 1)
+        #expect(await api.registeredTokens().isEmpty)
+    }
+
+    @Test("Re-enabling after a denial does not register, so the Account row can explain why")
+    func reEnableAfterDenial() async {
+        let (registrar, _, api, _) = makeRegistrar(status: .denied)
+        #expect(!(await registrar.enable()))
+        #expect(registrar.permission == .denied)
+        #expect(await api.registeredTokens().isEmpty)
     }
 }

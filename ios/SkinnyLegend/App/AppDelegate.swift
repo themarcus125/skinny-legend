@@ -66,10 +66,9 @@ final class PushTokenRefresh {
     static let shared = PushTokenRefresh()
     weak var registrar: PushRegistrar?
 
-    /// Only a user who has reminders ON gets re-registered; a rotated token must never undo
-    /// `disable()`.
+    /// The registrar decides whether the token is wanted (reminders ON, or a first registration
+    /// still waiting on the APNs → FCM handshake); a rotated token must never undo `disable()`.
     func handle() async {
-        guard let registrar, registrar.isEnabled else { return }
-        await registrar.registerCurrentToken()
+        await registrar?.handleTokenRefresh()
     }
 }

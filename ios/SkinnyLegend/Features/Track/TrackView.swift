@@ -6,6 +6,7 @@ struct TrackView: View {
     /// `String`s from `Localized` (labels, `LocalDay.display`), and `Text(String)` carries no
     /// locale dependency of its own the way `Text(LocalizedStringKey)` does.
     @Environment(\.locale) private var locale
+    @Environment(AppEnvironment.self) private var env
     @State private var model: TrackModel
     @State private var places: PlaceResolver
     @State private var pickerItem: PhotosPickerItem?
@@ -68,6 +69,14 @@ struct TrackView: View {
                 celebrationPoints = sheetModel.projectedPoints
                 model.reset()
                 places.clear()
+                // Spec §E: ask for notification permission after the first confirmed entry,
+                // never at launch. Wait out the celebration overlay (1.8 s) so the system
+                // alert does not land on top of it. No-ops on every later entry.
+                let push = env.push
+                Task {
+                    try? await Task.sleep(for: .seconds(2))
+                    await push.requestAfterFirstConfirmedEntry()
+                }
             }
         }
         .overlay {
