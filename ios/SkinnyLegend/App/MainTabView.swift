@@ -22,7 +22,7 @@ struct MainTabView: View {
                 NavigationStack { DashboardView(api: env.api) }
             }
             Tab("Xếp hạng", systemImage: "trophy.fill", value: AppTab.leaderboard) {
-                NavigationStack { TabStub(title: "Xếp hạng", symbol: "trophy.fill") }
+                NavigationStack { LeaderboardView(api: env.api) }
             }
             Tab("Xu hướng", systemImage: "chart.bar.xaxis", value: AppTab.trends) {
                 NavigationStack { TabStub(title: "Xu hướng", symbol: "chart.bar.xaxis") }
