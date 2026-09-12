@@ -50,6 +50,13 @@ struct AccountView: View {
             }
 
             Section {
+                Link(destination: AppMode.momoFundURL) {
+                    Label("Quỹ nhóm", systemImage: "banknote")
+                        .font(.roundedLabel(16, weight: .medium))
+                }
+                .accessibilityElement(children: .combine)
+                .accessibilityHint("Mở trang quỹ Momo")
+
                 Button {
                     isFeedbackSheetPresented = true
                 } label: {

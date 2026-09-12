@@ -38,4 +38,7 @@ enum AppMode {
         let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "1"
         return "\(short) (\(build))"
     }
+
+    /// Group fund page (spec v1.1 §A). Per-challenge, so a constant rather than an API field.
+    static let momoFundURL = URL(string: "https://quy.momo.vn/v2/GZqk7REIhy?cover=f131")!
 }
