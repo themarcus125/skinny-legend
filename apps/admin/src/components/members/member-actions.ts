@@ -2,6 +2,7 @@ import type { AdminUser, UserPatch, UserStatus } from '@/lib/api/types';
 
 export interface MemberAction {
   key: 'approve' | 'disable' | 'reactivate';
+  /** Message key under `members.*`; the table renders `t(label)`. */
   label: string;
   patch: UserPatch;
   /** Destructive actions go through a confirmation dialog. */
@@ -12,11 +13,11 @@ export interface MemberAction {
 export function availableActions(user: AdminUser): MemberAction[] {
   switch (user.status) {
     case 'pending':
-      return [{ key: 'approve', label: 'Duyệt', patch: { status: 'active' }, confirm: false }];
+      return [{ key: 'approve', label: 'members.approve', patch: { status: 'active' }, confirm: false }];
     case 'active':
-      return [{ key: 'disable', label: 'Khoá tài khoản', patch: { status: 'disabled' }, confirm: true }];
+      return [{ key: 'disable', label: 'members.lock', patch: { status: 'disabled' }, confirm: true }];
     case 'disabled':
-      return [{ key: 'reactivate', label: 'Mở lại', patch: { status: 'active' }, confirm: false }];
+      return [{ key: 'reactivate', label: 'members.reopen', patch: { status: 'active' }, confirm: false }];
   }
 }
 

@@ -4,7 +4,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import { NotificationLog } from '@/components/notifications/notification-log';
-import { testSendErrorKey } from '@/components/notifications/test-send-error';
 import { TestSendForm } from '@/components/notifications/test-send-form';
 import { CountPill, PageHeader } from '@/components/page-header';
 import { QueryState } from '@/components/query-state';
@@ -13,6 +12,7 @@ import { useAdminApi } from '@/lib/auth/auth-context';
 
 export default function NotificationsPage() {
   const t = useTranslations('notifications');
+  const tRoot = useTranslations();
   const api = useAdminApi();
   const queryClient = useQueryClient();
 
@@ -23,13 +23,16 @@ export default function NotificationsPage() {
     mutationFn: (userId: string) => api.sendTestNotification(userId),
     onSuccess: async (result) => {
       await queryClient.invalidateQueries({ queryKey: ['admin', 'notifications'] });
-      toast.success(t('toast.sent', { sent: result.sent, tokens: result.tokens }));
+      // FCM prunes dead registrations as a side effect; tell the admin when that happened.
+      const description = result.removedTokens > 0 ? t('toast.removed', { count: result.removedTokens }) : undefined;
+      if (result.sent === 0) {
+        toast.warning(t('toast.none', { tokens: result.tokens }), { description });
+      } else {
+        toast.success(t('toast.sent', { sent: result.sent, tokens: result.tokens }), { description });
+      }
     },
-    onError: (error: Error) => {
-      // `push_failed` forwards raw FCM text in its message; never surface that to the admin.
-      const key = testSendErrorKey(error);
-      toast.error(key ? t(`errors.${key}`) : describeError(error));
-    },
+    // `push_failed` forwards raw FCM text in its message; describeError only ever maps the code.
+    onError: (error: Error) => toast.error(tRoot(describeError(error))),
   });
 
   const items = logQuery.data ?? [];

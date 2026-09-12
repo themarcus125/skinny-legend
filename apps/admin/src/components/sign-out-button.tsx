@@ -1,6 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/lib/auth/auth-context';
 
@@ -18,6 +19,7 @@ export function SignOutButton({
   variant?: React.ComponentProps<typeof Button>['variant'];
   size?: React.ComponentProps<typeof Button>['size'];
 }) {
+  const t = useTranslations('common');
   const { signOutUser } = useAuth();
   const router = useRouter();
 
@@ -28,7 +30,7 @@ export function SignOutButton({
 
   return (
     <Button variant={variant} size={size} className={className} onClick={() => void handleClick()}>
-      Đăng xuất
+      {t('signOut')}
     </Button>
   );
 }

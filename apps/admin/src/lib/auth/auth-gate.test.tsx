@@ -15,6 +15,7 @@ const admin: AdminUser = {
   avatarKey: null,
   role: 'admin',
   status: 'active',
+  locale: 'vi',
   createdAt: '2026-09-08T01:00:00.000Z',
 };
 
@@ -55,9 +56,14 @@ describe('AuthGate', () => {
     expect(screen.queryByText('Nội dung quản trị')).not.toBeInTheDocument();
   });
 
-  it('shows the Vietnamese error message', () => {
-    renderGate({ status: 'error', error: 'Tài khoản này không có quyền quản trị.' });
+  it('renders the error key as its Vietnamese message', () => {
+    renderGate({ status: 'error', error: 'errors.forbidden' });
     expect(screen.getByRole('alert')).toHaveTextContent('Tài khoản này không có quyền quản trị.');
+  });
+
+  it('renders a raw developer error (missing env) as it is', () => {
+    renderGate({ status: 'error', error: 'Missing NEXT_PUBLIC_API_BASE_URL' });
+    expect(screen.getByRole('alert')).toHaveTextContent('Missing NEXT_PUBLIC_API_BASE_URL');
   });
 
   it('redirects a non-admin to /not-authorized', () => {

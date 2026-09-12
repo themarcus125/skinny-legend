@@ -1,6 +1,7 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import { MembersTable } from '@/components/members/members-table';
 import { PageHeader } from '@/components/page-header';
@@ -10,6 +11,8 @@ import type { UserPatch } from '@/lib/api/types';
 import { useAdminApi, useAuth } from '@/lib/auth/auth-context';
 
 export default function MembersPage() {
+  const t = useTranslations('members');
+  const tRoot = useTranslations();
   const api = useAdminApi();
   const { user: currentUser } = useAuth();
   const queryClient = useQueryClient();
@@ -20,9 +23,9 @@ export default function MembersPage() {
     mutationFn: ({ id, patch }: { id: string; patch: UserPatch }) => api.patchUser(id, patch),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
-      toast.success('Đã cập nhật thành viên');
+      toast.success(t('updated'));
     },
-    onError: (error: Error) => toast.error(describeError(error)),
+    onError: (error: Error) => toast.error(tRoot(describeError(error))),
   });
 
   const users = usersQuery.data ?? [];
@@ -31,10 +34,8 @@ export default function MembersPage() {
   return (
     <div>
       <PageHeader
-        title="Thành viên"
-        description={
-          pendingCount > 0 ? `${pendingCount} tài khoản đang chờ duyệt.` : 'Không có tài khoản nào chờ duyệt.'
-        }
+        title={t('title')}
+        description={pendingCount > 0 ? t('pendingCount', { count: pendingCount }) : t('noPending')}
       />
 
       <section className="overflow-hidden rounded-xl border border-border bg-card shadow-card">
@@ -42,7 +43,7 @@ export default function MembersPage() {
           isPending={usersQuery.isPending}
           error={usersQuery.error}
           isEmpty={users.length === 0}
-          emptyLabel="Chưa có thành viên nào."
+          emptyLabel={t('empty')}
         >
           <MembersTable
             users={users}

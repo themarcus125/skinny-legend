@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useFieldArray, useForm, useWatch, type Control } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -17,10 +18,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { CATEGORIES, type Category, type RulesPayload, type RulesResponse } from '@/lib/api/types';
-import { CATEGORY_LABELS } from '@/lib/labels';
+import { CATEGORY_LABELS, translateLabels } from '@/lib/labels';
 import { rulesFormSchema, toFormValues, toRulesPayload, type RulesFormValues } from './rules-schema';
-
-const CAP_PERIOD_LABELS = { day: 'mỗi ngày', week: 'mỗi tuần' } as const;
 
 const RULE_ROW_CLASS = 'grid items-end gap-3 sm:grid-cols-[minmax(0,1fr)_7rem_7rem_9rem_auto]';
 
@@ -43,7 +42,7 @@ type NumberFieldName =
 /**
  * The one place a number input is wired to react-hook-form. `valueAsNumber` yields NaN for an
  * empty box; the input renders '' so it stays controlled and clearable, and the schema's
- * 'Phải là số' message fires on submit.
+ * `rules.errors.number` message fires on submit.
  */
 function NumberField({
   control,
@@ -90,8 +89,11 @@ export function RulesForm({
   onSave: (payload: RulesPayload) => void;
   isSaving: boolean;
 }) {
+  const t = useTranslations('rules');
+  const tRoot = useTranslations();
+  const schema = useMemo(() => rulesFormSchema(t), [t]);
   const form = useForm<RulesFormValues>({
-    resolver: zodResolver(rulesFormSchema),
+    resolver: zodResolver(schema),
     defaultValues: toFormValues(data),
     mode: 'onSubmit',
   });
@@ -102,16 +104,17 @@ export function RulesForm({
   const used = watchedRules.map((rule) => rule.category);
   const unused = CATEGORIES.filter((category) => !used.includes(category));
 
+  const categoryItems = translateLabels(CATEGORY_LABELS, tRoot);
+  const capPeriodItems = { day: t('perDay'), week: t('perWeek') } as const;
+
   return (
     <>
       <Form {...form}>
         <form className="space-y-6" onSubmit={form.handleSubmit((values) => setPending(values))}>
           <Card>
             <CardHeader className="border-b">
-              <CardTitle>Mốc thời gian</CardTitle>
-              <CardDescription>
-                Múi giờ cố định phía máy chủ: {data.challenge.timezone} (không sửa được qua API).
-              </CardDescription>
+              <CardTitle>{t('timeline')}</CardTitle>
+              <CardDescription>{t('timezoneNote', { timezone: data.challenge.timezone })}</CardDescription>
             </CardHeader>
             <CardContent className="grid gap-4 sm:grid-cols-2">
               <FormField
@@ -119,7 +122,7 @@ export function RulesForm({
                 name="startDate"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Ngày bắt đầu</FormLabel>
+                    <FormLabel>{t('startDate')}</FormLabel>
                     <FormControl>
                       <Input type="date" {...field} />
                     </FormControl>
@@ -132,7 +135,7 @@ export function RulesForm({
                 name="endDate"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Ngày kết thúc</FormLabel>
+                    <FormLabel>{t('endDate')}</FormLabel>
                     <FormControl>
                       <Input type="date" {...field} />
                     </FormControl>
@@ -145,19 +148,19 @@ export function RulesForm({
 
           <Card>
             <CardHeader className="border-b">
-              <CardTitle>Chuỗi ngày</CardTitle>
-              <CardDescription>Thưởng mỗi khi chuỗi đạt bội số của độ dài chuỗi.</CardDescription>
+              <CardTitle>{t('streak')}</CardTitle>
+              <CardDescription>{t('streakHint')}</CardDescription>
             </CardHeader>
             <CardContent className="grid gap-4 sm:grid-cols-2">
-              <NumberField control={form.control} name="streakPoints" label="Điểm thưởng" />
-              <NumberField control={form.control} name="streakLength" label="Độ dài chuỗi (ngày)" />
+              <NumberField control={form.control} name="streakPoints" label={t('streakPoints')} />
+              <NumberField control={form.control} name="streakLength" label={t('streakLength')} />
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="border-b">
-              <CardTitle>Hạng mục</CardTitle>
-              <CardDescription>Điểm và giới hạn cho mỗi hạng mục. Mỗi hạng mục chỉ xuất hiện một lần.</CardDescription>
+              <CardTitle>{tRoot('common.category')}</CardTitle>
+              <CardDescription>{t('scoring')}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
               {rules.fields.map((row, index) => (
@@ -167,8 +170,8 @@ export function RulesForm({
                     name={`rules.${index}.category`}
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className={ruleLabelClass(index)}>Hạng mục</FormLabel>
-                        <Select items={CATEGORY_LABELS} value={field.value} onValueChange={(value) => field.onChange(value as Category)}>
+                        <FormLabel className={ruleLabelClass(index)}>{tRoot('common.category')}</FormLabel>
+                        <Select items={categoryItems} value={field.value} onValueChange={(value) => field.onChange(value as Category)}>
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue />
@@ -177,7 +180,7 @@ export function RulesForm({
                           <SelectContent>
                             {CATEGORIES.map((category) => (
                               <SelectItem key={category} value={category}>
-                                {CATEGORY_LABELS[category]}
+                                {categoryItems[category]}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -189,13 +192,13 @@ export function RulesForm({
                   <NumberField
                     control={form.control}
                     name={`rules.${index}.points`}
-                    label="Điểm"
+                    label={tRoot('common.points')}
                     labelClassName={ruleLabelClass(index)}
                   />
                   <NumberField
                     control={form.control}
                     name={`rules.${index}.capCount`}
-                    label="Giới hạn"
+                    label={t('limit')}
                     labelClassName={ruleLabelClass(index)}
                   />
                   <FormField
@@ -203,16 +206,16 @@ export function RulesForm({
                     name={`rules.${index}.capPeriod`}
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className={ruleLabelClass(index)}>Chu kỳ</FormLabel>
-                        <Select items={CAP_PERIOD_LABELS} value={field.value} onValueChange={field.onChange}>
+                        <FormLabel className={ruleLabelClass(index)}>{t('period')}</FormLabel>
+                        <Select items={capPeriodItems} value={field.value} onValueChange={field.onChange}>
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="day">{CAP_PERIOD_LABELS.day}</SelectItem>
-                            <SelectItem value="week">{CAP_PERIOD_LABELS.week}</SelectItem>
+                            <SelectItem value="day">{capPeriodItems.day}</SelectItem>
+                            <SelectItem value="week">{capPeriodItems.week}</SelectItem>
                           </SelectContent>
                         </Select>
                         <FormMessage />
@@ -227,7 +230,7 @@ export function RulesForm({
                     disabled={rules.fields.length === 1}
                     onClick={() => rules.remove(index)}
                   >
-                    Xoá
+                    {tRoot('common.delete')}
                   </Button>
                 </div>
               ))}
@@ -245,17 +248,15 @@ export function RulesForm({
                 disabled={unused.length === 0}
                 onClick={() => rules.append({ category: unused[0]!, points: 0, capCount: 1, capPeriod: 'day' })}
               >
-                Thêm hạng mục
+                {t('addCategory')}
               </Button>
             </CardContent>
           </Card>
 
           <div className="flex items-center justify-end gap-4 rounded-xl border border-border bg-card px-5 py-3 shadow-card">
-            <p className="mr-auto text-label text-muted-foreground">
-              Điểm được tính lại từ luật hiện hành cho mọi mục ghi.
-            </p>
+            <p className="mr-auto text-label text-muted-foreground">{t('recalcNote')}</p>
             <Button type="submit" disabled={isSaving}>
-              Lưu luật chơi
+              {t('submit')}
             </Button>
           </div>
         </form>
@@ -264,15 +265,14 @@ export function RulesForm({
       <Dialog open={pending !== null} onOpenChange={(open) => !open && setPending(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Áp dụng luật mới?</DialogTitle>
+            <DialogTitle>{t('applyConfirm')}</DialogTitle>
             <DialogDescription>
-              Điểm không được lưu trong cơ sở dữ liệu — mọi bảng xếp hạng, chuỗi ngày và thống kê được tính
-              lại từ luật hiện hành. Thay đổi này áp dụng <strong>hồi tố</strong> cho toàn bộ mục ghi đã có.
+              {t.rich('applyDescription', { strong: (chunks) => <strong>{chunks}</strong> })}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setPending(null)}>
-              Huỷ
+              {tRoot('common.cancel')}
             </Button>
             <Button
               disabled={isSaving}
@@ -281,7 +281,7 @@ export function RulesForm({
                 setPending(null);
               }}
             >
-              Áp dụng
+              {t('apply')}
             </Button>
           </DialogFooter>
         </DialogContent>

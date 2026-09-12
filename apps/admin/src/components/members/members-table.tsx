@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -15,7 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ROLES, type AdminUser, type Role, type UserPatch } from '@/lib/api/types';
 import { formatDateTime } from '@/lib/format';
-import { ROLE_LABELS, USER_STATUS_LABELS } from '@/lib/labels';
+import { ROLE_LABELS, USER_STATUS_LABELS, translateLabels } from '@/lib/labels';
 import { availableActions, statusVariant, type MemberAction } from './member-actions';
 
 /** statusVariant() is pinned by its own tests; the soft pill tone is mapped here instead. */
@@ -42,7 +43,9 @@ export function MembersTable({
   /** The signed-in admin's id. Their own row can't disable or demote itself (no self-lockout). */
   currentUserId?: string | null;
 }) {
+  const t = useTranslations();
   const [confirming, setConfirming] = useState<PendingConfirm | null>(null);
+  const roleItems = translateLabels(ROLE_LABELS, t);
 
   function run(user: AdminUser, action: MemberAction) {
     if (action.confirm) {
@@ -57,11 +60,11 @@ export function MembersTable({
       <Table containerClassName="md:max-h-[calc(100dvh-15rem)]">
         <TableHeader>
           <TableRow>
-            <TableHead>Tên</TableHead>
-            <TableHead>Trạng thái</TableHead>
-            <TableHead>Vai trò</TableHead>
-            <TableHead>Tham gia</TableHead>
-            <TableHead className="text-right">Thao tác</TableHead>
+            <TableHead>{t('common.name')}</TableHead>
+            <TableHead>{t('common.status')}</TableHead>
+            <TableHead>{t('members.role')}</TableHead>
+            <TableHead>{t('members.joined')}</TableHead>
+            <TableHead className="text-right">{t('common.actions')}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -82,11 +85,11 @@ export function MembersTable({
                   {user.displayName}
                 </TableCell>
                 <TableCell>
-                  <Badge variant={STATUS_TONE[statusVariant(user.status)]}>{USER_STATUS_LABELS[user.status]}</Badge>
+                  <Badge variant={STATUS_TONE[statusVariant(user.status)]}>{t(USER_STATUS_LABELS[user.status])}</Badge>
                 </TableCell>
                 <TableCell>
                   <Select
-                    items={ROLE_LABELS}
+                    items={roleItems}
                     value={user.role}
                     disabled={isPatching || isSelf}
                     onValueChange={(role) => onPatch(user.id, { role: role as Role })}
@@ -94,15 +97,15 @@ export function MembersTable({
                     <SelectTrigger
                       size="sm"
                       className="w-40"
-                      aria-label={`Vai trò của ${user.displayName}`}
-                      title={isSelf ? 'Không thể đổi vai trò của chính bạn' : undefined}
+                      aria-label={t('members.roleOf', { name: user.displayName })}
+                      title={isSelf ? t('members.cannotChangeOwnRole') : undefined}
                     >
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
                       {ROLES.map((role) => (
                         <SelectItem key={role} value={role}>
-                          {ROLE_LABELS[role]}
+                          {roleItems[role]}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -123,7 +126,7 @@ export function MembersTable({
                       disabled={isPatching}
                       onClick={() => run(user, action)}
                     >
-                      {action.label}
+                      {t(action.label)}
                     </Button>
                   ))}
                 </TableCell>
@@ -136,16 +139,14 @@ export function MembersTable({
       <Dialog open={confirming !== null} onOpenChange={(open) => !open && setConfirming(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Khoá tài khoản?</DialogTitle>
+            <DialogTitle>{t('members.lockConfirm')}</DialogTitle>
             <DialogDescription>
-              {confirming
-                ? `${confirming.user.displayName} sẽ không đăng nhập được nữa (API trả 403 disabled). Các mục đã ghi vẫn được giữ và vẫn tính điểm.`
-                : ''}
+              {confirming ? t('members.lockDescription', { name: confirming.user.displayName }) : ''}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setConfirming(null)}>
-              Huỷ
+              {t('common.cancel')}
             </Button>
             <Button
               variant="destructive"
@@ -155,7 +156,7 @@ export function MembersTable({
                 setConfirming(null);
               }}
             >
-              Khoá tài khoản
+              {t('members.lock')}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -9,6 +9,7 @@ const admin: AdminUser = {
   avatarKey: null,
   role: 'admin',
   status: 'active',
+  locale: 'vi',
   createdAt: '2026-09-08T01:00:00.000Z',
 };
 
@@ -21,11 +22,19 @@ describe('gateDecision', () => {
     expect(gateDecision({ status: 'signed-out', user: null, error: null })).toEqual({ kind: 'sign-in' });
   });
 
-  it('surfaces the already-translated error message', () => {
-    // `error` is whatever describeError() produced in auth-context, so it is already Vietnamese.
-    expect(
-      gateDecision({ status: 'error', user: null, error: 'Tài khoản này không có quyền quản trị.' }),
-    ).toEqual({ kind: 'error', message: 'Tài khoản này không có quyền quản trị.' });
+  it('surfaces the error message key untouched', () => {
+    // `error` is whatever describeError() produced in auth-context: a key the gate renders with t().
+    expect(gateDecision({ status: 'error', user: null, error: 'errors.forbidden' })).toEqual({
+      kind: 'error',
+      message: 'errors.forbidden',
+    });
+  });
+
+  it('falls back to the generic sign-in failure key when the error carries no message', () => {
+    expect(gateDecision({ status: 'error', user: null, error: null })).toEqual({
+      kind: 'error',
+      message: 'auth.signInFailed',
+    });
   });
 
   it('allows an active admin', () => {

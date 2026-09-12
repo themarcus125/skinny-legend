@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest';
 import type { RulesResponse } from '@/lib/api/types';
 import { rulesFormSchema, toFormValues, toRulesPayload, type RulesFormValues } from './rules-schema';
 
+// Identity translator: the schema's messages come back as their `rules.*` key suffixes.
+const schema = rulesFormSchema((key) => key);
+
 const valid: RulesFormValues = {
   startDate: '2026-09-08',
   endDate: '2026-12-25',
@@ -15,42 +18,42 @@ const valid: RulesFormValues = {
 };
 
 function errorsOf(values: unknown): string[] {
-  const result = rulesFormSchema.safeParse(values);
+  const result = schema.safeParse(values);
   return result.success ? [] : result.error.issues.map((issue) => issue.message);
 }
 
 describe('rulesFormSchema', () => {
   it('accepts the seeded rulebook', () => {
-    expect(rulesFormSchema.safeParse(valid).success).toBe(true);
+    expect(schema.safeParse(valid).success).toBe(true);
   });
 
   it('rejects a duplicate category', () => {
     const values = { ...valid, rules: [valid.rules[0]!, { ...valid.rules[0]! }] };
-    expect(errorsOf(values)).toContain('Mỗi hạng mục chỉ được xuất hiện một lần');
+    expect(errorsOf(values)).toContain('errors.categoryUnique');
   });
 
   it('rejects an end date before the start date', () => {
-    expect(errorsOf({ ...valid, endDate: '2026-09-07' })).toContain('Ngày kết thúc phải sau ngày bắt đầu');
+    expect(errorsOf({ ...valid, endDate: '2026-09-07' })).toContain('errors.endAfterStart');
   });
 
   it('rejects a malformed date', () => {
-    expect(errorsOf({ ...valid, startDate: '08/09/2026' })).toContain('Ngày phải có dạng YYYY-MM-DD');
+    expect(errorsOf({ ...valid, startDate: '08/09/2026' })).toContain('errors.dateFormat');
   });
 
   it('rejects negative points and a zero streak length', () => {
-    expect(errorsOf({ ...valid, rules: [{ ...valid.rules[0]!, points: -1 }] })).toContain('Không được âm');
-    expect(errorsOf({ ...valid, streakLength: 0 })).toContain('Tối thiểu 1 ngày');
+    expect(errorsOf({ ...valid, rules: [{ ...valid.rules[0]!, points: -1 }] })).toContain('errors.nonNegative');
+    expect(errorsOf({ ...valid, streakLength: 0 })).toContain('errors.minOneDay');
   });
 
   it('rejects an empty rule list', () => {
-    expect(errorsOf({ ...valid, rules: [] })).toContain('Cần ít nhất một hạng mục');
+    expect(errorsOf({ ...valid, rules: [] })).toContain('errors.categoryRequired');
   });
 
-  it('reports a cleared number input in Vietnamese, not in Zod English', () => {
+  it('reports a cleared number input through the catalogue, not in Zod English', () => {
     // Clearing a number input makes event.target.valueAsNumber return NaN, which trips the
     // base z.number() type check before any .int()/.min() rule — so that check needs copy too.
     const errors = errorsOf({ ...valid, streakPoints: Number.NaN });
-    expect(errors).toContain('Phải là số');
+    expect(errors).toContain('errors.number');
     expect(errors.join(' ')).not.toMatch(/[Ee]xpected|[Rr]eceived|NaN/);
   });
 });

@@ -3,6 +3,7 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
+import { useTranslations } from 'next-intl';
 import { PageHeader } from '@/components/page-header';
 import { QueryState } from '@/components/query-state';
 import { Badge } from '@/components/ui/badge';
@@ -18,10 +19,14 @@ import { describeError } from '@/lib/api';
 import { useAdminApi, useAuth } from '@/lib/auth/auth-context';
 import { challengeProgress, todayLocalDate } from '@/lib/challenge-progress';
 import { formatDateTime, formatLocalDate } from '@/lib/format';
+import { USER_STATUS_LABELS } from '@/lib/labels';
 
 /** Fallback span while the rules query is in flight or failed. */
 const DEFAULT_START = '2026-09-08';
 const DEFAULT_END = '2026-12-25';
+
+const LINK_CLASS =
+  'rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring text-sm font-medium text-brand-fg hover:underline';
 
 function KpiTile({
   label,
@@ -40,6 +45,7 @@ function KpiTile({
   isPending: boolean;
   children?: ReactNode;
 }) {
+  const t = useTranslations();
   return (
     <div className="rounded-xl border border-border bg-card px-5 py-4 shadow-card">
       <p className="flex items-center gap-1.5 text-label font-medium text-muted-foreground">
@@ -59,7 +65,7 @@ function KpiTile({
         {isPending ? (
           <span className="inline-block h-[18px] w-24 animate-pulse rounded bg-muted align-top motion-reduce:animate-none" />
         ) : error ? (
-          describeError(error)
+          t(describeError(error))
         ) : (
           sub
         )}
@@ -81,6 +87,8 @@ function Initial({ name }: { name: string }) {
 }
 
 export default function OverviewPage() {
+  const t = useTranslations('overview');
+  const tRoot = useTranslations();
   const api = useAdminApi();
   const { user } = useAuth();
 
@@ -109,52 +117,50 @@ export default function OverviewPage() {
   const progress = challengeProgress(start, end);
   const progressSub =
     progress.phase === 'before'
-      ? `Bắt đầu ${formatLocalDate(start)}`
+      ? t('startsOn', { date: formatLocalDate(start) })
       : progress.phase === 'during'
-        ? `còn ${progress.remaining} ngày`
-        : `Đã kết thúc ${formatLocalDate(end)}`;
+        ? t('daysLeft', { days: progress.remaining })
+        : t('endedOn', { date: formatLocalDate(end) });
 
   const todoIsEmpty = !usersQuery.isPending && !entriesQuery.isPending && pendingUsers.length === 0 && pendingEntries === 0;
 
   return (
     <div>
       <PageHeader
-        title={`Xin chào ${user?.displayName ?? ''}`}
+        title={t('greeting', { name: user?.displayName ?? '' })}
         description={
-          rules
-            ? `${rules.challenge.name} · ${formatLocalDate(start)} – ${formatLocalDate(end)}`
-            : 'Operation Skinny Legend — 08/09/2026 đến 25/12/2026.'
+          rules ? `${rules.challenge.name} · ${formatLocalDate(start)} – ${formatLocalDate(end)}` : t('subtitle')
         }
       />
 
       <div className="space-y-6">
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <KpiTile
-            label="Thành viên hoạt động"
+            label={t('activeMembers')}
             value={activeUsers}
-            sub={`${pendingUsers.length} chờ duyệt · ${disabledUsers} đã khoá`}
+            sub={t('activeMembersSub', { pending: pendingUsers.length, disabled: disabledUsers })}
             attention={pendingUsers.length > 0}
             error={usersQuery.error}
             isPending={usersQuery.isPending}
           />
           <KpiTile
-            label="Mục ghi chờ xác nhận"
+            label={t('pendingEntries')}
             value={pendingEntries}
-            sub={`trong ${entries.length} mục gần nhất`}
+            sub={t('pendingEntriesSub', { total: entries.length })}
             attention={pendingEntries > 0}
             error={entriesQuery.error}
             isPending={entriesQuery.isPending}
           />
           <KpiTile
-            label="Mục ghi hôm nay"
+            label={t('entriesToday')}
             value={todayEntries.length}
-            sub={`${confirmedToday} đã xác nhận`}
+            sub={t('entriesTodaySub', { confirmed: confirmedToday })}
             error={entriesQuery.error}
             isPending={entriesQuery.isPending}
           />
           <KpiTile
-            label="Ngày thử thách"
-            value={`Ngày ${progress.day} / ${progress.total}`}
+            label={t('challengeDays')}
+            value={t('dayOfTotal', { day: progress.day, total: progress.total })}
             sub={progressSub}
             error={rulesQuery.error}
             isPending={rulesQuery.isPending}
@@ -162,7 +168,7 @@ export default function OverviewPage() {
             {rules ? (
               <div
                 role="progressbar"
-                aria-label="Tiến độ thử thách"
+                aria-label={t('progress')}
                 aria-valuemin={0}
                 aria-valuemax={progress.total}
                 aria-valuenow={progress.day}
@@ -180,32 +186,32 @@ export default function OverviewPage() {
         <div className="grid gap-6 lg:grid-cols-[3fr_2fr]">
           <Card>
             <CardHeader className="border-b">
-              <CardTitle>Cần xử lý</CardTitle>
-              <CardDescription>Việc chờ quản trị viên.</CardDescription>
+              <CardTitle>{t('todo')}</CardTitle>
+              <CardDescription>{t('todoHint')}</CardDescription>
             </CardHeader>
             <CardContent className="px-0">
               <QueryState
                 isPending={usersQuery.isPending || entriesQuery.isPending}
                 error={usersQuery.error ?? entriesQuery.error}
                 isEmpty={todoIsEmpty}
-                emptyLabel="Không có việc nào chờ xử lý."
+                emptyLabel={t('todoEmpty')}
               >
                 <ul className="divide-y divide-border">
                   {pendingUsers.map((pending) => (
                     <li key={pending.id} className="flex items-center gap-3 px-5 py-3">
                       <Initial name={pending.displayName} />
                       <span className="text-sm font-medium">{pending.displayName}</span>
-                      <Badge variant="warning">Chờ duyệt</Badge>
-                      <Link href="/members" className="ml-auto rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring text-sm font-medium text-brand-fg hover:underline">
-                        Duyệt
+                      <Badge variant="warning">{tRoot(USER_STATUS_LABELS.pending)}</Badge>
+                      <Link href="/members" className={`ml-auto ${LINK_CLASS}`}>
+                        {tRoot('members.approve')}
                       </Link>
                     </li>
                   ))}
                   {pendingEntries > 0 ? (
                     <li className="flex items-center gap-3 px-5 py-3">
-                      <span className="text-sm font-medium">{pendingEntries} mục ghi chờ xác nhận</span>
-                      <Link href="/entries" className="ml-auto rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring text-sm font-medium text-brand-fg hover:underline">
-                        Xem
+                      <span className="text-sm font-medium">{t('pendingEntriesTodo', { count: pendingEntries })}</span>
+                      <Link href="/entries" className={`ml-auto ${LINK_CLASS}`}>
+                        {tRoot('common.view')}
                       </Link>
                     </li>
                   ) : null}
@@ -216,15 +222,15 @@ export default function OverviewPage() {
 
           <Card>
             <CardHeader className="border-b">
-              <CardTitle>Góp ý mới nhất</CardTitle>
-              <CardDescription>Gần đây từ ứng dụng iOS.</CardDescription>
+              <CardTitle>{t('latestFeedback')}</CardTitle>
+              <CardDescription>{t('latestFeedbackHint')}</CardDescription>
             </CardHeader>
             <CardContent className="px-0">
               <QueryState
                 isPending={feedbackQuery.isPending}
                 error={feedbackQuery.error}
                 isEmpty={feedback.length === 0}
-                emptyLabel="Chưa có góp ý nào."
+                emptyLabel={tRoot('feedback.empty')}
               >
                 <ul className="divide-y divide-border">
                   {feedback.slice(0, 3).map((item) => (
@@ -242,8 +248,8 @@ export default function OverviewPage() {
               </QueryState>
             </CardContent>
             <CardFooter>
-              <Link href="/feedback" className="rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring text-sm font-medium text-brand-fg hover:underline">
-                Xem tất cả góp ý
+              <Link href="/feedback" className={LINK_CLASS}>
+                {t('viewAllFeedback')}
               </Link>
             </CardFooter>
           </Card>

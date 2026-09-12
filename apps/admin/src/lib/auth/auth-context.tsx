@@ -11,6 +11,11 @@ import { firebaseAuth, googleProvider, isFirebaseConfigured } from './firebase';
 export interface AuthState {
   status: 'loading' | 'signed-out' | 'signed-in' | 'error';
   user: AdminUser | null;
+  /**
+   * A message key under messages/*.json (`errors.*` from describeError, or `auth.*`) that the
+   * gate renders with `t()`. The two build-time env misconfigurations are the exception: raw
+   * English developer text, never localised (the console cannot even reach the API then).
+   */
   error: string | null;
   /** True once a Firebase user is signed in, even if the app rejected their session (disabled/pending). */
   hasFirebaseUser: boolean;
@@ -71,12 +76,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
     if (!API_BASE_URL) {
-      setError('Thiếu biến môi trường NEXT_PUBLIC_API_BASE_URL');
+      setError('Missing NEXT_PUBLIC_API_BASE_URL');
       setStatus('error');
       return;
     }
     if (!isFirebaseConfigured()) {
-      setError('Thiếu biến môi trường NEXT_PUBLIC_FIREBASE_*');
+      setError('Missing NEXT_PUBLIC_FIREBASE_*');
       setStatus('error');
       return;
     }
@@ -102,9 +107,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await signInWithPopup(firebaseAuth(), googleProvider());
     } catch (err) {
       // Keep the real cause (popup blocked, unauthorised domain, misconfigured consent screen)
-      // in the console; the user only ever sees the Vietnamese message.
+      // in the console; the user only ever sees the catalogue message.
       console.error('[auth] Google sign-in failed', err);
-      setError('Đăng nhập Google thất bại. Kiểm tra cửa sổ popup và tên miền được phép trong Firebase.');
+      setError('auth.googleFailed');
       setStatus('error');
     }
   }, []);
@@ -122,7 +127,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await signOut(firebaseAuth());
     } catch (err) {
       console.error('[auth] Sign-out failed', err);
-      setError('Đăng xuất thất bại. Vui lòng thử lại.');
+      setError('auth.signOutFailed');
       setStatus('error');
     }
   }, [queryClient]);

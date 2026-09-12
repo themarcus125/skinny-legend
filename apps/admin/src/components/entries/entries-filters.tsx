@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -20,7 +21,8 @@ export function EntriesFilters({
   onChange: (next: FilterForm) => void;
   members: AdminUser[];
 }) {
-  const memberItems: Record<string, string> = { [ALL]: 'Tất cả' };
+  const t = useTranslations();
+  const memberItems: Record<string, string> = { [ALL]: t('common.all') };
   for (const member of members) memberItems[member.id] = member.displayName;
 
   return (
@@ -28,11 +30,11 @@ export function EntriesFilters({
       <Tabs value={value.status} onValueChange={(status) => onChange({ ...value, status })}>
         <TabsList variant="line" className="gap-5 p-0 group-data-horizontal/tabs:h-9">
           <TabsTrigger value={ALL} className={TAB_TRIGGER_CLASS}>
-            Tất cả
+            {t('common.all')}
           </TabsTrigger>
           {ENTRY_STATUSES.map((status) => (
             <TabsTrigger key={status} value={status} className={TAB_TRIGGER_CLASS}>
-              {ENTRY_STATUS_LABELS[status]}
+              {t(ENTRY_STATUS_LABELS[status])}
             </TabsTrigger>
           ))}
         </TabsList>
@@ -42,7 +44,7 @@ export function EntriesFilters({
       <div className="flex flex-wrap items-end gap-x-4 gap-y-3">
         <div className="flex flex-col gap-1.5">
           <label className="text-label font-medium text-secondary-foreground" htmlFor="filter-user">
-            Thành viên
+            {t('common.member')}
           </label>
           <Select
             items={memberItems}
@@ -53,7 +55,7 @@ export function EntriesFilters({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={ALL}>Tất cả</SelectItem>
+              <SelectItem value={ALL}>{t('common.all')}</SelectItem>
               {members.map((member) => (
                 <SelectItem key={member.id} value={member.id}>
                   {member.displayName}
@@ -65,7 +67,7 @@ export function EntriesFilters({
 
         <div className="flex flex-col gap-1.5">
           <label className="text-label font-medium text-secondary-foreground" htmlFor="filter-from">
-            Từ ngày
+            {t('entries.from')}
           </label>
           <Input
             id="filter-from"
@@ -78,7 +80,7 @@ export function EntriesFilters({
 
         <div className="flex flex-col gap-1.5">
           <label className="text-label font-medium text-secondary-foreground" htmlFor="filter-to">
-            Đến ngày
+            {t('entries.to')}
           </label>
           <Input
             id="filter-to"
@@ -95,7 +97,7 @@ export function EntriesFilters({
           className="text-secondary-foreground"
           onClick={() => onChange(EMPTY_FILTER_FORM)}
         >
-          Xoá bộ lọc
+          {t('entries.clearFilters')}
         </Button>
       </div>
     </div>

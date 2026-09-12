@@ -13,6 +13,7 @@ function member(overrides: Partial<AdminUser> = {}): AdminUser {
     avatarKey: null,
     role: 'member',
     status: 'active',
+    locale: 'vi',
     createdAt: '2026-09-08T02:30:00.000Z',
     ...overrides,
   };

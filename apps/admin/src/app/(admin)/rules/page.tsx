@@ -1,6 +1,7 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import { PageHeader } from '@/components/page-header';
 import { QueryState } from '@/components/query-state';
@@ -10,6 +11,8 @@ import type { RulesPayload } from '@/lib/api/types';
 import { useAdminApi } from '@/lib/auth/auth-context';
 
 export default function RulesPage() {
+  const t = useTranslations('rules');
+  const tRoot = useTranslations();
   const api = useAdminApi();
   const queryClient = useQueryClient();
 
@@ -19,23 +22,23 @@ export default function RulesPage() {
     mutationFn: (payload: RulesPayload) => api.putRules(payload),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['admin', 'rules'] });
-      toast.success('Đã lưu luật chơi');
+      toast.success(t('saved'));
     },
-    onError: (error: Error) => toast.error(describeError(error)),
+    onError: (error: Error) => toast.error(tRoot(describeError(error))),
   });
 
   return (
     <div>
       <PageHeader
-        title="Luật chơi"
-        description="Sửa điểm, giới hạn và mốc thời gian của thử thách đang chạy."
+        title={t('title')}
+        description={t('subtitle')}
       />
 
       <QueryState
         isPending={rulesQuery.isPending}
         error={rulesQuery.error}
         isEmpty={false}
-        emptyLabel="Chưa có thử thách nào."
+        emptyLabel={t('empty')}
       >
         {rulesQuery.data ? (
           <RulesForm

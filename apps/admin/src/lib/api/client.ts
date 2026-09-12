@@ -6,6 +6,7 @@ import type {
   EntryPatch,
   FeedbackItem,
   MapPin,
+  MePatch,
   NotificationLogItem,
   RulesPayload,
   RulesResponse,
@@ -27,6 +28,8 @@ export class ApiError extends Error {
 
 export interface AdminApi {
   session(): Promise<AdminUser>;
+  /** `PATCH /me` — the signed-in admin's own row (the language switch). */
+  updateMe(patch: MePatch): Promise<AdminUser>;
   listUsers(): Promise<AdminUser[]>;
   patchUser(id: string, patch: UserPatch): Promise<AdminUser>;
   listEntries(filters: EntryFilters): Promise<AdminEntry[]>;

@@ -10,6 +10,7 @@ import type {
   EntryStatus,
   FeedbackItem,
   MapPin,
+  MePatch,
   NotificationLogItem,
   RulesPayload,
   RulesResponse,
@@ -52,10 +53,10 @@ const PLACE_COORDINATES: Record<string, { lat: number; lng: number }> = {
 const PLACE_NAMES = Object.keys(PLACE_COORDINATES);
 
 const SEED_USERS: AdminUser[] = [
-  { id: '11111111-1111-4111-8111-111111111111', firebaseUid: 'uid-khoa', displayName: 'Khoa', avatarKey: null, role: 'admin', status: 'active', createdAt: '2026-09-08T01:00:00.000Z' },
-  { id: '22222222-2222-4222-8222-222222222222', firebaseUid: 'uid-minh', displayName: 'Minh', avatarKey: null, role: 'member', status: 'active', createdAt: '2026-09-08T02:30:00.000Z' },
-  { id: '33333333-3333-4333-8333-333333333333', firebaseUid: 'uid-lan', displayName: 'Lan', avatarKey: null, role: 'member', status: 'active', createdAt: '2026-09-09T04:15:00.000Z' },
-  { id: '44444444-4444-4444-8444-444444444444', firebaseUid: 'uid-tuan', displayName: 'Tuấn', avatarKey: null, role: 'member', status: 'pending', createdAt: '2026-09-10T03:05:00.000Z' },
+  { id: '11111111-1111-4111-8111-111111111111', firebaseUid: 'uid-khoa', displayName: 'Khoa', avatarKey: null, role: 'admin', status: 'active', locale: 'vi', createdAt: '2026-09-08T01:00:00.000Z' },
+  { id: '22222222-2222-4222-8222-222222222222', firebaseUid: 'uid-minh', displayName: 'Minh', avatarKey: null, role: 'member', status: 'active', locale: 'vi', createdAt: '2026-09-08T02:30:00.000Z' },
+  { id: '33333333-3333-4333-8333-333333333333', firebaseUid: 'uid-lan', displayName: 'Lan', avatarKey: null, role: 'member', status: 'active', locale: 'vi', createdAt: '2026-09-09T04:15:00.000Z' },
+  { id: '44444444-4444-4444-8444-444444444444', firebaseUid: 'uid-tuan', displayName: 'Tuấn', avatarKey: null, role: 'member', status: 'pending', locale: 'vi', createdAt: '2026-09-10T03:05:00.000Z' },
 ];
 
 interface EntryPattern {
@@ -210,6 +211,13 @@ export class MockAdminApi implements AdminApi {
   async session(): Promise<AdminUser> {
     await delay();
     return { ...this.users[0]! };
+  }
+
+  async updateMe(patch: MePatch): Promise<AdminUser> {
+    await delay();
+    const me = this.users[0]!;
+    Object.assign(me, patch);
+    return { ...me };
   }
 
   async listUsers(): Promise<AdminUser[]> {

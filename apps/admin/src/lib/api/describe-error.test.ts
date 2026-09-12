@@ -3,41 +3,37 @@ import { ApiError } from './client';
 import { describeError } from './describe-error';
 
 describe('describeError', () => {
-  it('translates every code the dashboard can receive', () => {
-    expect(describeError(new ApiError(401, 'unauthenticated', 'Missing token'))).toBe(
-      'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.',
+  it('maps every code the dashboard can receive to its errors.* key', () => {
+    expect(describeError(new ApiError(401, 'unauthenticated', 'Missing token'))).toBe('errors.unauthenticated');
+    expect(describeError(new ApiError(403, 'forbidden', 'Admin only'))).toBe('errors.forbidden');
+    expect(describeError(new ApiError(403, 'disabled', 'Account disabled'))).toBe('errors.disabled');
+    expect(describeError(new ApiError(400, 'invalid_body', 'Invalid input'))).toBe('errors.invalid_body');
+    expect(describeError(new ApiError(404, 'not_found', 'Entry not found'))).toBe('errors.not_found');
+    expect(describeError(new ApiError(500, 'internal', 'Internal error'))).toBe('errors.internal');
+  });
+
+  it('maps the two codes only POST /admin/notifications/test returns', () => {
+    expect(describeError(new ApiError(400, 'no_device_tokens', 'User has no registered devices'))).toBe(
+      'errors.no_device_tokens',
     );
-    expect(describeError(new ApiError(403, 'forbidden', 'Admin only'))).toBe(
-      'Tài khoản này không có quyền quản trị.',
-    );
-    expect(describeError(new ApiError(403, 'disabled', 'Account disabled'))).toBe(
-      'Tài khoản này đã bị khoá.',
-    );
-    expect(describeError(new ApiError(400, 'invalid_body', 'Invalid input'))).toBe(
-      'Dữ liệu gửi lên không hợp lệ. Vui lòng kiểm tra lại các ô đã nhập.',
-    );
-    expect(describeError(new ApiError(404, 'not_found', 'Entry not found'))).toBe(
-      'Không tìm thấy dữ liệu. Có thể mục này vừa bị xoá.',
-    );
-    expect(describeError(new ApiError(500, 'internal', 'Internal error'))).toBe(
-      'Máy chủ gặp sự cố. Vui lòng thử lại sau.',
+    // The message carries raw FCM text; only the code is ever looked at.
+    expect(describeError(new ApiError(502, 'push_failed', 'Push delivery failed: FCM 503 UNAVAILABLE'))).toBe(
+      'errors.push_failed',
     );
   });
 
   it('describes a network / CORS failure', () => {
-    expect(describeError(new TypeError('Failed to fetch'))).toBe(
-      'Không kết nối được máy chủ. Kiểm tra mạng hoặc cấu hình CORS_ORIGINS của API.',
-    );
+    expect(describeError(new TypeError('Failed to fetch'))).toBe('errors.offline');
   });
 
   it('never leaks the English server message for an unknown code', () => {
-    const message = describeError(new ApiError(418, 'teapot', 'I am a teapot'));
-    expect(message).toBe('Đã có lỗi xảy ra. Vui lòng thử lại.');
-    expect(message).not.toContain('teapot');
+    const key = describeError(new ApiError(418, 'teapot', 'I am a teapot'));
+    expect(key).toBe('errors.fallback');
+    expect(key).not.toContain('teapot');
   });
 
   it('falls back for anything that is not an Error', () => {
-    expect(describeError(null)).toBe('Đã có lỗi xảy ra. Vui lòng thử lại.');
-    expect(describeError('boom')).toBe('Đã có lỗi xảy ra. Vui lòng thử lại.');
+    expect(describeError(null)).toBe('errors.fallback');
+    expect(describeError('boom')).toBe('errors.fallback');
   });
 });

@@ -2,6 +2,7 @@
 
 import L from 'leaflet';
 import { useEffect } from 'react';
+import { useTranslations } from 'next-intl';
 import { MapContainer, Marker, Popup, TileLayer, useMap } from 'react-leaflet';
 import { CategoryChips } from '@/components/category-chips';
 import type { MapPin } from '@/lib/api/types';
@@ -41,6 +42,7 @@ function FitToPins({ pins }: { pins: MapPin[] }) {
 }
 
 export default function EntryMap({ pins }: { pins: MapPin[] }) {
+  const t = useTranslations('map');
   const markers = toMarkers(pins);
 
   return (
@@ -63,7 +65,7 @@ export default function EntryMap({ pins }: { pins: MapPin[] }) {
                 // eslint-disable-next-line @next/next/no-img-element -- R2 serves short-lived signed URLs; next/image would need remotePatterns and would cache them.
                 <img
                   src={marker.thumbUrl}
-                  alt={`Ảnh mục ghi ngày ${formatLocalDate(marker.date)}`}
+                  alt={t('photoAlt', { date: formatLocalDate(marker.date) })}
                   className="h-24 w-full rounded-md object-cover"
                 />
               ) : null}

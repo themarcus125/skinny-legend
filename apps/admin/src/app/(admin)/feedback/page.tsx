@@ -1,12 +1,14 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
+import { useTranslations } from 'next-intl';
 import { FeedbackList } from '@/components/feedback/feedback-list';
 import { CountPill, PageHeader } from '@/components/page-header';
 import { QueryState } from '@/components/query-state';
 import { useAdminApi } from '@/lib/auth/auth-context';
 
 export default function FeedbackPage() {
+  const t = useTranslations('feedback');
   const api = useAdminApi();
   const feedbackQuery = useQuery({ queryKey: ['admin', 'feedback'], queryFn: () => api.listFeedback() });
   const items = feedbackQuery.data ?? [];
@@ -14,16 +16,16 @@ export default function FeedbackPage() {
   return (
     <div>
       <PageHeader
-        title="Góp ý"
-        description="Góp ý gửi từ ứng dụng iOS, mới nhất trước. Chỉ xem, không sửa được."
-        action={feedbackQuery.data ? <CountPill>{items.length} góp ý</CountPill> : null}
+        title={t('title')}
+        description={t('subtitle')}
+        action={feedbackQuery.data ? <CountPill>{t('count', { count: items.length })}</CountPill> : null}
       />
 
       <QueryState
         isPending={feedbackQuery.isPending}
         error={feedbackQuery.error}
         isEmpty={items.length === 0}
-        emptyLabel="Chưa có góp ý nào."
+        emptyLabel={t('empty')}
       >
         <FeedbackList items={items} />
       </QueryState>

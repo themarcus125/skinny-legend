@@ -10,20 +10,33 @@ function paths(value: unknown, prefix = ''): string[] {
   );
 }
 
+const read = (source: unknown, path: string) =>
+  path.split('.').reduce<unknown>((node, key) => (node as Record<string, unknown>)?.[key], source);
+
 describe('message catalogues', () => {
   it('have identical key sets', () => {
     expect(paths(en).sort()).toEqual(paths(vi).sort());
   });
 
   it('have no empty values', () => {
-    const empties = paths(vi).concat(paths(en)).filter((path) => path.endsWith('.'));
+    const empties = [
+      ...paths(vi).filter((path) => String(read(vi, path)).trim() === ''),
+      ...paths(en).filter((path) => String(read(en, path)).trim() === ''),
+    ];
     expect(empties).toEqual([]);
   });
 
   it('never reuse the Vietnamese string as the English one', () => {
-    const properNouns = new Set(['Skinny Legend', 'Momo', 'Google', 'Strava', 'Tiếng Việt', 'English', 'AI']);
-    const read = (source: unknown, path: string) =>
-      path.split('.').reduce<unknown>((node, key) => (node as Record<string, unknown>)?.[key], source) as string;
+    const properNouns = new Set([
+      'Skinny Legend',
+      'Skinny Legend Admin',
+      'Momo',
+      'Google',
+      'Strava',
+      'Tiếng Việt',
+      'English',
+      'AI',
+    ]);
     const echoes = paths(vi).filter((path) => {
       const viValue = read(vi, path);
       return typeof viValue === 'string' && read(en, path) === viValue && !properNouns.has(viValue);

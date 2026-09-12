@@ -1,4 +1,8 @@
 {
+  "meta": {
+    "title": "Skinny Legend Admin",
+    "description": "Operation Skinny Legend admin console"
+  },
   "nav": {
     "overview": "Overview",
     "members": "Members",
@@ -10,12 +14,184 @@
     "label": "Navigation",
     "subtitle": "Admin console",
     "mock": "Mock mode",
-    "language": "Language"
+    "language": "Language",
+    "vi": "Tiếng Việt",
+    "en": "English"
   },
   "common": {
     "signOut": "Sign out",
     "loading": "Loading…",
-    "retry": "Try again"
+    "retry": "Try again",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "view": "View",
+    "none": "None",
+    "all": "All",
+    "date": "Date",
+    "name": "Name",
+    "photo": "Photo",
+    "actions": "Actions",
+    "status": "Status",
+    "category": "Category",
+    "points": "Points",
+    "member": "Member"
+  },
+  "labels": {
+    "category": {
+      "exercise": "Exercise",
+      "meal": "Healthy meal",
+      "group": "Group activity"
+    },
+    "userStatus": {
+      "pending": "Pending",
+      "active": "Active",
+      "disabled": "Locked"
+    },
+    "role": {
+      "member": "Member",
+      "admin": "Admin"
+    },
+    "entryStatus": {
+      "pending": "Awaiting confirmation",
+      "confirmed": "Confirmed",
+      "rejected": "Rejected"
+    }
+  },
+  "errors": {
+    "fallback": "Something went wrong. Please try again.",
+    "unauthenticated": "Your session has expired. Please sign in again.",
+    "forbidden": "This account has no admin access.",
+    "disabled": "This account has been locked.",
+    "invalid_body": "The submitted data isn't valid. Check the fields and try again.",
+    "not_found": "Nothing found. This item may have just been deleted.",
+    "internal": "The server hit a problem. Please try again later.",
+    "offline": "Can't reach the server. Check your connection or the API's CORS_ORIGINS setting.",
+    "no_device_tokens": "This member has not enabled notifications on their iPhone.",
+    "push_failed": "Push delivery failed. Please try again later."
+  },
+  "auth": {
+    "signInHint": "Sign in with an admin Google account.",
+    "signInWithGoogle": "Sign in with Google",
+    "googleFailed": "Google sign-in failed. Check the popup window and Firebase's allowed domains.",
+    "signOutFailed": "Sign-out failed. Please try again.",
+    "signInFailed": "Couldn't sign in",
+    "notAuthorized": "No access",
+    "notAuthorizedHint": "This account isn't an active admin. Ask an admin to grant access (<code>role=admin</code>, <code>status=active</code>), then sign in again."
+  },
+  "overview": {
+    "greeting": "Hello {name}",
+    "subtitle": "Operation Skinny Legend — 08/09/2026 to 25/12/2026.",
+    "todo": "Needs attention",
+    "todoEmpty": "Nothing waiting.",
+    "todoHint": "Tasks waiting on an admin.",
+    "activeMembers": "Active members",
+    "activeMembersSub": "{pending} pending · {disabled} locked",
+    "pendingEntries": "Entries awaiting confirmation",
+    "pendingEntriesSub": "of the {total} most recent",
+    "pendingEntriesTodo": "{count, plural, one {# entry} other {# entries}} awaiting confirmation",
+    "entriesToday": "Entries today",
+    "entriesTodaySub": "{confirmed} confirmed",
+    "progress": "Challenge progress",
+    "challengeDays": "Challenge days",
+    "dayOfTotal": "Day {day} / {total}",
+    "startsOn": "Starts {date}",
+    "daysLeft": "{days, plural, one {# day} other {# days}} left",
+    "endedOn": "Ended {date}",
+    "latestFeedback": "Latest feedback",
+    "latestFeedbackHint": "Recent, from the iOS app.",
+    "viewAllFeedback": "View all feedback"
+  },
+  "members": {
+    "title": "Members",
+    "pendingCount": "{count, plural, one {# account} other {# accounts}} waiting for approval.",
+    "noPending": "No accounts waiting for approval.",
+    "empty": "No members yet.",
+    "role": "Role",
+    "roleOf": "{name}'s role",
+    "joined": "Joined",
+    "approve": "Approve",
+    "lock": "Lock account",
+    "lockConfirm": "Lock this account?",
+    "lockDescription": "{name} won't be able to sign in any more (the API returns 403 disabled). Their entries are kept and still count.",
+    "reopen": "Reopen",
+    "cannotChangeOwnRole": "You can't change your own role",
+    "updated": "Member updated"
+  },
+  "entries": {
+    "title": "Entries",
+    "limitNote": "The API returns at most the 200 newest entries per filter.",
+    "count": "{count, plural, one {# entry} other {# entries}}",
+    "empty": "No entries match these filters.",
+    "from": "From",
+    "to": "To",
+    "clearFilters": "Clear filters",
+    "aiVerdict": "AI verdict",
+    "aiFailed": "AI failed",
+    "noThumb": "No thumbnail",
+    "noCategory": "no category",
+    "healthy": "· healthy",
+    "unhealthy": "· not healthy",
+    "edit": "Edit",
+    "reject": "Reject",
+    "editCategories": "Edit categories",
+    "photoOf": "{name}'s photo",
+    "overrideNote": "Categories are saved with source <code>admin</code> and points are recalculated immediately.",
+    "updated": "Entry updated",
+    "rejected": "Entry rejected"
+  },
+  "rules": {
+    "title": "Rules",
+    "subtitle": "Edit the points, limits and dates of the running challenge.",
+    "empty": "No challenge yet.",
+    "timeline": "Timeline",
+    "timezoneNote": "Server-side fixed timezone: {timezone} (not editable through the API).",
+    "startDate": "Start date",
+    "endDate": "End date",
+    "streak": "Streak",
+    "streakHint": "Awarded each time the streak hits a multiple of the streak length.",
+    "streakPoints": "Bonus points",
+    "streakLength": "Streak length (days)",
+    "scoring": "Points and limits per category. Each category appears once.",
+    "limit": "Limit",
+    "period": "Period",
+    "perDay": "per day",
+    "perWeek": "per week",
+    "addCategory": "Add category",
+    "recalcNote": "Points are recalculated from the current rules for every entry.",
+    "submit": "Save rules",
+    "applyConfirm": "Apply the new rules?",
+    "applyDescription": "Points aren't stored in the database — every leaderboard, streak and statistic is recalculated from the current rules. This change applies <strong>retroactively</strong> to every existing entry.",
+    "apply": "Apply",
+    "saved": "Rules saved",
+    "errors": {
+      "categoryRequired": "At least one category is required",
+      "categoryUnique": "Each category may appear only once",
+      "categoryInvalid": "Invalid category",
+      "periodInvalid": "Invalid period",
+      "number": "Must be a number",
+      "integer": "Must be a whole number",
+      "nonNegative": "Can't be negative",
+      "minOneDay": "At least 1 day",
+      "dateFormat": "Dates must look like YYYY-MM-DD",
+      "endAfterStart": "The end date must fall after the start date"
+    }
+  },
+  "feedback": {
+    "title": "Feedback",
+    "subtitle": "Feedback sent from the iOS app, newest first. Read-only.",
+    "count": "{count, plural, one {# item} other {# items}}",
+    "empty": "No feedback yet.",
+    "viewScreenshot": "View screenshot"
+  },
+  "map": {
+    "title": "Map",
+    "subtitle": "Where recent entries were tracked.",
+    "empty": "No entries in this window have a location.",
+    "days7": "7 days",
+    "days30": "30 days",
+    "days90": "90 days",
+    "photoAlt": "Entry photo from {date}"
   },
   "notifications": {
     "title": "Notifications",
@@ -41,11 +217,9 @@
       "sending": "Sending…"
     },
     "toast": {
-      "sent": "Sent to {sent}/{tokens} device(s)"
-    },
-    "errors": {
-      "noDeviceTokens": "This member has not enabled notifications on their iPhone.",
-      "pushFailed": "Push delivery failed. Please try again later."
+      "sent": "Sent to {sent}/{tokens} device(s)",
+      "none": "Couldn't deliver to any of the {tokens} device(s).",
+      "removed": "Removed {count, plural, one {# stale device} other {# stale devices}}."
     }
   }
 }

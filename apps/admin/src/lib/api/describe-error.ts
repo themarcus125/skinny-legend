@@ -1,28 +1,30 @@
 import { ApiError } from './client';
 
-const FALLBACK = 'Đã có lỗi xảy ra. Vui lòng thử lại.';
+const FALLBACK = 'errors.fallback';
 
 /**
- * The API's `message` is English (apps/api/src/errors.ts), and user-facing copy is Vietnamese,
- * so nothing renders `error.message` directly. Only the codes the dashboard can actually receive
- * are listed: `pending_approval` is unreachable here because `requireActive` guards the member
- * routes only, never `/auth/session` or `/admin/*`.
+ * Maps an API failure to a message key under `errors.*` in messages/*.json; the caller renders it
+ * with `t(describeError(error))`. Nothing ever renders `error.message`: the API speaks English
+ * (apps/api/src/errors.ts) and `push_failed` even forwards raw FCM text. Only the codes the
+ * dashboard can actually receive are listed — `pending_approval` is unreachable here because
+ * `requireActive` guards the member routes only, never `/auth/session` or `/admin/*`.
  */
-const MESSAGES: Record<string, string> = {
-  unauthenticated: 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.',
-  forbidden: 'Tài khoản này không có quyền quản trị.',
-  disabled: 'Tài khoản này đã bị khoá.',
-  invalid_body: 'Dữ liệu gửi lên không hợp lệ. Vui lòng kiểm tra lại các ô đã nhập.',
-  not_found: 'Không tìm thấy dữ liệu. Có thể mục này vừa bị xoá.',
-  internal: 'Máy chủ gặp sự cố. Vui lòng thử lại sau.',
+const KEYS: Record<string, string> = {
+  unauthenticated: 'errors.unauthenticated',
+  forbidden: 'errors.forbidden',
+  disabled: 'errors.disabled',
+  invalid_body: 'errors.invalid_body',
+  not_found: 'errors.not_found',
+  internal: 'errors.internal',
+  // POST /admin/notifications/test
+  no_device_tokens: 'errors.no_device_tokens',
+  push_failed: 'errors.push_failed',
 };
 
 export function describeError(error: unknown): string {
-  if (error instanceof ApiError) return MESSAGES[error.code] ?? FALLBACK;
+  if (error instanceof ApiError) return KEYS[error.code] ?? FALLBACK;
   // fetch() rejects with a TypeError when the request never completed: offline, DNS failure,
   // or a blocked CORS preflight.
-  if (error instanceof TypeError) {
-    return 'Không kết nối được máy chủ. Kiểm tra mạng hoặc cấu hình CORS_ORIGINS của API.';
-  }
+  if (error instanceof TypeError) return 'errors.offline';
   return FALLBACK;
 }

@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import { CountPill, PageHeader } from '@/components/page-header';
 import { QueryState } from '@/components/query-state';
@@ -14,6 +15,8 @@ import type { AdminEntry, EntryPatch } from '@/lib/api/types';
 import { useAdminApi } from '@/lib/auth/auth-context';
 
 export default function EntriesPage() {
+  const t = useTranslations('entries');
+  const tRoot = useTranslations();
   const api = useAdminApi();
   const queryClient = useQueryClient();
   const [form, setForm] = useState<FilterForm>(EMPTY_FILTER_FORM);
@@ -36,18 +39,18 @@ export default function EntriesPage() {
     onSuccess: async () => {
       setEditing(null);
       await refresh();
-      toast.success('Đã cập nhật mục ghi');
+      toast.success(t('updated'));
     },
-    onError: (error: Error) => toast.error(describeError(error)),
+    onError: (error: Error) => toast.error(tRoot(describeError(error))),
   });
 
   const rejectEntry = useMutation({
     mutationFn: (id: string) => api.rejectEntry(id),
     onSuccess: async () => {
       await refresh();
-      toast.success('Đã từ chối mục ghi');
+      toast.success(t('rejected'));
     },
-    onError: (error: Error) => toast.error(describeError(error)),
+    onError: (error: Error) => toast.error(tRoot(describeError(error))),
   });
 
   const entries = entriesQuery.data ?? [];
@@ -56,9 +59,9 @@ export default function EntriesPage() {
   return (
     <div>
       <PageHeader
-        title="Mục ghi"
-        description="API trả tối đa 200 mục mới nhất cho mỗi bộ lọc."
-        action={entriesQuery.data ? <CountPill>{entries.length} mục</CountPill> : null}
+        title={t('title')}
+        description={t('limitNote')}
+        action={entriesQuery.data ? <CountPill>{t('count', { count: entries.length })}</CountPill> : null}
       />
 
       <section className="overflow-hidden rounded-xl border border-border bg-card shadow-card">
@@ -70,7 +73,7 @@ export default function EntriesPage() {
           isPending={entriesQuery.isPending}
           error={entriesQuery.error}
           isEmpty={entries.length === 0}
-          emptyLabel="Không có mục ghi nào khớp bộ lọc."
+          emptyLabel={t('empty')}
         >
           <EntriesTable
             entries={entries}

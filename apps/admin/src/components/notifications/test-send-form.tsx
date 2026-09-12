@@ -34,7 +34,7 @@ export function TestSendForm({
           id="test-send-user"
           value={userId}
           onChange={(event) => setUserId(event.target.value)}
-          className="h-9 rounded-lg border border-border bg-card px-2.5 text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+          className="h-9 rounded-lg border border-input bg-card pr-2 pl-3 text-sm shadow-card transition-colors outline-none hover:border-border-strong focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
         >
           <option value="">{t('placeholder')}</option>
           {candidates.map((user) => (

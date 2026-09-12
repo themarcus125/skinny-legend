@@ -1,12 +1,15 @@
 'use client';
 
 import { FlameIcon } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { SignOutButton } from '@/components/sign-out-button';
 import { useAuth } from '@/lib/auth/auth-context';
 
+/** `error` is already-translated copy (AuthGate resolves the message key). */
 export function SignInCard({ error }: { error?: string }) {
+  const t = useTranslations('auth');
   const { signIn, status, hasFirebaseUser } = useAuth();
   // A Firebase user can be signed in while the app still rejects them (disabled/pending
   // account, or any other /auth/session failure) — the "Sign in with Google" button won't
@@ -24,7 +27,7 @@ export function SignInCard({ error }: { error?: string }) {
             <FlameIcon className="size-5" />
           </span>
           <CardTitle className="text-xl font-semibold tracking-[-0.01em]">Skinny Legend Admin</CardTitle>
-          <CardDescription className="text-base">Đăng nhập bằng tài khoản Google quản trị.</CardDescription>
+          <CardDescription className="text-base">{t('signInHint')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {error ? (
@@ -36,7 +39,7 @@ export function SignInCard({ error }: { error?: string }) {
             <SignOutButton className="w-full" />
           ) : (
             <Button size="lg" className="w-full" onClick={() => void signIn()}>
-              Đăng nhập với Google
+              {t('signInWithGoogle')}
             </Button>
           )}
         </CardContent>

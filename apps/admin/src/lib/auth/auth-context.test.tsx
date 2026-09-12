@@ -12,6 +12,7 @@ const user: AdminUser = {
   avatarKey: null,
   role: 'admin',
   status: 'active',
+  locale: 'vi',
   createdAt: '2026-09-08T01:00:00.000Z',
 };
 
@@ -114,7 +115,8 @@ describe('AuthProvider', () => {
     );
 
     await waitFor(() => expect(screen.getByTestId('status')).toHaveTextContent('error'));
-    expect(screen.getByTestId('error')).toHaveTextContent('Thiếu biến môi trường NEXT_PUBLIC_API_BASE_URL');
+    // Developer-facing config text, deliberately not localised (see AuthState.error).
+    expect(screen.getByTestId('error')).toHaveTextContent('Missing NEXT_PUBLIC_API_BASE_URL');
   });
 
   it('sets status to error when the live sign-out call fails', async () => {

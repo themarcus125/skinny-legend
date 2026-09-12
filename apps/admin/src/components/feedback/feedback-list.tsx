@@ -1,9 +1,11 @@
 import { ImageIcon } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { Badge } from '@/components/ui/badge';
 import type { FeedbackItem } from '@/lib/api/types';
 import { formatDateTime } from '@/lib/format';
 
 export function FeedbackList({ items }: { items: FeedbackItem[] }) {
+  const t = useTranslations('feedback');
   return (
     <div className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-card shadow-card">
       {items.map((item) => (
@@ -32,7 +34,7 @@ export function FeedbackList({ items }: { items: FeedbackItem[] }) {
               className="mt-2 inline-flex items-center gap-1.5 rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring text-sm font-medium text-brand-fg underline-offset-4 hover:underline"
             >
               <ImageIcon aria-hidden className="size-4" />
-              Xem ảnh chụp màn hình
+              {t('viewScreenshot')}
             </a>
           ) : null}
         </article>

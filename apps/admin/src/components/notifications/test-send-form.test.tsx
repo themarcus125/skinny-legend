@@ -5,9 +5,9 @@ import type { AdminUser } from '@/lib/api/types';
 import { TestSendForm } from './test-send-form';
 
 const users: AdminUser[] = [
-  { id: 'u-1', firebaseUid: 'uid-khoa', displayName: 'Khoa', avatarKey: null, role: 'admin', status: 'active', createdAt: '2026-09-08T01:00:00.000Z' },
-  { id: 'u-2', firebaseUid: 'uid-minh', displayName: 'Minh', avatarKey: null, role: 'member', status: 'active', createdAt: '2026-09-08T02:00:00.000Z' },
-  { id: 'u-4', firebaseUid: 'uid-tuan', displayName: 'Tuấn', avatarKey: null, role: 'member', status: 'pending', createdAt: '2026-09-10T03:00:00.000Z' },
+  { id: 'u-1', firebaseUid: 'uid-khoa', displayName: 'Khoa', avatarKey: null, role: 'admin', status: 'active', locale: 'vi', createdAt: '2026-09-08T01:00:00.000Z' },
+  { id: 'u-2', firebaseUid: 'uid-minh', displayName: 'Minh', avatarKey: null, role: 'member', status: 'active', locale: 'vi', createdAt: '2026-09-08T02:00:00.000Z' },
+  { id: 'u-4', firebaseUid: 'uid-tuan', displayName: 'Tuấn', avatarKey: null, role: 'member', status: 'pending', locale: 'vi', createdAt: '2026-09-10T03:00:00.000Z' },
 ];
 
 describe('TestSendForm', () => {

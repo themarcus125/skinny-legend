@@ -1,4 +1,8 @@
 {
+  "meta": {
+    "title": "Skinny Legend Admin",
+    "description": "Bảng quản trị Operation Skinny Legend"
+  },
   "nav": {
     "overview": "Tổng quan",
     "members": "Thành viên",
@@ -10,12 +14,184 @@
     "label": "Điều hướng",
     "subtitle": "Bảng quản trị",
     "mock": "Chế độ mock",
-    "language": "Ngôn ngữ"
+    "language": "Ngôn ngữ",
+    "vi": "Tiếng Việt",
+    "en": "English"
   },
   "common": {
     "signOut": "Đăng xuất",
     "loading": "Đang tải…",
-    "retry": "Thử lại"
+    "retry": "Thử lại",
+    "save": "Lưu",
+    "cancel": "Huỷ",
+    "delete": "Xoá",
+    "view": "Xem",
+    "none": "Không có",
+    "all": "Tất cả",
+    "date": "Ngày",
+    "name": "Tên",
+    "photo": "Ảnh",
+    "actions": "Thao tác",
+    "status": "Trạng thái",
+    "category": "Hạng mục",
+    "points": "Điểm",
+    "member": "Thành viên"
+  },
+  "labels": {
+    "category": {
+      "exercise": "Thể thao",
+      "meal": "Bữa ăn lành mạnh",
+      "group": "Hoạt động nhóm"
+    },
+    "userStatus": {
+      "pending": "Chờ duyệt",
+      "active": "Hoạt động",
+      "disabled": "Đã khoá"
+    },
+    "role": {
+      "member": "Thành viên",
+      "admin": "Quản trị"
+    },
+    "entryStatus": {
+      "pending": "Chờ xác nhận",
+      "confirmed": "Đã xác nhận",
+      "rejected": "Đã từ chối"
+    }
+  },
+  "errors": {
+    "fallback": "Đã có lỗi xảy ra. Vui lòng thử lại.",
+    "unauthenticated": "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.",
+    "forbidden": "Tài khoản này không có quyền quản trị.",
+    "disabled": "Tài khoản này đã bị khoá.",
+    "invalid_body": "Dữ liệu gửi lên không hợp lệ. Vui lòng kiểm tra lại các ô đã nhập.",
+    "not_found": "Không tìm thấy dữ liệu. Có thể mục này vừa bị xoá.",
+    "internal": "Máy chủ gặp sự cố. Vui lòng thử lại sau.",
+    "offline": "Không kết nối được máy chủ. Kiểm tra mạng hoặc cấu hình CORS_ORIGINS của API.",
+    "no_device_tokens": "Thành viên này chưa bật thông báo trên iPhone.",
+    "push_failed": "Gửi thông báo thất bại. Vui lòng thử lại sau."
+  },
+  "auth": {
+    "signInHint": "Đăng nhập bằng tài khoản Google quản trị.",
+    "signInWithGoogle": "Đăng nhập với Google",
+    "googleFailed": "Đăng nhập Google thất bại. Kiểm tra cửa sổ popup và tên miền được phép trong Firebase.",
+    "signOutFailed": "Đăng xuất thất bại. Vui lòng thử lại.",
+    "signInFailed": "Không đăng nhập được",
+    "notAuthorized": "Không có quyền truy cập",
+    "notAuthorizedHint": "Tài khoản này không phải quản trị viên đang hoạt động. Nhờ quản trị viên cấp quyền (<code>role=admin</code>, <code>status=active</code>) rồi đăng nhập lại."
+  },
+  "overview": {
+    "greeting": "Xin chào {name}",
+    "subtitle": "Operation Skinny Legend — 08/09/2026 đến 25/12/2026.",
+    "todo": "Cần xử lý",
+    "todoEmpty": "Không có việc nào chờ xử lý.",
+    "todoHint": "Việc chờ quản trị viên.",
+    "activeMembers": "Thành viên hoạt động",
+    "activeMembersSub": "{pending} chờ duyệt · {disabled} đã khoá",
+    "pendingEntries": "Mục ghi chờ xác nhận",
+    "pendingEntriesSub": "trong {total} mục gần nhất",
+    "pendingEntriesTodo": "{count} mục ghi chờ xác nhận",
+    "entriesToday": "Mục ghi hôm nay",
+    "entriesTodaySub": "{confirmed} đã xác nhận",
+    "progress": "Tiến độ thử thách",
+    "challengeDays": "Ngày thử thách",
+    "dayOfTotal": "Ngày {day} / {total}",
+    "startsOn": "Bắt đầu {date}",
+    "daysLeft": "còn {days} ngày",
+    "endedOn": "Đã kết thúc {date}",
+    "latestFeedback": "Góp ý mới nhất",
+    "latestFeedbackHint": "Gần đây từ ứng dụng iOS.",
+    "viewAllFeedback": "Xem tất cả góp ý"
+  },
+  "members": {
+    "title": "Thành viên",
+    "pendingCount": "{count} tài khoản đang chờ duyệt.",
+    "noPending": "Không có tài khoản nào chờ duyệt.",
+    "empty": "Chưa có thành viên nào.",
+    "role": "Vai trò",
+    "roleOf": "Vai trò của {name}",
+    "joined": "Tham gia",
+    "approve": "Duyệt",
+    "lock": "Khoá tài khoản",
+    "lockConfirm": "Khoá tài khoản?",
+    "lockDescription": "{name} sẽ không đăng nhập được nữa (API trả 403 disabled). Các mục đã ghi vẫn được giữ và vẫn tính điểm.",
+    "reopen": "Mở lại",
+    "cannotChangeOwnRole": "Không thể đổi vai trò của chính bạn",
+    "updated": "Đã cập nhật thành viên"
+  },
+  "entries": {
+    "title": "Mục ghi",
+    "limitNote": "API trả tối đa 200 mục mới nhất cho mỗi bộ lọc.",
+    "count": "{count} mục",
+    "empty": "Không có mục ghi nào khớp bộ lọc.",
+    "from": "Từ ngày",
+    "to": "Đến ngày",
+    "clearFilters": "Xoá bộ lọc",
+    "aiVerdict": "Nhận định AI",
+    "aiFailed": "AI lỗi",
+    "noThumb": "Không có ảnh thu nhỏ",
+    "noCategory": "không có hạng mục",
+    "healthy": "· lành mạnh",
+    "unhealthy": "· không lành mạnh",
+    "edit": "Sửa",
+    "reject": "Từ chối",
+    "editCategories": "Sửa hạng mục",
+    "photoOf": "Ảnh của {name}",
+    "overrideNote": "Hạng mục sẽ được ghi với nguồn <code>admin</code> và điểm được tính lại ngay.",
+    "updated": "Đã cập nhật mục ghi",
+    "rejected": "Đã từ chối mục ghi"
+  },
+  "rules": {
+    "title": "Luật chơi",
+    "subtitle": "Sửa điểm, giới hạn và mốc thời gian của thử thách đang chạy.",
+    "empty": "Chưa có thử thách nào.",
+    "timeline": "Mốc thời gian",
+    "timezoneNote": "Múi giờ cố định phía máy chủ: {timezone} (không sửa được qua API).",
+    "startDate": "Ngày bắt đầu",
+    "endDate": "Ngày kết thúc",
+    "streak": "Chuỗi ngày",
+    "streakHint": "Thưởng mỗi khi chuỗi đạt bội số của độ dài chuỗi.",
+    "streakPoints": "Điểm thưởng",
+    "streakLength": "Độ dài chuỗi (ngày)",
+    "scoring": "Điểm và giới hạn cho mỗi hạng mục. Mỗi hạng mục chỉ xuất hiện một lần.",
+    "limit": "Giới hạn",
+    "period": "Chu kỳ",
+    "perDay": "mỗi ngày",
+    "perWeek": "mỗi tuần",
+    "addCategory": "Thêm hạng mục",
+    "recalcNote": "Điểm được tính lại từ luật hiện hành cho mọi mục ghi.",
+    "submit": "Lưu luật chơi",
+    "applyConfirm": "Áp dụng luật mới?",
+    "applyDescription": "Điểm không được lưu trong cơ sở dữ liệu — mọi bảng xếp hạng, chuỗi ngày và thống kê được tính lại từ luật hiện hành. Thay đổi này áp dụng <strong>hồi tố</strong> cho toàn bộ mục ghi đã có.",
+    "apply": "Áp dụng",
+    "saved": "Đã lưu luật chơi",
+    "errors": {
+      "categoryRequired": "Cần ít nhất một hạng mục",
+      "categoryUnique": "Mỗi hạng mục chỉ được xuất hiện một lần",
+      "categoryInvalid": "Hạng mục không hợp lệ",
+      "periodInvalid": "Chu kỳ không hợp lệ",
+      "number": "Phải là số",
+      "integer": "Phải là số nguyên",
+      "nonNegative": "Không được âm",
+      "minOneDay": "Tối thiểu 1 ngày",
+      "dateFormat": "Ngày phải có dạng YYYY-MM-DD",
+      "endAfterStart": "Ngày kết thúc phải sau ngày bắt đầu"
+    }
+  },
+  "feedback": {
+    "title": "Góp ý",
+    "subtitle": "Góp ý gửi từ ứng dụng iOS, mới nhất trước. Chỉ xem, không sửa được.",
+    "count": "{count} góp ý",
+    "empty": "Chưa có góp ý nào.",
+    "viewScreenshot": "Xem ảnh chụp màn hình"
+  },
+  "map": {
+    "title": "Bản đồ",
+    "subtitle": "Địa điểm các mục ghi gần đây.",
+    "empty": "Chưa có mục ghi nào có địa điểm trong khoảng thời gian này.",
+    "days7": "7 ngày",
+    "days30": "30 ngày",
+    "days90": "90 ngày",
+    "photoAlt": "Ảnh mục ghi ngày {date}"
   },
   "notifications": {
     "title": "Thông báo",
@@ -41,11 +217,9 @@
       "sending": "Đang gửi…"
     },
     "toast": {
-      "sent": "Đã gửi tới {sent}/{tokens} thiết bị"
-    },
-    "errors": {
-      "noDeviceTokens": "Thành viên này chưa bật thông báo trên iPhone.",
-      "pushFailed": "Gửi thông báo thất bại. Vui lòng thử lại sau."
+      "sent": "Đã gửi tới {sent}/{tokens} thiết bị",
+      "none": "Không gửi được tới thiết bị nào trong {tokens} thiết bị.",
+      "removed": "Đã gỡ {count} thiết bị không còn hợp lệ."
     }
   }
 }

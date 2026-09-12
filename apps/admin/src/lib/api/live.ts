@@ -7,6 +7,7 @@ import type {
   EntryPatch,
   FeedbackItem,
   MapPin,
+  MePatch,
   NotificationLogItem,
   RulesPayload,
   RulesResponse,
@@ -25,7 +26,8 @@ export class LiveAdminApi implements AdminApi {
 
   private async request<T>(path: string, init: RequestInit = {}): Promise<T> {
     const token = await this.getToken();
-    if (!token) throw new ApiError(401, 'unauthenticated', 'Chưa đăng nhập');
+    // Protocol text only: nothing renders ApiError.message (see describeError), so it stays English.
+    if (!token) throw new ApiError(401, 'unauthenticated', 'Not signed in');
 
     const response = await fetch(`${this.baseUrl}${path}`, {
       ...init,
@@ -44,7 +46,7 @@ export class LiveAdminApi implements AdminApi {
       throw new ApiError(
         response.status,
         envelope?.code ?? 'unknown',
-        envelope?.message ?? `Yêu cầu thất bại (${response.status})`,
+        envelope?.message ?? `Request failed (${response.status})`,
       );
     }
     return body as T;
@@ -52,6 +54,14 @@ export class LiveAdminApi implements AdminApi {
 
   async session(): Promise<AdminUser> {
     const { user } = await this.request<{ user: AdminUser }>('/auth/session', { method: 'POST' });
+    return user;
+  }
+
+  async updateMe(patch: MePatch): Promise<AdminUser> {
+    const { user } = await this.request<{ user: AdminUser }>('/me', {
+      method: 'PATCH',
+      body: JSON.stringify(patch),
+    });
     return user;
   }
 

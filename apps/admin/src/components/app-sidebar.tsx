@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { cn } from '@/lib/utils';
+import { LanguageSwitch } from '@/components/language-switch';
 import { SignOutButton } from '@/components/sign-out-button';
 import { IS_MOCK } from '@/lib/api';
 import { useAuth } from '@/lib/auth/auth-context';
@@ -83,6 +84,7 @@ function NavLinks({ layout }: { layout: 'rail' | 'bar' }) {
 /** Desktop rail (md and up). Below md it is display:none and MobileTopBar takes over. */
 export function AppSidebar() {
   const { user } = useAuth();
+  const t = useTranslations('nav');
 
   return (
     <aside className="sticky top-0 hidden h-dvh w-[232px] shrink-0 flex-col border-r border-sidebar-border bg-sidebar px-3 py-4 md:flex">
@@ -90,12 +92,12 @@ export function AppSidebar() {
         <BrandMark />
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold leading-5">Skinny Legend</p>
-          <p className="text-xs leading-4 text-muted-foreground">Bảng quản trị</p>
+          <p className="text-xs leading-4 text-muted-foreground">{t('subtitle')}</p>
         </div>
       </div>
       {IS_MOCK ? (
         <p className="mx-2 mb-4 inline-flex h-6 w-fit items-center rounded-full bg-warning-soft px-2.5 text-xs font-medium text-warning-fg">
-          Chế độ mock
+          {t('mock')}
         </p>
       ) : null}
 
@@ -111,14 +113,19 @@ export function AppSidebar() {
           </span>
           <p className="truncate text-sm font-medium">{user?.displayName ?? ''}</p>
         </div>
+        <LanguageSwitch />
         <SignOutButton variant="ghost" size="sm" className="mt-1 w-full justify-start text-secondary-foreground" />
       </div>
     </aside>
   );
 }
 
-/** Phone header (below md): brand mark, sign-out, and the same NAV as a horizontal scroller. */
+/**
+ * Phone header (below md): brand mark, sign-out, and the same NAV as a horizontal scroller.
+ * No language switch here — the bar has no room; the desktop rail is where the language changes.
+ */
 export function MobileTopBar() {
+  const t = useTranslations('nav');
   return (
     <header className="sticky top-0 z-20 border-b border-sidebar-border bg-sidebar md:hidden">
       <div className="flex h-12 items-center gap-2.5 px-3">
@@ -126,7 +133,7 @@ export function MobileTopBar() {
         <p className="truncate text-sm font-semibold">Skinny Legend</p>
         {IS_MOCK ? (
           <span className="inline-flex h-6 shrink-0 items-center rounded-full bg-warning-soft px-2.5 text-xs font-medium text-warning-fg">
-            Mock
+            {t('mock')}
           </span>
         ) : null}
         <SignOutButton variant="ghost" size="sm" className="ml-auto text-secondary-foreground" />

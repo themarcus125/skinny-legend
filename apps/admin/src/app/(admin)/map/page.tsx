@@ -3,6 +3,7 @@
 import { useQuery } from '@tanstack/react-query';
 import dynamic from 'next/dynamic';
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { PageHeader } from '@/components/page-header';
 import { QueryState } from '@/components/query-state';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -12,11 +13,14 @@ import { useAdminApi } from '@/lib/auth/auth-context';
 const EntryMap = dynamic(() => import('@/components/map/entry-map'), { ssr: false });
 
 const DAY_OPTIONS = [7, 30, 90] as const;
-const DAY_ITEMS: Record<string, string> = { '7': '7 ngày', '30': '30 ngày', '90': '90 ngày' };
 
 export default function MapPage() {
+  const t = useTranslations('map');
   const api = useAdminApi();
   const [days, setDays] = useState<(typeof DAY_OPTIONS)[number]>(30);
+  const dayItems: Record<string, string> = Object.fromEntries(
+    DAY_OPTIONS.map((option) => [String(option), t(`days${option}`)]),
+  );
 
   const mapQuery = useQuery({ queryKey: ['admin', 'map', days], queryFn: () => api.mapPins(days) });
   const pins = mapQuery.data ?? [];
@@ -24,11 +28,11 @@ export default function MapPage() {
   return (
     <div>
       <PageHeader
-        title="Bản đồ"
-        description="Địa điểm các mục ghi gần đây."
+        title={t('title')}
+        description={t('subtitle')}
         action={
           <Select
-            items={DAY_ITEMS}
+            items={dayItems}
             value={String(days)}
             onValueChange={(value) => setDays(Number(value) as (typeof DAY_OPTIONS)[number])}
           >
@@ -38,7 +42,7 @@ export default function MapPage() {
             <SelectContent>
               {DAY_OPTIONS.map((option) => (
                 <SelectItem key={option} value={String(option)}>
-                  {DAY_ITEMS[String(option)]}
+                  {dayItems[String(option)]}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -50,7 +54,7 @@ export default function MapPage() {
         isPending={mapQuery.isPending}
         error={mapQuery.error}
         isEmpty={pins.length === 0}
-        emptyLabel="Chưa có mục ghi nào có địa điểm trong khoảng thời gian này."
+        emptyLabel={t('empty')}
       >
         <EntryMap pins={pins} />
       </QueryState>

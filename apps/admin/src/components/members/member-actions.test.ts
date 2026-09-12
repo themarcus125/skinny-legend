@@ -10,27 +10,29 @@ function member(overrides: Partial<AdminUser> = {}): AdminUser {
     avatarKey: null,
     role: 'member',
     status: 'active',
+    locale: 'vi',
     createdAt: '2026-09-08T02:30:00.000Z',
     ...overrides,
   };
 }
 
 describe('availableActions', () => {
+  // `label` is a members.* message key; the table renders t(label).
   it('offers a one-click approval for a pending member', () => {
     expect(availableActions(member({ status: 'pending' }))).toEqual([
-      { key: 'approve', label: 'Duyệt', patch: { status: 'active' }, confirm: false },
+      { key: 'approve', label: 'members.approve', patch: { status: 'active' }, confirm: false },
     ]);
   });
 
   it('offers a confirmed disable for an active member', () => {
     expect(availableActions(member({ status: 'active' }))).toEqual([
-      { key: 'disable', label: 'Khoá tài khoản', patch: { status: 'disabled' }, confirm: true },
+      { key: 'disable', label: 'members.lock', patch: { status: 'disabled' }, confirm: true },
     ]);
   });
 
   it('offers reactivation for a disabled member', () => {
     expect(availableActions(member({ status: 'disabled' }))).toEqual([
-      { key: 'reactivate', label: 'Mở lại', patch: { status: 'active' }, confirm: false },
+      { key: 'reactivate', label: 'members.reopen', patch: { status: 'active' }, confirm: false },
     ]);
   });
 });

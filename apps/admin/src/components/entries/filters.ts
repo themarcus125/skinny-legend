@@ -1,6 +1,6 @@
 import type { AdminEntry, EntryFilters, EntryStatus } from '@/lib/api/types';
 import { formatPercent } from '@/lib/format';
-import { CATEGORY_LABELS } from '@/lib/labels';
+import { CATEGORY_LABELS, type Translate } from '@/lib/labels';
 
 /** shadcn Select forbids an empty string value, so "no filter" is the sentinel 'all'. */
 export const ALL = 'all';
@@ -23,16 +23,17 @@ export function toEntryFilters(form: FilterForm): EntryFilters {
   return filters;
 }
 
-/** One-line rendering of the stored ai_verdicts row for the table cell. */
-export function verdictSummary(verdict: AdminEntry['verdict']): string {
-  if (!verdict) return 'Không có';
-  if (verdict.failed) return 'AI lỗi';
+/** One-line rendering of the stored ai_verdicts row for the table cell. `t` is a root translator. */
+export function verdictSummary(verdict: AdminEntry['verdict'], t: Translate): string {
+  if (!verdict) return t('common.none');
+  if (verdict.failed) return t('entries.aiFailed');
   // categories is a raw string[] from the model's JSON response, not the Category union, so an
   // unrecognized value (a model hallucination) falls back to itself rather than throwing.
   const labels: Record<string, string> = CATEGORY_LABELS;
   const categories = verdict.categories.length
-    ? verdict.categories.map((category) => labels[category] ?? category).join(', ')
-    : 'không có hạng mục';
-  const healthy = verdict.healthy === null ? '' : verdict.healthy ? ' · lành mạnh' : ' · không lành mạnh';
+    ? verdict.categories.map((category) => (labels[category] ? t(labels[category]) : category)).join(', ')
+    : t('entries.noCategory');
+  const healthy =
+    verdict.healthy === null ? '' : verdict.healthy ? ` ${t('entries.healthy')}` : ` ${t('entries.unhealthy')}`;
   return `${categories} · ${formatPercent(verdict.confidence)}${healthy}`;
 }

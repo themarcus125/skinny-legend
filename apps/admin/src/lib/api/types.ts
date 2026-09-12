@@ -20,6 +20,10 @@ export type UserStatus = (typeof USER_STATUSES)[number];
 export const ENTRY_STATUSES = ['pending', 'confirmed', 'rejected'] as const;
 export type EntryStatus = (typeof ENTRY_STATUSES)[number];
 
+/** `user_locale` — the member's persisted language, shared by the iOS app, push copy and this console. */
+export const USER_LOCALES = ['vi', 'en'] as const;
+export type UserLocale = (typeof USER_LOCALES)[number];
+
 export type CapPeriod = 'day' | 'week';
 export type PlaceSource = 'poi' | 'geocode' | 'manual' | 'none';
 
@@ -31,6 +35,7 @@ export interface AdminUser {
   avatarKey: string | null;
   role: Role;
   status: UserStatus;
+  locale: UserLocale;
   createdAt: string;
 }
 
@@ -132,6 +137,11 @@ export interface UserPatch {
   status?: UserStatus;
   role?: Role;
   displayName?: string;
+}
+
+/** Body of `PATCH /me` as sent by the console: only the language preference. */
+export interface MePatch {
+  locale: UserLocale;
 }
 
 /** Body of `PATCH /admin/entries/:id`. */

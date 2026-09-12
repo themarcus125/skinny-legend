@@ -1,9 +1,9 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
-import { getMessages } from 'next-intl/server';
+import { getMessages, getTranslations } from 'next-intl/server';
 import './globals.css';
 import { Providers } from './providers';
-import { readLocale } from '@/i18n/locale';
+import { readLocale } from '@/i18n/locale.server';
 
 const inter = Inter({
   subsets: ['latin', 'vietnamese'],
@@ -12,10 +12,10 @@ const inter = Inter({
   display: 'swap',
 });
 
-export const metadata: Metadata = {
-  title: 'Skinny Legend Admin',
-  description: 'Bảng quản trị Operation Skinny Legend',
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('meta');
+  return { title: t('title'), description: t('description') };
+}
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const locale = await readLocale();

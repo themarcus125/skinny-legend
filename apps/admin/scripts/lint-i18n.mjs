@@ -15,7 +15,6 @@ const VIETNAMESE =
 const ALLOWED = new Set([
   'lib/api/mock.ts', // seeded entries, feedback and place names — fixtures, never shipped
   'lib/auth/firebase.ts', // "Thiếu biến môi trường NEXT_PUBLIC_FIREBASE_*" — a build-time crash
-  'lib/auth/gate-decision.ts', // same: missing NEXT_PUBLIC_API_BASE_URL
 ]);
 
 function* walk(dir) {
