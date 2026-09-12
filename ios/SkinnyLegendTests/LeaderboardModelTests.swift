@@ -19,6 +19,19 @@ struct LeaderboardModelTests {
         #expect(rows.first?.rank == 1)
     }
 
+    @Test("Announces the current member's row distinctly to VoiceOver")
+    func accessibilityLabelMarksCurrentMember() {
+        let user = UserSummary(id: "u1", displayName: "Khoa", avatarUrl: nil)
+        let meRow = LeaderboardRow(rank: 1, user: user, total: 120, weekPoints: 30, isMe: true)
+        let otherRow = LeaderboardRow(rank: 2, user: user, total: 90, weekPoints: 10, isMe: false)
+
+        let meLabel = LeaderboardRowView.accessibilityLabel(for: meRow)
+        let otherLabel = LeaderboardRowView.accessibilityLabel(for: otherRow)
+
+        #expect(meLabel.contains("bạn"))
+        #expect(!otherLabel.contains("bạn"))
+    }
+
     @Test("Surfaces a load failure")
     func surfacesFailure() async {
         let error = APIError(status: 0, code: "network", message: "offline")

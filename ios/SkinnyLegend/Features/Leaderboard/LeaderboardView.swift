@@ -49,7 +49,7 @@ struct LeaderboardView: View {
     }
 }
 
-private struct LeaderboardRowView: View {
+struct LeaderboardRowView: View {
     let row: LeaderboardRow
 
     var body: some View {
@@ -62,8 +62,17 @@ private struct LeaderboardRowView: View {
             AvatarView(url: row.user.avatarUrl, displayName: row.user.displayName, size: 44)
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(row.user.displayName)
-                    .font(.roundedLabel(17, weight: .bold))
+                HStack(spacing: 6) {
+                    Text(row.user.displayName)
+                        .font(.roundedLabel(17, weight: .bold))
+                    if row.isMe {
+                        Text("Bạn")
+                            .font(.roundedLabel(11, weight: .bold))
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 3)
+                            .glassEffect(.regular.tint(Theme.flame.opacity(0.45)), in: Capsule())
+                    }
+                }
                 Text("Tuần này +\(row.weekPoints)")
                     .font(.roundedLabel(13, weight: .medium))
                     .foregroundStyle(.secondary)
@@ -82,6 +91,8 @@ private struct LeaderboardRowView: View {
             row.isMe ? .regular.tint(Theme.flame.opacity(0.30)) : .regular,
             in: RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
         )
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(Self.accessibilityLabel(for: row))
     }
 
     private var medalTint: Color {
@@ -90,5 +101,11 @@ private struct LeaderboardRowView: View {
         case 2, 3: Theme.flame.opacity(0.75)
         default: Color.secondary
         }
+    }
+
+    /// Pure helper so the VoiceOver label is unit-testable without rendering a view.
+    static func accessibilityLabel(for row: LeaderboardRow) -> String {
+        let mePart = row.isMe ? ", bạn" : ""
+        return "Hạng \(row.rank), \(row.user.displayName)\(mePart), \(row.total) điểm, tuần này \(row.weekPoints) điểm"
     }
 }
