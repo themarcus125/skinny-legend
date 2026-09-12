@@ -7,6 +7,11 @@ export const capPeriodEnum = pgEnum('cap_period', ['day', 'week']);
 export const entryStatusEnum = pgEnum('entry_status', ['pending', 'confirmed', 'rejected']);
 export const categorySourceEnum = pgEnum('category_source', ['ai', 'user', 'admin']);
 export const placeSourceEnum = pgEnum('place_source', ['poi', 'geocode', 'manual', 'none']);
+/**
+ * The user's UI language (spec §D). Deliberately NOT named `locale`: the push feature adds a
+ * separate `device_locale` enum for `device_tokens.locale`, and the two must not collide.
+ */
+export const userLocaleEnum = pgEnum('user_locale', ['vi', 'en']);
 
 export const users = pgTable('users', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -15,6 +20,7 @@ export const users = pgTable('users', {
   avatarKey: text('avatar_key'),
   role: roleEnum('role').notNull().default('member'),
   status: userStatusEnum('status').notNull().default('pending'),
+  locale: userLocaleEnum('locale').notNull().default('vi'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [uniqueIndex('users_firebase_uid_idx').on(t.firebaseUid)]);
 

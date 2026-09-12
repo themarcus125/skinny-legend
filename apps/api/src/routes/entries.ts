@@ -118,7 +118,7 @@ export function entryRoutes(deps: EntryDeps) {
     const challenge = await loadChallenge();
     const image = await storage.getObject(body.photoKey).catch(() => { throw new ApiError(400, 'photo_missing', 'Photo not uploaded'); });
     const normalized = await normalizeImage(image).catch(() => { throw new ApiError(400, 'photo_invalid', 'Photo could not be decoded'); });
-    const [verdict, thumb] = await Promise.all([deps.classify(normalized), makeThumbnail(normalized)]);
+    const [verdict, thumb] = await Promise.all([deps.classify(normalized, { locale: user.locale }), makeThumbnail(normalized)]);
     const thumbKey = newKey('thumb', user.id);
     await storage.putObject(thumbKey, thumb, 'image/jpeg');
 

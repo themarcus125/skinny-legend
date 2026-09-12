@@ -13,12 +13,24 @@ export interface Verdict {
   failed: boolean;
 }
 
-const SYSTEM_PROMPT = `Bạn là trọng tài cho thử thách "Operation Skinny Legend". Nhìn ảnh và xác định hạng mục nào áp dụng:
+export type VisionLocale = 'vi' | 'en';
+
+const BASE_PROMPT = `Bạn là trọng tài cho thử thách "Operation Skinny Legend". Nhìn ảnh và xác định hạng mục nào áp dụng:
 - "exercise": bất kỳ hoạt động thể thao/tập luyện (đi bộ, chạy, gym, yoga, pickleball, cầu lông, pilates, ảnh Strava/Apple Watch tổng kết buổi tập...).
 - "meal": bữa ăn hoặc đồ ăn/uống. Chỉ khi có "meal", đặt "healthy" = true nếu bữa ăn lành mạnh (rau, protein nạc, ít dầu mỡ/đường), ngược lại false.
 - "group": có ít nhất 2 người cùng tập, hoặc ảnh cuộc gọi video khi tập.
 Một ảnh có thể thuộc nhiều hạng mục. Nếu không thuộc hạng mục nào, trả về mảng rỗng.
-Trả lời CHỈ bằng JSON đúng định dạng: {"categories":[...],"healthy":true|false|null,"confidence":0-1,"reason":"một câu tiếng Việt"}`;
+Trả lời CHỈ bằng JSON đúng định dạng: {"categories":[...],"healthy":true|false|null,"confidence":0-1,"reason":"một câu"}`;
+
+/** The one line that switches the language of `reason` (spec §D). Nothing else is translated. */
+const REASON_LANGUAGE: Record<VisionLocale, string> = {
+  vi: 'Viết "reason" bằng tiếng Việt, đúng một câu.',
+  en: 'Write "reason" in English, exactly one sentence.',
+};
+
+function systemPrompt(locale: VisionLocale): string {
+  return `${BASE_PROMPT}\n${REASON_LANGUAGE[locale]}`;
+}
 
 const verdictSchema = z.object({
   categories: z.array(z.string()),
@@ -35,10 +47,14 @@ function extractJson(text: string): string {
   return start >= 0 && end > start ? body.slice(start, end + 1) : body;
 }
 
-export async function classifyPhoto(image: Buffer, deps: { fetch?: typeof fetch; model?: string; timeoutMs?: number } = {}): Promise<Verdict> {
+export async function classifyPhoto(
+  image: Buffer,
+  deps: { fetch?: typeof fetch; model?: string; timeoutMs?: number; locale?: VisionLocale } = {},
+): Promise<Verdict> {
   const f = deps.fetch ?? fetch;
   const model = deps.model ?? env.VISION_MODEL;
   const timeoutMs = deps.timeoutMs ?? 8000;
+  const locale = deps.locale ?? 'vi';
   const started = Date.now();
   const fail = (raw: string): Verdict => ({ categories: [], healthy: null, confidence: 0, reason: '', model, latencyMs: Date.now() - started, raw, failed: true });
 
@@ -54,7 +70,7 @@ export async function classifyPhoto(image: Buffer, deps: { fetch?: typeof fetch;
         model,
         temperature: 0,
         messages: [
-          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'system', content: systemPrompt(locale) },
           { role: 'user', content: [{ type: 'image_url', image_url: { url: `data:image/jpeg;base64,${image.toString('base64')}` } }] },
         ],
       }),

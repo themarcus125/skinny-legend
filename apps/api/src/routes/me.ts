@@ -12,8 +12,11 @@ meRoutes.use(authenticate);
 
 meRoutes.get('/', (c) => c.json({ user: c.get('user') }));
 
-const patchMe = z.object({ displayName: z.string().min(1).max(40).optional(), avatarKey: z.string().min(1).optional() })
-  .refine((o) => Object.keys(o).length > 0, { message: 'No fields to update' });
+const patchMe = z.object({
+  displayName: z.string().min(1).max(40).optional(),
+  avatarKey: z.string().min(1).optional(),
+  locale: z.enum(['vi', 'en']).optional(),
+}).refine((o) => Object.keys(o).length > 0, { message: 'No fields to update' });
 meRoutes.patch('/', validate('json', patchMe), async (c) => {
   const me = c.get('user');
   const patch = c.req.valid('json');

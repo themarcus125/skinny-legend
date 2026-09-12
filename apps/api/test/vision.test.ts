@@ -71,3 +71,29 @@ describe('normalizeImage', () => {
     expect(meta.height).toBe(600);
   });
 });
+
+describe('classifyPhoto locale instruction', () => {
+  function capturingFetch(): { calls: string[]; fetch: typeof fetch } {
+    const calls: string[] = [];
+    const fetch = (async (_url: string, init: RequestInit) => {
+      calls.push(String(init.body));
+      return new Response(JSON.stringify({ choices: [{ message: { content: '{"categories":["meal"],"healthy":true,"confidence":0.9,"reason":"ok"}' } }] }), { status: 200 });
+    }) as unknown as typeof fetch;
+    return { calls, fetch };
+  }
+
+  it('asks for a Vietnamese reason by default', async () => {
+    const { calls, fetch } = capturingFetch();
+    await classifyPhoto(png, { fetch });
+    const system = JSON.parse(calls[0]!).messages[0].content as string;
+    expect(system).toContain('bằng tiếng Việt');
+    expect(system).not.toContain('in English');
+  });
+
+  it('asks for an English reason when locale is en', async () => {
+    const { calls, fetch } = capturingFetch();
+    await classifyPhoto(png, { fetch, locale: 'en' });
+    const system = JSON.parse(calls[0]!).messages[0].content as string;
+    expect(system).toContain('in English');
+  });
+});
