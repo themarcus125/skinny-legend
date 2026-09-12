@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen } from '@/test/intl';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { MockAdminApi } from '@/lib/api/mock';
 import type { AdminUser } from '@/lib/api/types';

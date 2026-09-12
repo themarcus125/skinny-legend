@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@/test/intl';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { MockAdminApi } from '@/lib/api/mock';
 import { AuthContext, type AuthState } from '@/lib/auth/auth-context';

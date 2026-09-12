@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen } from '@/test/intl';
 import { describe, expect, it } from 'vitest';
 import type { FeedbackItem } from '@/lib/api/types';
 import { FeedbackList } from './feedback-list';

@@ -1,0 +1,19 @@
+{
+  "nav": {
+    "overview": "Overview",
+    "members": "Members",
+    "entries": "Entries",
+    "map": "Map",
+    "rules": "Rules",
+    "feedback": "Feedback",
+    "label": "Navigation",
+    "subtitle": "Admin console",
+    "mock": "Mock mode",
+    "language": "Language"
+  },
+  "common": {
+    "signOut": "Sign out",
+    "loading": "Loading…",
+    "retry": "Try again"
+  }
+}

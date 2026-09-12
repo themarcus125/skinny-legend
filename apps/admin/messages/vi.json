@@ -1,0 +1,19 @@
+{
+  "nav": {
+    "overview": "Tổng quan",
+    "members": "Thành viên",
+    "entries": "Mục ghi",
+    "map": "Bản đồ",
+    "rules": "Luật chơi",
+    "feedback": "Góp ý",
+    "label": "Điều hướng",
+    "subtitle": "Bảng quản trị",
+    "mock": "Chế độ mock",
+    "language": "Ngôn ngữ"
+  },
+  "common": {
+    "signOut": "Đăng xuất",
+    "loading": "Đang tải…",
+    "retry": "Thử lại"
+  }
+}
