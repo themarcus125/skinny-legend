@@ -45,6 +45,15 @@ struct TrendsModelTests {
         #expect(TrendsModel.weekdayLabels == ["T2", "T3", "T4", "T5", "T6", "T7", "CN"])
     }
 
+    @Test("Heat cell accessibility label reads the Vietnamese day and points, or inactivity")
+    func heatCellAccessibilityLabel() {
+        let active = TrendsModel.HeatCell(date: "2026-09-09", points: 12, weekKey: "2026-W37", weekdayLabel: "T4")
+        #expect(TrendsModel.accessibilityLabel(for: active) == "Thứ Tư, 09/09: 12 điểm")
+
+        let inactive = TrendsModel.HeatCell(date: "2026-09-10", points: 0, weekKey: "2026-W37", weekdayLabel: "T5")
+        #expect(TrendsModel.accessibilityLabel(for: inactive) == "Thứ Năm, 10/09: không hoạt động")
+    }
+
     @Test("Day entries collect just that day's rows from the paged history")
     func dayEntries() async throws {
         let client = MockAPIClient(historyPageSize: 3)

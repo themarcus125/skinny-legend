@@ -52,6 +52,14 @@ final class TrendsModel {
         heatCells.first { $0.weekKey == week && $0.weekdayLabel == weekday }
     }
 
+    /// VoiceOver label for a heatmap square, e.g. `Thứ Tư, 09/09: 12 điểm` or
+    /// `Thứ Năm, 10/09: không hoạt động`. Pure so it's covered without a chart on screen.
+    static func accessibilityLabel(for cell: HeatCell) -> String {
+        let day = LocalDay.display(cell.date)
+        guard cell.points > 0 else { return "\(day): không hoạt động" }
+        return "\(day): \(cell.points) điểm"
+    }
+
     private func buildGrid(from heatmap: [HeatmapDay]) {
         let today = LocalDay.today
         let earliest = max(Rulebook.challengeStart, LocalDay.adding(-Self.gridSpanDays, to: today))

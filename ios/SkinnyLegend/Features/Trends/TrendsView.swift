@@ -120,6 +120,7 @@ struct TrendsView: View {
                         Rectangle()
                             .fill(.clear)
                             .contentShape(Rectangle())
+                            .accessibilityHidden(true)
                             .gesture(
                                 SpatialTapGesture().onEnded { tap in
                                     guard let plotFrame = proxy.plotFrame else { return }
@@ -131,6 +132,18 @@ struct TrendsView: View {
                                     selectedDay = DaySelection(date: cell.date)
                                 }
                             )
+                    }
+                }
+                // The tap gesture above is invisible to VoiceOver, so this is the only route
+                // to the per-day drill-down: one synthetic, chronologically-ordered element
+                // per cell, each activatable regardless of whether the day scored points.
+                .accessibilityChildren {
+                    ForEach(model.heatCells) { cell in
+                        Color.clear
+                            .frame(width: 1, height: 1)
+                            .accessibilityLabel(TrendsModel.accessibilityLabel(for: cell))
+                            .accessibilityAddTraits(cell.points > 0 ? .isButton : [])
+                            .accessibilityAction { selectedDay = DaySelection(date: cell.date) }
                     }
                 }
                 Text("Chạm vào một ô để xem hoạt động của ngày đó.")
