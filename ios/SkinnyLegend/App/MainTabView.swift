@@ -25,7 +25,7 @@ struct MainTabView: View {
                 NavigationStack { LeaderboardView(api: env.api) }
             }
             Tab("Xu hướng", systemImage: "chart.bar.xaxis", value: AppTab.trends) {
-                NavigationStack { TabStub(title: "Xu hướng", symbol: "chart.bar.xaxis") }
+                NavigationStack { TrendsView(api: env.api) }
             }
             Tab("Tài khoản", systemImage: "person.crop.circle", value: AppTab.account) {
                 NavigationStack { TabStub(title: "Tài khoản", symbol: "person.crop.circle") }
