@@ -173,8 +173,14 @@ describe('GET /entries/map', () => {
   });
   it('excludes pending entries and entries outside the window', async () => {
     const a = await asUser('a', { activate: true });
+    // Out-of-window confirmed entry
     await confirmedAt(a.headers, '2026-08-01T01:00:00Z', ['exercise'], { lat: 1, lng: 1 });
-    const body = await (await app.request('/entries/map?days=7', { headers: a.headers })).json();
+    // Pending entry inside the window
+    const h = { ...a.headers, 'content-type': 'application/json' };
+    const presign = await (await app.request('/uploads/presign', { method: 'POST', headers: h, body: JSON.stringify({ kind: 'photo', contentType: 'image/png' }) })).json();
+    await storage.putObject(presign.key, png, 'image/png');
+    await app.request('/entries', { method: 'POST', headers: h, body: JSON.stringify({ photoKey: presign.key, takenAt: '2026-09-09T01:00:00Z', lat: 10.77, lng: 106.70 }) });
+    const body = await (await app.request('/entries/map?days=30', { headers: a.headers })).json();
     expect(body.pins).toEqual([]);
   });
   it('rejects days outside 1–90', async () => {
