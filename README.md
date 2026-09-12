@@ -94,8 +94,10 @@ standings and the last 24 h of `notification_log`, then sends through FCM.
 Delivery only goes out for real once `AUTH_MODE=firebase` and `FIREBASE_PROJECT_ID`,
 `FIREBASE_CLIENT_EMAIL` and `FIREBASE_PRIVATE_KEY` are all set (SKI-40/42) — the same service
 account that verifies ID tokens, plus an **APNs authentication key uploaded to Firebase → Project
-settings → Cloud Messaging**. In any other mode the job runs end to end against an in-memory fake
-sender and writes no `notification_log` rows for undelivered messages, so it is safe to schedule early.
+settings → Cloud Messaging**. The job shares the API's env gate: with `AUTH_MODE` unset (the
+production default) it refuses to boot until the three `FIREBASE_*` vars are present, so create the
+Railway cron service once Firebase and the APNs key are configured. Under `AUTH_MODE=test` (local
+only) sends go to an in-memory fake that reports success, so `notification_log` rows are still written.
 
 ### Bootstrapping the first admin
 
