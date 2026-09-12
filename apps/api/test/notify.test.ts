@@ -65,23 +65,28 @@ describe('runNotifyJob', () => {
     expect(log[0]!.payloadJson).toMatchObject({ locale: 'vi', vars: { days: 1 } });
   });
 
-  it('renders the copy in the locale of the most recently seen device', async () => {
+  it('renders the copy in users.locale, even when every device says otherwise', async () => {
     const { user } = await asUser('u', { activate: true });
+    await db.update(schema.users).set({ locale: 'en' }).where(eq(schema.users.id, user.id));
     await logExercise(user.id, '2026-09-19');
-    await registerDevice(user.id, 'tok-old', 'vi');
-    await registerDevice(user.id, 'tok-new', 'en');
-    // Pin both timestamps: `last_seen_at` defaults to the real wall clock, which would make
-    // "most recently seen" depend on the day the suite happens to run.
-    await db.update(schema.deviceTokens)
-      .set({ lastSeenAt: new Date('2026-09-10T10:00:00Z') })
-      .where(eq(schema.deviceTokens.token, 'tok-old'));
-    await db.update(schema.deviceTokens)
-      .set({ lastSeenAt: new Date('2026-09-20T10:00:00Z') })
-      .where(eq(schema.deviceTokens.token, 'tok-new'));
+    await registerDevice(user.id, 'tok-vi', 'vi');
     const sender = fakeSender();
 
     await runNotifyJob({ sender, now: NOW });
     expect(sender.sent[0]!.title).toBe('Nothing logged today?');
+    const log = await db.select().from(schema.notificationLog);
+    expect(log[0]!.payloadJson).toMatchObject({ locale: 'en' });
+  });
+
+  it('defaults to vi: a fresh user with an en device is still reminded in Vietnamese', async () => {
+    const { user } = await asUser('u', { activate: true });
+    expect(user.locale).toBe('vi');
+    await logExercise(user.id, '2026-09-19');
+    await registerDevice(user.id, 'tok-en', 'en');
+    const sender = fakeSender();
+
+    await runNotifyJob({ sender, now: NOW });
+    expect(sender.sent[0]!.title).toBe('Hôm nay chưa ghi nhận gì?');
   });
 
   it('does not re-send the same kind within 24h', async () => {

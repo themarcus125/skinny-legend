@@ -254,16 +254,26 @@ describe('POST /admin/notifications/test', () => {
     expect(audit[0]).toMatchObject({ actorId: admin.user.id, action: 'notification.test', targetType: 'user', targetId: member.user.id });
   });
 
-  it('uses the locale of the most recently seen device, not the last inserted', async () => {
+  it('uses users.locale, not the locale of any device', async () => {
     const admin = await asUser('adm', { admin: true });
     const member = await asUser('m', { activate: true });
+    await db.update(schema.users).set({ locale: 'en' }).where(eq(schema.users.id, member.user.id));
     await db.insert(schema.deviceTokens).values([
-      { userId: member.user.id, token: 'tok-en', platform: 'ios', locale: 'en', lastSeenAt: new Date('2026-09-12T10:00:00Z') },
-      { userId: member.user.id, token: 'tok-vi', platform: 'ios', locale: 'vi', lastSeenAt: new Date('2026-09-01T10:00:00Z') },
+      { userId: member.user.id, token: 'tok-vi-1', platform: 'ios', locale: 'vi', lastSeenAt: new Date('2026-09-12T10:00:00Z') },
+      { userId: member.user.id, token: 'tok-vi-2', platform: 'ios', locale: 'vi', lastSeenAt: new Date('2026-09-01T10:00:00Z') },
     ]);
     expect((await testSend(admin.headers, member.user.id)).status).toBe(200);
     expect(fake.sent).toHaveLength(2);
     expect(fake.sent.every((m) => m.title === 'Test notification')).toBe(true);
+  });
+
+  it('defaults to vi: a fresh user with an en device still gets the Vietnamese test copy', async () => {
+    const admin = await asUser('adm', { admin: true });
+    const member = await asUser('m', { activate: true });
+    expect(member.user.locale).toBe('vi');
+    await db.insert(schema.deviceTokens).values({ userId: member.user.id, token: 'tok-en', platform: 'ios', locale: 'en' });
+    expect((await testSend(admin.headers, member.user.id)).status).toBe(200);
+    expect(fake.sent[0]!.title).toBe('Thử thông báo');
   });
 
   it('writes no notification_log row: a test send is not a planned reminder', async () => {

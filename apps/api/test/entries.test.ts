@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { eq } from 'drizzle-orm';
 import { schema } from '@skinny/shared';
 import { db } from '../src/db.js';
 import { createApp } from '../src/app.js';
@@ -36,6 +37,15 @@ describe('POST /entries', () => {
     const [row] = await db.select().from(schema.entries);
     expect(row?.thumbKey).toMatch(/^thumbs\//);
     expect(classify).toHaveBeenCalledOnce();
+    expect(classify).toHaveBeenCalledWith(expect.any(Buffer), { locale: 'vi' });
+  });
+
+  it('passes the user\'s locale to the classifier so the verdict reason is in their language', async () => {
+    const { headers, user } = await asUser('u1', { activate: true });
+    await db.update(schema.users).set({ locale: 'en' }).where(eq(schema.users.id, user.id));
+    const key = await uploadPhoto(headers);
+    expect((await post(headers, { photoKey: key, takenAt: '2026-09-10T01:00:00Z' })).status).toBe(201);
+    expect(classify).toHaveBeenCalledWith(expect.any(Buffer), { locale: 'en' });
   });
 
   it('stores location fields', async () => {

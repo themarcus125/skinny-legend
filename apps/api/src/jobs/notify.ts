@@ -77,8 +77,9 @@ function jsonVars(vars: NotificationVars): Record<string, string | number> {
 /**
  * The daily reminder run (spec §E). Fans each planned notification out to every device the
  * member has registered, logs one row per member who actually received something, and drops
- * tokens FCM reports as dead. Locale selection is `localeFor` from services/push, shared with
- * the admin test-send route; once i18n lands `users.locale` the job reads that first.
+ * tokens FCM reports as dead. Locale comes from `users.locale` (the language the member picked
+ * in the app), falling back to `localeFor` from services/push only when the row has none. Shared
+ * with the admin test-send route so both surfaces pick the same language.
  */
 export async function runNotifyJob(deps: { sender?: PushSender; now?: Date } = {}): Promise<NotifyResult> {
   const sender = deps.sender ?? pushSender;
@@ -112,7 +113,9 @@ export async function runNotifyJob(deps: { sender?: PushSender; now?: Date } = {
       lastConfirmedDate: lastConfirmedDate(entriesByUser.get(r.user.id) ?? [], today),
       rank: r.rank,
       total: r.score.total,
-      locale: localeFor(tokensByUser.get(r.user.id)!),
+      // users.locale is NOT NULL (default 'vi'), so the column always wins in practice; the
+      // device-locale fallback only guards a row read without it.
+      locale: r.user.locale ?? localeFor(tokensByUser.get(r.user.id)!),
     }));
 
   const log: NotificationLogEntry[] = await db

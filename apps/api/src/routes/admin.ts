@@ -148,14 +148,15 @@ adminRoutes.get('/notifications', validate('query', notificationsQuery), async (
 const testNotification = z.object({ userId: z.string().uuid() });
 adminRoutes.post('/notifications/test', validate('json', testNotification), async (c) => {
   const { userId } = c.req.valid('json');
-  const [target] = await db.select({ id: schema.users.id }).from(schema.users).where(eq(schema.users.id, userId));
+  const [target] = await db.select({ id: schema.users.id, locale: schema.users.locale }).from(schema.users).where(eq(schema.users.id, userId));
   if (!target) throw new ApiError(404, 'not_found', 'User not found');
 
   const devices = await db.select().from(schema.deviceTokens).where(eq(schema.deviceTokens.userId, userId));
   if (devices.length === 0) throw new ApiError(400, 'no_device_tokens', 'User has no registered devices');
 
-  // Locale selection is shared with the notify job (services/push.localeFor): most recently seen device wins.
-  const copy = TEST_NOTIFICATION[localeFor(devices)];
+  // Same rule as the notify job: users.locale (NOT NULL, default 'vi') wins, so the column always
+  // decides in practice; localeFor (most recently seen device) only guards a row read without it.
+  const copy = TEST_NOTIFICATION[target.locale ?? localeFor(devices)];
   let results: PushResult[];
   try {
     results = await pushSender.send(devices.map((d) => ({ token: d.token, title: copy.title, body: copy.body, data: { deepLink: 'track', kind: 'test' } })));

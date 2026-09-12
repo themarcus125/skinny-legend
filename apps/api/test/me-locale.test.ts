@@ -34,6 +34,20 @@ describe('users.locale', () => {
     expect((await res.json()).user).toMatchObject({ displayName: 'Khoa', locale: 'en' });
   });
 
+  it('PATCH /me { displayName } alone leaves a previously set locale untouched', async () => {
+    const { headers } = await asUser('u1', { name: 'Khoa' });
+    const patch = (body: unknown) => app.request('/me', {
+      method: 'PATCH',
+      headers: { ...headers, 'content-type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    expect((await patch({ locale: 'en' })).status).toBe(200);
+    const res = await patch({ displayName: 'Khoa N' });
+    expect(res.status).toBe(200);
+    expect((await res.json()).user).toMatchObject({ displayName: 'Khoa N', locale: 'en' });
+    expect((await (await app.request('/me', { headers })).json()).user.locale).toBe('en');
+  });
+
   it('rejects an unknown locale with 400', async () => {
     const { headers } = await asUser('u1', { name: 'Khoa' });
     const res = await app.request('/me', {
