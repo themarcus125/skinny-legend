@@ -4,8 +4,10 @@ import SwiftUI
 /// can still score today.
 struct DashboardView: View {
     @State private var model: DashboardModel
+    private let apiClient: any APIClient
 
     init(api: any APIClient) {
+        self.apiClient = api
         _model = State(initialValue: DashboardModel(api: api))
     }
 
@@ -43,6 +45,21 @@ struct DashboardView: View {
                 }
                 checklistCard(dashboard)
                 totalCard(dashboard)
+                NavigationLink {
+                    FeedView(api: apiClient)
+                } label: {
+                    GlassCard {
+                        HStack {
+                            Label("Nhật ký nhóm", systemImage: "photo.stack")
+                                .font(.roundedLabel(17, weight: .semibold))
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+                .buttonStyle(.plain)
             }
             .padding(.horizontal, 20)
             .padding(.top, 8)
