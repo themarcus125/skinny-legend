@@ -22,6 +22,7 @@ private struct StubAPIClient: APIClient {
     func feed(cursor: String?) async throws -> FeedPage { FeedPage(entries: [], nextCursor: nil) }
     func entries(ofUser userID: String, cursor: String?) async throws -> EntryPage { EntryPage(entries: [], nextCursor: nil) }
     func sendFeedback(message: String, screenshotKey: String?, appVersion: String) async throws {}
+    func mapPins(days: Int) async throws -> MapPinsPage { MapPinsPage(pins: []) }
 }
 
 private func pendingUser() -> UserDTO {

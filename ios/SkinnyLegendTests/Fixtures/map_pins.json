@@ -1,0 +1,26 @@
+{
+  "pins": [
+    {
+      "entryId": "66666666-6666-4666-8666-666666666666",
+      "lat": 10.7769,
+      "lng": 106.7009,
+      "placeName": "Phòng gym California Fitness",
+      "takenAt": "2026-09-11T09:40:00.000Z",
+      "localDate": "2026-09-11",
+      "categories": ["exercise"],
+      "thumbUrl": "https://photos.example.com/thumbs/6666/x.jpg",
+      "user": { "id": "44444444-4444-4444-8444-444444444444", "displayName": "Linh", "avatarUrl": null }
+    },
+    {
+      "entryId": "77777777-7777-4777-8777-777777777777",
+      "lat": 10.8122,
+      "lng": 106.6740,
+      "placeName": null,
+      "takenAt": "2026-09-10T05:00:00.000Z",
+      "localDate": "2026-09-10",
+      "categories": ["group"],
+      "thumbUrl": null,
+      "user": { "id": "33333333-3333-4333-8333-33333333bbbb", "displayName": "Tuấn", "avatarUrl": null }
+    }
+  ]
+}

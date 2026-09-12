@@ -31,6 +31,17 @@ enum MockSeed {
         "Bún chả Hương Liên",
     ]
 
+    /// One coordinate per name in `places`, so the mock map screen (`MockAPIClient.mapPins`) has
+    /// something real to plot over Ho Chi Minh City.
+    static let placeCoordinates: [String: GeoPoint] = [
+        "Phòng gym California Fitness": GeoPoint(lat: 10.7769, lng: 106.7009),
+        "Sân cầu lông Tân Bình": GeoPoint(lat: 10.8010, lng: 106.6520),
+        "Công viên Gia Định": GeoPoint(lat: 10.8122, lng: 106.6740),
+        "Cơm tấm Ba Ghiền": GeoPoint(lat: 10.7890, lng: 106.6910),
+        "Hồ bơi Lam Sơn": GeoPoint(lat: 10.7830, lng: 106.6950),
+        "Bún chả Hương Liên": GeoPoint(lat: 10.7740, lng: 106.7030),
+    ]
+
     /// Category patterns per weekday index, rotated per member. Index 0 = Monday. Every member
     /// gets exactly two entries every day in the window, which keeps the paging tests meaningful
     /// however few days of the challenge have elapsed.

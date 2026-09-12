@@ -101,6 +101,19 @@ struct DTODecodingTests {
         #expect(page.nextCursor == nil)
     }
 
+    @Test("Decodes the map pins page")
+    func decodesMapPins() throws {
+        let page = try Fixture.decode(MapPinsPage.self, "map_pins")
+        #expect(page.pins.count == 2)
+        #expect(page.pins[0].id == page.pins[0].entryId)
+        #expect(page.pins[0].placeName == "Phòng gym California Fitness")
+        #expect(page.pins[0].categories == [.exercise])
+        #expect(page.pins[0].user.displayName == "Linh")
+        #expect(page.pins[1].placeName == nil)
+        #expect(page.pins[1].thumbUrl == nil)
+        #expect(page.pins[1].user.displayName == "Tuấn")
+    }
+
     @Test("Encodes a create-entry body with an offset timestamp and omitted optionals")
     func encodesCreateEntry() throws {
         let takenAt = try Date("2026-09-11T01:30:00Z", strategy: .iso8601)

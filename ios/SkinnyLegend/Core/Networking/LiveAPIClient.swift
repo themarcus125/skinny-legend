@@ -107,6 +107,10 @@ struct LiveAPIClient: APIClient {
         try await send(EntryPage.self, "GET", "/users/\(userID)/entries", query: cursorQuery(cursor))
     }
 
+    func mapPins(days: Int) async throws -> MapPinsPage {
+        try await send(MapPinsPage.self, "GET", "/entries/map", query: [URLQueryItem(name: "days", value: String(days))])
+    }
+
     // MARK: - Feedback
 
     func sendFeedback(message: String, screenshotKey: String?, appVersion: String) async throws {

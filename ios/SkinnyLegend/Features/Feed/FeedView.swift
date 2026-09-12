@@ -4,8 +4,10 @@ import SwiftUI
 /// shown — only `placeName` (spec §8 step 7).
 struct FeedView: View {
     @State private var model: FeedModel
+    private let api: any APIClient
 
     init(api: any APIClient) {
+        self.api = api
         _model = State(initialValue: FeedModel(api: api))
     }
 
@@ -33,6 +35,13 @@ struct FeedView: View {
         .navigationTitle("Nhật ký nhóm")
         .task { if model.entries.isEmpty { await model.loadFirstPage() } }
         .refreshable { await model.loadFirstPage() }
+        .toolbar {
+            NavigationLink {
+                MapScreen(api: api)
+            } label: {
+                Label("Bản đồ", systemImage: "map")
+            }
+        }
     }
 
     private var list: some View {

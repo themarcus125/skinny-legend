@@ -56,6 +56,7 @@ protocol APIClient: Sendable {
     func trends() async throws -> TrendsDTO
     func feed(cursor: String?) async throws -> FeedPage
     func entries(ofUser userID: String, cursor: String?) async throws -> EntryPage
+    func mapPins(days: Int) async throws -> MapPinsPage
 
     func sendFeedback(message: String, screenshotKey: String?, appVersion: String) async throws
 }

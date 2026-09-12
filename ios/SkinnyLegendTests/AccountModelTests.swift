@@ -156,4 +156,5 @@ struct LeaderboardFailingClient: APIClient {
     func sendFeedback(message: String, screenshotKey: String?, appVersion: String) async throws {
         try await inner.sendFeedback(message: message, screenshotKey: screenshotKey, appVersion: appVersion)
     }
+    func mapPins(days: Int) async throws -> MapPinsPage { try await inner.mapPins(days: days) }
 }

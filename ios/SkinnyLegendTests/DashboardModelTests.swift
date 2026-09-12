@@ -62,6 +62,7 @@ actor SlowDashboardClient: APIClient {
     func feed(cursor: String?) async throws -> FeedPage { fatalError("unused in this test") }
     func entries(ofUser userID: String, cursor: String?) async throws -> EntryPage { fatalError("unused in this test") }
     func sendFeedback(message: String, screenshotKey: String?, appVersion: String) async throws { fatalError("unused in this test") }
+    func mapPins(days: Int) async throws -> MapPinsPage { fatalError("unused in this test") }
 
     func dashboard() async throws -> DashboardDTO {
         dashboardCallCount += 1
@@ -99,4 +100,5 @@ struct FailingClient: APIClient {
     func feed(cursor: String?) async throws -> FeedPage { throw error }
     func entries(ofUser userID: String, cursor: String?) async throws -> EntryPage { throw error }
     func sendFeedback(message: String, screenshotKey: String?, appVersion: String) async throws { throw error }
+    func mapPins(days: Int) async throws -> MapPinsPage { throw error }
 }

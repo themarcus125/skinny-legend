@@ -239,6 +239,23 @@ actor MockAPIClient: APIClient {
         return EntryPage(entries: page.items.map(dto), nextCursor: page.nextCursor)
     }
 
+    func mapPins(days: Int) async throws -> MapPinsPage {
+        let since = LocalDay.adding(-days, to: today)
+        let pins = store
+            .filter { $0.status == .confirmed && $0.localDate >= since }
+            .sorted { $0.takenAt > $1.takenAt }
+            .compactMap { stored -> MapPinDTO? in
+                guard let placeName = stored.placeName, let point = MockSeed.placeCoordinates[placeName],
+                      let author = members.first(where: { $0.id == stored.userId }) else { return nil }
+                return MapPinDTO(
+                    entryId: stored.id, lat: point.lat, lng: point.lng, placeName: placeName,
+                    takenAt: stored.takenAt, localDate: stored.localDate, categories: stored.categories,
+                    thumbUrl: photoURL(stored), user: summary(author)
+                )
+            }
+        return MapPinsPage(pins: pins)
+    }
+
     func sendFeedback(message: String, screenshotKey: String?, appVersion: String) async throws {
         try? await Task.sleep(for: .milliseconds(300))
     }

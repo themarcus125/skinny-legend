@@ -1,0 +1,52 @@
+import SwiftUI
+
+/// Detail sheet for a single map pin. `FeedRow` (Features/Feed/FeedView.swift) is `private` with
+/// no tap target of its own, so this rebuilds the same visual grammar — photo, author, categories,
+/// place — as a standalone `GlassCard` sheet instead of reusing it.
+struct MapPinCard: View {
+    let pin: MapPinDTO
+
+    var body: some View {
+        GlassCard(padding: 0) {
+            VStack(alignment: .leading, spacing: 0) {
+                RemoteImage(url: pin.thumbUrl)
+                    .aspectRatio(16.0 / 9.0, contentMode: .fill)
+                    .frame(maxWidth: .infinity)
+                    .clipped()
+
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack(spacing: 10) {
+                        AvatarView(url: pin.user.avatarUrl, displayName: pin.user.displayName, size: 34)
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(pin.user.displayName)
+                                .font(.roundedLabel(15, weight: .bold))
+                            Text(LocalDay.display(pin.localDate))
+                                .font(.roundedLabel(12, weight: .medium))
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                    }
+
+                    GlassEffectContainer(spacing: 8) {
+                        FlowLayout(spacing: 8, rowSpacing: 8) {
+                            ForEach(pin.categories) { category in
+                                CategoryChip(category: category)
+                            }
+                        }
+                    }
+
+                    if let placeName = pin.placeName {
+                        Label(placeName, systemImage: "mappin.circle.fill")
+                            .font(.roundedLabel(13, weight: .medium))
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
+                }
+                .padding(16)
+            }
+        }
+        .padding(20)
+        .presentationDetents([.medium])
+        .presentationDragIndicator(.visible)
+    }
+}
