@@ -7,8 +7,10 @@ import type {
   EntryPatch,
   FeedbackItem,
   MapPin,
+  NotificationLogItem,
   RulesPayload,
   RulesResponse,
+  TestSendResult,
   UserPatch,
 } from './types';
 
@@ -99,5 +101,19 @@ export class LiveAdminApi implements AdminApi {
   async mapPins(days: number): Promise<MapPin[]> {
     const { pins } = await this.request<{ pins: MapPin[] }>(`/entries/map?days=${days}`);
     return pins;
+  }
+
+  async listNotifications(limit = 100): Promise<NotificationLogItem[]> {
+    const { notifications } = await this.request<{ notifications: NotificationLogItem[] }>(
+      `/admin/notifications?limit=${limit}`,
+    );
+    return notifications;
+  }
+
+  async sendTestNotification(userId: string): Promise<TestSendResult> {
+    return this.request<TestSendResult>('/admin/notifications/test', {
+      method: 'POST',
+      body: JSON.stringify({ userId }),
+    });
   }
 }

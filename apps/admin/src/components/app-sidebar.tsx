@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
+  BellIcon,
   FlameIcon,
   ImagesIcon,
   LayoutDashboardIcon,
@@ -11,18 +12,21 @@ import {
   SlidersHorizontalIcon,
   UsersIcon,
 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { cn } from '@/lib/utils';
 import { SignOutButton } from '@/components/sign-out-button';
 import { IS_MOCK } from '@/lib/api';
 import { useAuth } from '@/lib/auth/auth-context';
 
+/** Section links; `key` is the `nav.*` message key, translated at render. */
 const NAV = [
-  { href: '/', label: 'Tổng quan', icon: LayoutDashboardIcon },
-  { href: '/members', label: 'Thành viên', icon: UsersIcon },
-  { href: '/entries', label: 'Mục ghi', icon: ImagesIcon },
-  { href: '/map', label: 'Bản đồ', icon: MapIcon },
-  { href: '/rules', label: 'Luật chơi', icon: SlidersHorizontalIcon },
-  { href: '/feedback', label: 'Góp ý', icon: MessageSquareTextIcon },
+  { href: '/', key: 'overview', icon: LayoutDashboardIcon },
+  { href: '/members', key: 'members', icon: UsersIcon },
+  { href: '/entries', key: 'entries', icon: ImagesIcon },
+  { href: '/map', key: 'map', icon: MapIcon },
+  { href: '/rules', key: 'rules', icon: SlidersHorizontalIcon },
+  { href: '/feedback', key: 'feedback', icon: MessageSquareTextIcon },
+  { href: '/notifications', key: 'notifications', icon: BellIcon },
 ] as const;
 
 function BrandMark() {
@@ -36,15 +40,16 @@ function BrandMark() {
   );
 }
 
-/** The five section links — same hrefs, labels and aria-current in the rail and the phone top bar. */
+/** The seven section links — same hrefs, labels and aria-current in the rail and the phone top bar. */
 function NavLinks({ layout }: { layout: 'rail' | 'bar' }) {
   const pathname = usePathname();
+  const t = useTranslations('nav');
   return (
     <nav
-      aria-label="Điều hướng"
+      aria-label={t('label')}
       className={layout === 'rail' ? 'flex flex-col gap-0.5' : 'flex gap-1 overflow-x-auto px-3 pb-2'}
     >
-      {NAV.map(({ href, label, icon: Icon }) => {
+      {NAV.map(({ href, key, icon: Icon }) => {
         const active = href === '/' ? pathname === '/' : pathname.startsWith(href);
         return (
           <Link
@@ -67,7 +72,7 @@ function NavLinks({ layout }: { layout: 'rail' | 'bar' }) {
               )}
               strokeWidth={active ? 2.25 : 2}
             />
-            <span className="truncate">{label}</span>
+            <span className="truncate">{t(key)}</span>
           </Link>
         );
       })}

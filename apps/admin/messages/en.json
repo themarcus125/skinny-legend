@@ -6,6 +6,7 @@
     "map": "Map",
     "rules": "Rules",
     "feedback": "Feedback",
+    "notifications": "Notifications",
     "label": "Navigation",
     "subtitle": "Admin console",
     "mock": "Mock mode",
@@ -15,5 +16,36 @@
     "signOut": "Sign out",
     "loading": "Loading…",
     "retry": "Try again"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "description": "Push reminders go out every day at 20:00. Read-only.",
+    "count": "{count} sent",
+    "empty": "No notifications sent yet.",
+    "columns": {
+      "member": "Member",
+      "kind": "Type",
+      "content": "Content",
+      "sentAt": "Sent at"
+    },
+    "kinds": {
+      "inactive_1d": "Away 1 day",
+      "inactive_3d": "Away 3 days",
+      "inactive_7d": "Away 7 days",
+      "rank_nudge": "Rank nudge"
+    },
+    "form": {
+      "member": "Member",
+      "placeholder": "Choose a member…",
+      "send": "Send test",
+      "sending": "Sending…"
+    },
+    "toast": {
+      "sent": "Sent to {sent}/{tokens} device(s)"
+    },
+    "errors": {
+      "noDeviceTokens": "This member has not enabled notifications on their iPhone.",
+      "pushFailed": "Push delivery failed. Please try again later."
+    }
   }
 }

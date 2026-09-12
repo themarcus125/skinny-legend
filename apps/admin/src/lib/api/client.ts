@@ -6,8 +6,10 @@ import type {
   EntryPatch,
   FeedbackItem,
   MapPin,
+  NotificationLogItem,
   RulesPayload,
   RulesResponse,
+  TestSendResult,
   UserPatch,
 } from './types';
 
@@ -34,6 +36,8 @@ export interface AdminApi {
   putRules(payload: RulesPayload): Promise<void>;
   listFeedback(): Promise<FeedbackItem[]>;
   mapPins(days: number): Promise<MapPin[]>;
+  listNotifications(limit?: number): Promise<NotificationLogItem[]>;
+  sendTestNotification(userId: string): Promise<TestSendResult>;
 }
 
 /** Serialises entry filters, dropping empty values. Returns '' or '?a=b&c=d'. */

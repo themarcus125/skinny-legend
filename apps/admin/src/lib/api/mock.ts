@@ -10,9 +10,11 @@ import type {
   EntryStatus,
   FeedbackItem,
   MapPin,
+  NotificationLogItem,
   RulesPayload,
   RulesResponse,
   ScoringRule,
+  TestSendResult,
   UserPatch,
 } from './types';
 
@@ -156,6 +158,30 @@ const SEED_FEEDBACK: FeedbackItem[] = [
   },
 ];
 
+const SEED_NOTIFICATIONS: NotificationLogItem[] = [
+  {
+    id: 'n-1',
+    kind: 'rank_nudge',
+    payload: { title: 'Bạn đang bám sát Khoa', body: 'Còn 6 điểm là vượt Khoa.', locale: 'vi', vars: { gap: 6, name: 'Khoa' } },
+    sentAt: `${addDays(CHALLENGE_START, 11)}T13:00:00.000Z`,
+    user: { id: SEED_USERS[1]!.id, displayName: SEED_USERS[1]!.displayName },
+  },
+  {
+    id: 'n-2',
+    kind: 'inactive_3d',
+    payload: { title: 'Ba ngày rồi đó!', body: 'Ghi nhận hôm nay để bắt đầu lại chuỗi ngày của bạn.', locale: 'vi', vars: { days: 3 } },
+    sentAt: `${addDays(CHALLENGE_START, 10)}T13:00:00.000Z`,
+    user: { id: SEED_USERS[2]!.id, displayName: SEED_USERS[2]!.displayName },
+  },
+  {
+    id: 'n-3',
+    kind: 'inactive_7d',
+    payload: { title: 'Một tuần chưa thấy bạn đâu', body: 'Quay lại ghi nhận một hoạt động hôm nay nhé.', locale: 'vi', vars: { days: 7 } },
+    sentAt: `${addDays(CHALLENGE_START, 9)}T13:00:00.000Z`,
+    user: { id: SEED_USERS[1]!.id, displayName: SEED_USERS[1]!.displayName },
+  },
+];
+
 function toEntryDto(entry: AdminEntry): EntryDto {
   return {
     id: entry.id,
@@ -179,6 +205,7 @@ export class MockAdminApi implements AdminApi {
   private challenge: Challenge = { ...SEED_CHALLENGE };
   private rules: ScoringRule[] = SEED_RULES.map((rule) => ({ ...rule }));
   private feedback: FeedbackItem[] = SEED_FEEDBACK.map((item) => ({ ...item }));
+  private notifications: NotificationLogItem[] = SEED_NOTIFICATIONS.map((item) => ({ ...item }));
 
   async session(): Promise<AdminUser> {
     await delay();
@@ -270,5 +297,24 @@ export class MockAdminApi implements AdminApi {
         user: { id: entry.user.id, displayName: entry.user.displayName, avatarUrl: null },
       }))
       .sort((a, b) => (a.takenAt < b.takenAt ? 1 : -1));
+  }
+
+  async listNotifications(limit = 100): Promise<NotificationLogItem[]> {
+    await delay();
+    return this.notifications
+      .slice()
+      .sort((a, b) => b.sentAt.localeCompare(a.sentAt))
+      .slice(0, limit)
+      .map((item) => ({ ...item }));
+  }
+
+  async sendTestNotification(userId: string): Promise<TestSendResult> {
+    await delay();
+    const user = this.users.find((row) => row.id === userId);
+    if (!user) throw new ApiError(404, 'not_found', 'User not found');
+    // Only the seeded active members have a "device" in mock mode, so the empty-device error
+    // path is reachable from the UI without any setup.
+    if (user.status !== 'active') throw new ApiError(400, 'no_device_tokens', 'User has no registered devices');
+    return { sent: 1, tokens: 1, removedTokens: 0 };
   }
 }

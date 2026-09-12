@@ -152,3 +152,31 @@ export interface MapPin {
   thumbUrl: string | null;
   user: { id: string; displayName: string; avatarUrl: string | null };
 }
+
+/** Mirrors `notification_kind` in packages/shared/src/db/schema.ts. */
+export const NOTIFICATION_KINDS = ['inactive_1d', 'inactive_3d', 'inactive_7d', 'rank_nudge'] as const;
+export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
+
+/** `notification_log.payload_json`, written by apps/api/src/jobs/notify.ts. */
+export interface NotificationPayload {
+  title: string;
+  body: string;
+  locale: 'vi' | 'en';
+  vars: Record<string, string | number>;
+}
+
+/** A row of `GET /admin/notifications`. */
+export interface NotificationLogItem {
+  id: string;
+  kind: NotificationKind;
+  payload: NotificationPayload;
+  sentAt: string;
+  user: { id: string; displayName: string };
+}
+
+/** `POST /admin/notifications/test`. */
+export interface TestSendResult {
+  sent: number;
+  tokens: number;
+  removedTokens: number;
+}

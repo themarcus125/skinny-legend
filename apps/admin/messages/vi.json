@@ -6,6 +6,7 @@
     "map": "Bản đồ",
     "rules": "Luật chơi",
     "feedback": "Góp ý",
+    "notifications": "Thông báo",
     "label": "Điều hướng",
     "subtitle": "Bảng quản trị",
     "mock": "Chế độ mock",
@@ -15,5 +16,36 @@
     "signOut": "Đăng xuất",
     "loading": "Đang tải…",
     "retry": "Thử lại"
+  },
+  "notifications": {
+    "title": "Thông báo",
+    "description": "Nhắc nhở đẩy gửi mỗi ngày lúc 20:00. Chỉ xem, không sửa được.",
+    "count": "{count} lượt gửi",
+    "empty": "Chưa gửi thông báo nào.",
+    "columns": {
+      "member": "Thành viên",
+      "kind": "Loại",
+      "content": "Nội dung",
+      "sentAt": "Thời điểm"
+    },
+    "kinds": {
+      "inactive_1d": "Vắng 1 ngày",
+      "inactive_3d": "Vắng 3 ngày",
+      "inactive_7d": "Vắng 7 ngày",
+      "rank_nudge": "Bám sát thứ hạng"
+    },
+    "form": {
+      "member": "Thành viên",
+      "placeholder": "Chọn thành viên…",
+      "send": "Gửi thử",
+      "sending": "Đang gửi…"
+    },
+    "toast": {
+      "sent": "Đã gửi tới {sent}/{tokens} thiết bị"
+    },
+    "errors": {
+      "noDeviceTokens": "Thành viên này chưa bật thông báo trên iPhone.",
+      "pushFailed": "Gửi thông báo thất bại. Vui lòng thử lại sau."
+    }
   }
 }
