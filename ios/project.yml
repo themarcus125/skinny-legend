@@ -36,6 +36,7 @@ targets:
       - path: SkinnyLegend
         excludes:
           - Info.plist
+          - Resources/ATTRIBUTION.md
     dependencies:
       - package: Firebase
         product: FirebaseAuth
