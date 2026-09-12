@@ -19,17 +19,20 @@ struct LeaderboardModelTests {
         #expect(rows.first?.rank == 1)
     }
 
+    /// The exact wording in each language is asserted in `LocalizedTests`; this only checks the
+    /// language-neutral shape (the label reads the process-global in-app language).
     @Test("Announces the current member's row distinctly to VoiceOver")
     func accessibilityLabelMarksCurrentMember() {
         let user = UserSummary(id: "u1", displayName: "Khoa", avatarUrl: nil)
         let meRow = LeaderboardRow(rank: 1, user: user, total: 120, weekPoints: 30, isMe: true)
-        let otherRow = LeaderboardRow(rank: 2, user: user, total: 90, weekPoints: 10, isMe: false)
+        let otherRow = LeaderboardRow(rank: 1, user: user, total: 120, weekPoints: 30, isMe: false)
 
         let meLabel = LeaderboardRowView.accessibilityLabel(for: meRow)
         let otherLabel = LeaderboardRowView.accessibilityLabel(for: otherRow)
 
-        #expect(meLabel.contains("bạn"))
-        #expect(!otherLabel.contains("bạn"))
+        #expect(meLabel != otherLabel)
+        #expect(meLabel.contains("Khoa") && meLabel.contains("120") && meLabel.contains("30"))
+        #expect(otherLabel.contains("Khoa") && otherLabel.contains("120") && otherLabel.contains("30"))
     }
 
     @Test("Surfaces a load failure")

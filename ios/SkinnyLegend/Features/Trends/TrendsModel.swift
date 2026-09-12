@@ -44,7 +44,7 @@ final class TrendsModel {
         } catch let error as APIError {
             state = .failed(error.userMessage)
         } catch {
-            state = .failed("Không tải được xu hướng.")
+            state = .failed(Localized.string("Không tải được xu hướng."))
         }
     }
 
@@ -56,8 +56,8 @@ final class TrendsModel {
     /// `Thứ Năm, 10/09: không hoạt động`. Pure so it's covered without a chart on screen.
     static func accessibilityLabel(for cell: HeatCell) -> String {
         let day = LocalDay.display(cell.date)
-        guard cell.points > 0 else { return "\(day): không hoạt động" }
-        return "\(day): \(cell.points) điểm"
+        guard cell.points > 0 else { return Localized.string("\(day): không hoạt động") }
+        return Localized.string("\(day): \(cell.points) điểm")
     }
 
     private func buildGrid(from heatmap: [HeatmapDay]) {

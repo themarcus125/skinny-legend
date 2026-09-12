@@ -103,9 +103,12 @@ struct LeaderboardRowView: View {
         }
     }
 
-    /// Pure helper so the VoiceOver label is unit-testable without rendering a view.
+    /// Pure helper so the VoiceOver label is unit-testable without rendering a view. Two
+    /// whole-sentence catalog keys rather than a spliced ", bạn" fragment, so each language
+    /// reads as one sentence.
     static func accessibilityLabel(for row: LeaderboardRow) -> String {
-        let mePart = row.isMe ? ", bạn" : ""
-        return "Hạng \(row.rank), \(row.user.displayName)\(mePart), \(row.total) điểm, tuần này \(row.weekPoints) điểm"
+        row.isMe
+            ? Localized.string("Hạng \(row.rank), \(row.user.displayName), bạn, \(row.total) điểm, tuần này \(row.weekPoints) điểm")
+            : Localized.string("Hạng \(row.rank), \(row.user.displayName), \(row.total) điểm, tuần này \(row.weekPoints) điểm")
     }
 }

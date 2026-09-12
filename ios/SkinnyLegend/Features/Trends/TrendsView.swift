@@ -59,12 +59,18 @@ struct TrendsView: View {
         let points: Double
     }
 
+    /// The chart's series names are data that also render in the legend, so they are resolved
+    /// once per read (computed, not stored — a stored `static let` would freeze the language
+    /// the app launched in) and shared by the bars and the colour scale.
+    private static var mineSeries: String { Localized.string("Bạn") }
+    private static var groupSeries: String { Localized.string("Trung bình nhóm") }
+
     private func weeklyBars(_ trends: TrendsDTO) -> some View {
         let bars = trends.weeks.flatMap { week -> [WeeklyBar] in
             let label = Self.weekLabel(week.week)
             return [
-                WeeklyBar(id: "\(week.week)-me", week: label, series: "Bạn", points: Double(week.mine)),
-                WeeklyBar(id: "\(week.week)-avg", week: label, series: "Trung bình nhóm", points: week.groupAvg),
+                WeeklyBar(id: "\(week.week)-me", week: label, series: Self.mineSeries, points: Double(week.mine)),
+                WeeklyBar(id: "\(week.week)-avg", week: label, series: Self.groupSeries, points: week.groupAvg),
             ]
         }
         return GlassCard {
@@ -78,7 +84,7 @@ struct TrendsView: View {
                         .position(by: .value("Nhóm", bar.series))
                         .cornerRadius(6)
                 }
-                .chartForegroundStyleScale(["Bạn": Theme.flame, "Trung bình nhóm": Theme.exercise.opacity(0.55)])
+                .chartForegroundStyleScale([Self.mineSeries: Theme.flame, Self.groupSeries: Theme.exercise.opacity(0.55)])
                 .chartLegend(position: .bottom, spacing: 8)
                 .frame(height: 200)
             }

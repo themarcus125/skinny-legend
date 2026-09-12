@@ -77,31 +77,8 @@ struct AccountModelTests {
         #expect(model.errorMessage == error.userMessage)
     }
 
-    // MARK: - ios-accessibility: HistoryRow's combined VoiceOver label
-
-    @Test("Describes an active row with its place and points")
-    func accessibilityLabelForActiveRow() {
-        let entry = HistoryEntryDTO(
-            id: "e1", userId: "u1", photoUrl: "mock://photo/1", thumbUrl: nil,
-            takenAt: Date(), localDate: "2026-09-08", status: .confirmed,
-            categories: [.exercise, .meal], placeName: "Phòng gym California", placeSource: .poi,
-            createdAt: Date(), points: 5, capped: false
-        )
-        #expect(AccountModel.accessibilityLabel(for: entry) ==
-                "Thứ Ba, 08/09, Tập luyện, Bữa ăn lành mạnh, Phòng gym California, 5 điểm")
-    }
-
-    @Test("Names the cap and falls back to 'no place' wording for a capped row")
-    func accessibilityLabelForCappedRowWithNoPlace() {
-        let entry = HistoryEntryDTO(
-            id: "e2", userId: "u1", photoUrl: "mock://photo/2", thumbUrl: nil,
-            takenAt: Date(), localDate: "2026-09-08", status: .confirmed,
-            categories: [.group], placeName: nil, placeSource: PlaceSource.none,
-            createdAt: Date(), points: 0, capped: true
-        )
-        #expect(AccountModel.accessibilityLabel(for: entry) ==
-                "Thứ Ba, 08/09, Hoạt động nhóm, không có địa điểm, 0 điểm, đã đủ giới hạn")
-    }
+    // The HistoryRow VoiceOver label (`AccountModel.accessibilityLabel(for:)`) is asserted in
+    // `LocalizedTests` — it reads the process-global in-app language, so it must not race here.
 
     // MARK: - Ruling 1: loadProfile() must not swallow errors with `try?`
 
@@ -122,9 +99,9 @@ struct AccountModelTests {
 /// loading (ruling 1: `loadProfile()` must surface its own failure, not swallow it with `try?`).
 struct LeaderboardFailingClient: APIClient {
     let inner: MockAPIClient
-    let error: APIError
+    let error: any Error
 
-    init(error: APIError, today: LocalDate = LocalDay.today) {
+    init(error: any Error, today: LocalDate = LocalDay.today) {
         self.error = error
         self.inner = MockAPIClient(today: today)
     }
@@ -148,6 +125,48 @@ struct LeaderboardFailingClient: APIClient {
     func myEntries(cursor: String?) async throws -> HistoryPage { try await inner.myEntries(cursor: cursor) }
     func dashboard() async throws -> DashboardDTO { try await inner.dashboard() }
     func leaderboard() async throws -> [LeaderboardRow] { throw error }
+    func trends() async throws -> TrendsDTO { try await inner.trends() }
+    func feed(cursor: String?) async throws -> FeedPage { try await inner.feed(cursor: cursor) }
+    func entries(ofUser userID: String, cursor: String?) async throws -> EntryPage {
+        try await inner.entries(ofUser: userID, cursor: cursor)
+    }
+    func sendFeedback(message: String, screenshotKey: String?, appVersion: String) async throws {
+        try await inner.sendFeedback(message: message, screenshotKey: screenshotKey, appVersion: appVersion)
+    }
+    func mapPins(days: Int) async throws -> MapPinsPage { try await inner.mapPins(days: days) }
+}
+
+/// The mirror image of `LeaderboardFailingClient`: only `myEntries(cursor:)` fails, so
+/// `AccountModel.load(cursor:)`'s own fallback copy can be asserted without `loadProfile()`
+/// overwriting it a moment later.
+struct HistoryFailingClient: APIClient {
+    let inner: MockAPIClient
+    let error: any Error
+
+    init(error: any Error, today: LocalDate = LocalDay.today) {
+        self.error = error
+        self.inner = MockAPIClient(today: today)
+    }
+
+    func session() async throws -> UserDTO { try await inner.session() }
+    func me() async throws -> UserDTO { try await inner.me() }
+    func updateMe(displayName: String?, avatarKey: String?) async throws -> UserDTO {
+        try await inner.updateMe(displayName: displayName, avatarKey: avatarKey)
+    }
+    func presign(kind: UploadKind, contentType: String) async throws -> PresignDTO {
+        try await inner.presign(kind: kind, contentType: contentType)
+    }
+    func upload(_ data: Data, to presign: PresignDTO, contentType: String, onProgress: @escaping @Sendable (Double) -> Void) async throws {
+        try await inner.upload(data, to: presign, contentType: contentType, onProgress: onProgress)
+    }
+    func createEntry(_ input: CreateEntryInput) async throws -> CreateEntryResponse { try await inner.createEntry(input) }
+    func confirmEntry(id: String, _ input: ConfirmEntryInput) async throws -> ConfirmEntryResponse {
+        try await inner.confirmEntry(id: id, input)
+    }
+    func deleteEntry(id: String) async throws { try await inner.deleteEntry(id: id) }
+    func myEntries(cursor: String?) async throws -> HistoryPage { throw error }
+    func dashboard() async throws -> DashboardDTO { try await inner.dashboard() }
+    func leaderboard() async throws -> [LeaderboardRow] { try await inner.leaderboard() }
     func trends() async throws -> TrendsDTO { try await inner.trends() }
     func feed(cursor: String?) async throws -> FeedPage { try await inner.feed(cursor: cursor) }
     func entries(ofUser userID: String, cursor: String?) async throws -> EntryPage {

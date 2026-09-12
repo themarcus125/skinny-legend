@@ -199,4 +199,161 @@ struct LocalizedTests {
         #expect(dashboard.state == .failed("Couldn't load data."))
         #expect(feed.errorMessage == "Couldn't load the group feed.")
     }
+
+    // MARK: - Feature-model strings (Leaderboard, Trends, Account, Map): fallback copy plus the
+    // VoiceOver sentences the pure helpers build from `LocalDay.display` and `Category.label`.
+
+    @MainActor @Test func leaderboardStringsFollowTheInAppLanguage() async {
+        defer { Localized.setLanguage(.vi) }
+        let client = FailingClient(error: URLError(.badServerResponse))
+        let board = LeaderboardModel(api: client)
+        let member = MemberDetailModel(api: client, memberID: "u2")
+        let user = UserSummary(id: "u1", displayName: "Khoa", avatarUrl: nil)
+        let meRow = LeaderboardRow(rank: 1, user: user, total: 120, weekPoints: 30, isMe: true)
+        let otherRow = LeaderboardRow(rank: 2, user: user, total: 90, weekPoints: 10, isMe: false)
+
+        await board.load()
+        await member.loadFirstPage()
+        #expect(board.state == .failed("Không tải được bảng xếp hạng."))
+        #expect(member.errorMessage == "Không tải được hoạt động của thành viên.")
+        #expect(LeaderboardRowView.accessibilityLabel(for: meRow) == "Hạng 1, Khoa, bạn, 120 điểm, tuần này 30 điểm")
+        #expect(LeaderboardRowView.accessibilityLabel(for: otherRow) == "Hạng 2, Khoa, 90 điểm, tuần này 10 điểm")
+
+        Localized.setLanguage(.en)
+        await board.load()
+        await member.loadFirstPage()
+        #expect(board.state == .failed("Couldn't load the leaderboard."))
+        #expect(member.errorMessage == "Couldn't load this member's activity.")
+        #expect(LeaderboardRowView.accessibilityLabel(for: meRow) == "Rank 1, Khoa, you, 120 points, 30 points this week")
+        #expect(LeaderboardRowView.accessibilityLabel(for: otherRow) == "Rank 2, Khoa, 90 points, 10 points this week")
+    }
+
+    @MainActor @Test func trendsStringsFollowTheInAppLanguage() async {
+        defer { Localized.setLanguage(.vi) }
+        let client = FailingClient(error: URLError(.badServerResponse))
+        let trends = TrendsModel(api: client)
+        let day = DayEntriesModel(api: client, date: "2026-09-09")
+        let active = TrendsModel.HeatCell(date: "2026-09-09", points: 12, weekKey: "2026-W37", weekdayLabel: "T4")
+        let inactive = TrendsModel.HeatCell(date: "2026-09-10", points: 0, weekKey: "2026-W37", weekdayLabel: "T5")
+
+        await trends.load()
+        await day.load()
+        #expect(trends.state == .failed("Không tải được xu hướng."))
+        #expect(day.errorMessage == "Không tải được hoạt động của ngày này.")
+        #expect(TrendsModel.accessibilityLabel(for: active) == "Thứ Tư, 09/09: 12 điểm")
+        #expect(TrendsModel.accessibilityLabel(for: inactive) == "Thứ Năm, 10/09: không hoạt động")
+
+        Localized.setLanguage(.en)
+        await trends.load()
+        await day.load()
+        #expect(trends.state == .failed("Couldn't load trends."))
+        #expect(day.errorMessage == "Couldn't load this day's activity.")
+        #expect(TrendsModel.accessibilityLabel(for: active) == "Wednesday, 09/09: 12 points")
+        #expect(TrendsModel.accessibilityLabel(for: inactive) == "Thursday, 10/09: no activity")
+    }
+
+    @MainActor @Test func accountHistoryLabelsFollowTheInAppLanguage() {
+        defer { Localized.setLanguage(.vi) }
+        let active = HistoryEntryDTO(
+            id: "e1", userId: "u1", photoUrl: "mock://photo/1", thumbUrl: nil,
+            takenAt: Date(), localDate: "2026-09-08", status: .confirmed,
+            categories: [.exercise, .meal], placeName: "Phòng gym California", placeSource: .poi,
+            createdAt: Date(), points: 5, capped: false
+        )
+        let capped = HistoryEntryDTO(
+            id: "e2", userId: "u1", photoUrl: "mock://photo/2", thumbUrl: nil,
+            takenAt: Date(), localDate: "2026-09-08", status: .confirmed,
+            categories: [.group], placeName: nil, placeSource: PlaceSource.none,
+            createdAt: Date(), points: 0, capped: true
+        )
+        let empty = HistoryEntryDTO(
+            id: "e3", userId: "u1", photoUrl: "mock://photo/3", thumbUrl: nil,
+            takenAt: Date(), localDate: "2026-09-08", status: .pending,
+            categories: [], placeName: nil, placeSource: PlaceSource.none,
+            createdAt: Date(), points: 0, capped: false
+        )
+        #expect(AccountModel.accessibilityLabel(for: active) ==
+                "Thứ Ba, 08/09, Tập luyện, Bữa ăn lành mạnh, Phòng gym California, 5 điểm")
+        #expect(AccountModel.accessibilityLabel(for: capped) ==
+                "Thứ Ba, 08/09, Hoạt động nhóm, không có địa điểm, 0 điểm, đã đủ giới hạn")
+        #expect(AccountModel.accessibilityLabel(for: empty) ==
+                "Thứ Ba, 08/09, Chưa chọn hạng mục, không có địa điểm, 0 điểm")
+
+        Localized.setLanguage(.en)
+        #expect(AccountModel.accessibilityLabel(for: active) ==
+                "Tuesday, 08/09, Exercise, Healthy meal, Phòng gym California, 5 points")
+        #expect(AccountModel.accessibilityLabel(for: capped) ==
+                "Tuesday, 08/09, Group activity, no place, 0 points, limit reached")
+        #expect(AccountModel.accessibilityLabel(for: empty) ==
+                "Tuesday, 08/09, No category chosen, no place, 0 points")
+    }
+
+    @MainActor @Test func accountModelFailuresFollowTheInAppLanguage() async throws {
+        defer { Localized.setLanguage(.vi) }
+        let error = URLError(.badServerResponse)
+        let history = AccountModel(api: HistoryFailingClient(error: error))
+        let profile = AccountModel(api: LeaderboardFailingClient(error: error))
+        let deleting = AccountModel(api: MockAPIClient())
+        await deleting.loadFirstPage()
+        let victim = try #require(deleting.entries.first)
+        let deleteFails = AccountModel(api: FailingClient(error: error))
+
+        await history.loadFirstPage()
+        await profile.loadFirstPage()
+        await deleteFails.delete(victim)
+        #expect(history.errorMessage == "Không tải được lịch sử.")
+        #expect(profile.errorMessage == "Không tải được hồ sơ.")
+        #expect(deleteFails.errorMessage == "Không xoá được, hãy thử lại.")
+
+        Localized.setLanguage(.en)
+        await history.loadFirstPage()
+        await profile.loadFirstPage()
+        await deleteFails.delete(victim)
+        #expect(history.errorMessage == "Couldn't load your history.")
+        #expect(profile.errorMessage == "Couldn't load your profile.")
+        #expect(deleteFails.errorMessage == "Couldn't delete, please try again.")
+    }
+
+    @MainActor @Test func profileEditAndFeedbackFailuresFollowTheInAppLanguage() async {
+        defer { Localized.setLanguage(.vi) }
+        let error = URLError(.badServerResponse)
+        let user = UserDTO(id: "u1", firebaseUid: "fb1", displayName: "Khoa", avatarKey: nil,
+                           role: .member, status: .active, createdAt: Date())
+        let profile = ProfileEditModel(api: RecordingAPIClient(resultUser: user, updateMeError: error), user: user)
+        profile.displayName = "Khoa Mới"
+        let feedback = FeedbackModel(api: FailingClient(error: error))
+        feedback.message = "Nút xác nhận hơi nhỏ."
+
+        profile.usePickedImage(data: Data("nope".utf8))
+        #expect(profile.errorMessage == "Ảnh không hợp lệ, hãy chọn ảnh khác.")
+        feedback.useScreenshot(data: Data("nope".utf8))
+        #expect(feedback.errorMessage == "Ảnh không hợp lệ, hãy chọn ảnh khác.")
+        _ = await profile.save()
+        await feedback.send()
+        #expect(profile.errorMessage == "Không lưu được, hãy thử lại.")
+        #expect(feedback.errorMessage == "Không gửi được góp ý, hãy thử lại.")
+
+        Localized.setLanguage(.en)
+        profile.usePickedImage(data: Data("nope".utf8))
+        #expect(profile.errorMessage == "That photo isn't valid, pick another one.")
+        feedback.useScreenshot(data: Data("nope".utf8))
+        #expect(feedback.errorMessage == "That photo isn't valid, pick another one.")
+        _ = await profile.save()
+        await feedback.send()
+        #expect(profile.errorMessage == "Couldn't save, please try again.")
+        #expect(feedback.errorMessage == "Couldn't send your feedback, please try again.")
+    }
+
+    @MainActor @Test func mapStringsFollowTheInAppLanguage() async {
+        defer { Localized.setLanguage(.vi) }
+        let map = MapModel(api: FailingClient(error: URLError(.badServerResponse)))
+        await map.load()
+        #expect(map.state == .failed("Không tải được bản đồ."))
+        #expect(Localized.string("\(3) mục ghi") == "3 mục ghi")
+
+        Localized.setLanguage(.en)
+        await map.load()
+        #expect(map.state == .failed("Couldn't load the map."))
+        #expect(Localized.string("\(3) mục ghi") == "3 entries")
+    }
 }

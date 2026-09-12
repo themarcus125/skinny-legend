@@ -22,7 +22,7 @@ struct MemberDetailView: View {
                     if model.entries.isEmpty && model.isLoading {
                         ProgressView().padding(.vertical, 24)
                     } else if model.entries.isEmpty {
-                        Text(model.errorMessage ?? "Thành viên này chưa có hoạt động nào.")
+                        Text(model.errorMessage ?? Localized.string("Thành viên này chưa có hoạt động nào."))
                             .font(.roundedLabel(15, weight: .medium))
                             .foregroundStyle(.secondary)
                             .padding(.vertical, 24)

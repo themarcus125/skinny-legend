@@ -94,7 +94,7 @@ struct ProfileEditModelTests {
         #expect(model.errorMessage == error.userMessage)
     }
 
-    @Test("A non-API error falls back to the Vietnamese generic message")
+    @Test("A non-API error falls back to the model's own generic message")
     func mapsGenericErrorToFallbackMessage() async {
         struct GenericError: Error {}
         let client = RecordingAPIClient(resultUser: user(), updateMeError: GenericError())
@@ -103,7 +103,7 @@ struct ProfileEditModelTests {
 
         let result = await model.save()
         #expect(result == nil)
-        #expect(model.errorMessage == "Không lưu được, hãy thử lại.")
+        #expect(model.errorMessage == Localized.string("Không lưu được, hãy thử lại."))
     }
 }
 

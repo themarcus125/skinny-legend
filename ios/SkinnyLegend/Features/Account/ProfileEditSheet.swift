@@ -35,7 +35,7 @@ final class ProfileEditModel {
         } catch {
             pickedAvatarJPEG = nil
             pickedAvatar = nil
-            errorMessage = "Ảnh không hợp lệ, hãy chọn ảnh khác."
+            errorMessage = Localized.string("Ảnh không hợp lệ, hãy chọn ảnh khác.")
         }
     }
 
@@ -60,7 +60,7 @@ final class ProfileEditModel {
             errorMessage = error.userMessage
             return nil
         } catch {
-            errorMessage = "Không lưu được, hãy thử lại."
+            errorMessage = Localized.string("Không lưu được, hãy thử lại.")
             return nil
         }
     }

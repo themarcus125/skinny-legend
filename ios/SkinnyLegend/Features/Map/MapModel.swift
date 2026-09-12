@@ -41,7 +41,7 @@ final class MapModel {
         } catch let error as APIError {
             state = .failed(error.userMessage)
         } catch {
-            state = .failed("Không tải được bản đồ.")
+            state = .failed(Localized.string("Không tải được bản đồ."))
         }
     }
 }

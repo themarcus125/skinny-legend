@@ -108,7 +108,7 @@ private struct ClusterPin: View {
         let newest = cluster.pins[0]
         var parts = [newest.user.displayName]
         if cluster.pins.count > 1 {
-            parts.append("\(cluster.pins.count) mục ghi")
+            parts.append(Localized.string("\(cluster.pins.count) mục ghi"))
         }
         if let placeName = newest.placeName {
             parts.append(placeName)

@@ -40,7 +40,7 @@ final class DayEntriesModel {
         } catch let error as APIError {
             errorMessage = error.userMessage
         } catch {
-            errorMessage = "Không tải được hoạt động của ngày này."
+            errorMessage = Localized.string("Không tải được hoạt động của ngày này.")
         }
     }
 }

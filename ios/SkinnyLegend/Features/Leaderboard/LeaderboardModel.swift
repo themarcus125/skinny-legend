@@ -23,7 +23,7 @@ final class LeaderboardModel {
         } catch let error as APIError {
             state = .failed(error.userMessage)
         } catch {
-            state = .failed("Không tải được bảng xếp hạng.")
+            state = .failed(Localized.string("Không tải được bảng xếp hạng."))
         }
     }
 }

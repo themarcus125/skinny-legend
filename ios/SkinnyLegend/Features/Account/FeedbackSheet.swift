@@ -35,7 +35,7 @@ final class FeedbackModel {
         } catch {
             screenshotJPEG = nil
             screenshot = nil
-            errorMessage = "Ảnh không hợp lệ, hãy chọn ảnh khác."
+            errorMessage = Localized.string("Ảnh không hợp lệ, hãy chọn ảnh khác.")
         }
     }
 
@@ -65,7 +65,7 @@ final class FeedbackModel {
         } catch let error as APIError {
             errorMessage = error.userMessage
         } catch {
-            errorMessage = "Không gửi được góp ý, hãy thử lại."
+            errorMessage = Localized.string("Không gửi được góp ý, hãy thử lại.")
         }
     }
 }

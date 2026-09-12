@@ -43,7 +43,7 @@ final class MemberDetailModel {
         } catch let error as APIError {
             errorMessage = error.userMessage
         } catch {
-            errorMessage = "Không tải được hoạt động của thành viên."
+            errorMessage = Localized.string("Không tải được hoạt động của thành viên.")
         }
     }
 }

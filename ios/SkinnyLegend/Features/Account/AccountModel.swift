@@ -36,14 +36,13 @@ final class AccountModel {
     static func accessibilityLabel(for entry: HistoryEntryDTO) -> String {
         let day = LocalDay.display(entry.localDate)
         let categories = entry.categories.isEmpty
-            ? "Chưa chọn hạng mục"
+            ? Localized.string("Chưa chọn hạng mục")
             : entry.categories.map(\.label).joined(separator: ", ")
-        let place = entry.placeName ?? "không có địa điểm"
-        var label = "\(day), \(categories), \(place), \(entry.points) điểm"
-        if entry.capped {
-            label += ", đã đủ giới hạn"
-        }
-        return label
+        let place = entry.placeName ?? Localized.string("không có địa điểm")
+        // Two whole-sentence keys rather than an appended ", đã đủ giới hạn" fragment.
+        return entry.capped
+            ? Localized.string("\(day), \(categories), \(place), \(entry.points) điểm, đã đủ giới hạn")
+            : Localized.string("\(day), \(categories), \(place), \(entry.points) điểm")
     }
 
     var sections: [DaySection] {
@@ -85,7 +84,7 @@ final class AccountModel {
         } catch let error as APIError {
             errorMessage = error.userMessage
         } catch {
-            errorMessage = "Không xoá được, hãy thử lại."
+            errorMessage = Localized.string("Không xoá được, hãy thử lại.")
         }
     }
 
@@ -100,7 +99,7 @@ final class AccountModel {
         } catch let error as APIError {
             errorMessage = error.userMessage
         } catch {
-            errorMessage = "Không tải được hồ sơ."
+            errorMessage = Localized.string("Không tải được hồ sơ.")
         }
     }
 
@@ -116,7 +115,7 @@ final class AccountModel {
         } catch let error as APIError {
             errorMessage = error.userMessage
         } catch {
-            errorMessage = "Không tải được lịch sử."
+            errorMessage = Localized.string("Không tải được lịch sử.")
         }
     }
 }

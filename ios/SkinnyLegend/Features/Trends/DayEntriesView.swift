@@ -16,7 +16,7 @@ struct DayEntriesView: View {
                 ContentUnavailableView(
                     "Không có hoạt động",
                     systemImage: "calendar.badge.exclamationmark",
-                    description: Text(model.errorMessage ?? "Ngày này bạn chưa ghi nhận hoạt động nào.")
+                    description: Text(model.errorMessage ?? Localized.string("Ngày này bạn chưa ghi nhận hoạt động nào."))
                 )
             } else {
                 ScrollView {

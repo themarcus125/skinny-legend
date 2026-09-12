@@ -17,6 +17,7 @@ struct AccountView: View {
     }
 
     var body: some View {
+        let name = env.currentUser?.displayName ?? ""
         List {
             Section {
                 Button {
@@ -24,10 +25,10 @@ struct AccountView: View {
                 } label: {
                     HStack(spacing: 14) {
                         AvatarView(url: model.profileSummary?.avatarUrl,
-                                   displayName: env.currentUser?.displayName ?? "",
+                                   displayName: name,
                                    size: 56)
                         VStack(alignment: .leading, spacing: 3) {
-                            Text(env.currentUser?.displayName ?? "")
+                            Text(name)
                                 .font(.roundedLabel(19, weight: .bold))
                             if let rank = model.myRank, let total = model.myTotal {
                                 Text("Hạng \(rank) · \(total) điểm")
@@ -45,7 +46,7 @@ struct AccountView: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityElement(children: .combine)
-                .accessibilityLabel("Hồ sơ của \(env.currentUser?.displayName ?? "")")
+                .accessibilityLabel("Hồ sơ của \(name)")
                 .accessibilityHint("Nhấn để chỉnh sửa hồ sơ")
             }
 
