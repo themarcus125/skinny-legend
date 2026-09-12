@@ -68,14 +68,21 @@ function periodKeyOf(date: LocalDate, capPeriod: 'day' | 'week'): string {
 /**
  * Points this entry would earn if confirmed with `categories`, given the user's other confirmed
  * entries. `capsHit` is computed for the entry's own day/week (not "today") by counting scored
- * rows whose entry falls in the same period as `entry.localDate`.
+ * rows whose entry falls in the same period as `entry.localDate` — it answers "is this category's
+ * cap full for that period", which can be true even when this entry's own row still scored (an
+ * earlier entry the same period filled the cap). `cappedCategories` instead reports only the
+ * categories of *this entry's own* scored rows that came back with `capped: true` — i.e. this
+ * entry itself scored 0 for that category — which is what a client needs to know which of an
+ * entry's own categories to show a cap warning for.
  */
 async function projection(challenge: Challenge, entry: EntryRow, categories: Category[], otherEntries: ConfirmedEntry[]) {
   const others = otherEntries.filter((e) => e.id !== entry.id);
   const candidate = { id: entry.id, localDate: entry.localDate, takenAt: entry.takenAt, categories };
   const combined = [...others, candidate];
   const result = computeScore({ entries: combined, rules: challenge.rules, challenge: challenge.config, asOf: todayLocal(challenge.config) });
-  const projectedPoints = result.scored.filter((s) => s.entryId === entry.id).reduce((sum, s) => sum + s.points, 0);
+  const ownRows = result.scored.filter((s) => s.entryId === entry.id);
+  const projectedPoints = ownRows.reduce((sum, s) => sum + s.points, 0);
+  const cappedCategories = ownRows.filter((s) => s.capped).map((s) => s.category);
 
   const dateById = new Map(combined.map((e) => [e.id, e.localDate]));
   const capsHit = { exercise: false, meal: false, group: false } as Record<Category, boolean>;
@@ -88,7 +95,7 @@ async function projection(challenge: Challenge, entry: EntryRow, categories: Cat
     }).length;
     capsHit[rule.category] = count >= rule.capCount;
   }
-  return { projectedPoints, capsHit };
+  return { projectedPoints, capsHit, cappedCategories };
 }
 
 async function categoriesOf(entryId: string): Promise<Category[]> {

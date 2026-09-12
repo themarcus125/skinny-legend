@@ -1,0 +1,13 @@
+{
+  "weeks": [
+    { "week": "2026-W37", "mine": 11, "groupAvg": 9.4, "rank": 2 },
+    { "week": "2026-W38", "mine": 17, "groupAvg": 12.0, "rank": 1 }
+  ],
+  "heatmap": [
+    { "date": "2026-09-08", "points": 5 },
+    { "date": "2026-09-09", "points": 0 },
+    { "date": "2026-09-10", "points": 3 }
+  ],
+  "byCategory": { "exercise": 21, "meal": 12, "group": 6 },
+  "streakBonus": 5
+}

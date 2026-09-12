@@ -74,6 +74,31 @@ describe('POST /entries', () => {
     expect(second.capsHit.meal).toBe(false);
   });
 
+  it('cappedCategories is empty for the first exercise+meal entry of the day', async () => {
+    classify.mockResolvedValue({ ...okVerdict, categories: ['exercise', 'meal'] });
+    const { headers } = await asUser('u1', { activate: true });
+    const key = await uploadPhoto(headers);
+    const body = await (await post(headers, { photoKey: key, takenAt: '2026-09-10T01:00:00Z' })).json();
+    expect(body.projectedPoints).toBe(5);
+    expect(body.cappedCategories).toEqual([]);
+  });
+
+  it('cappedCategories flags only the category actually capped in a mixed entry', async () => {
+    classify.mockResolvedValue({ ...okVerdict, categories: ['meal'] });
+    const { headers } = await asUser('u1', { activate: true });
+    const h = { ...headers, 'content-type': 'application/json' };
+    const k1 = await uploadPhoto(headers);
+    const earlierMeal = await (await post(headers, { photoKey: k1, takenAt: '2026-09-10T01:00:00Z' })).json();
+    await app.request(`/entries/${earlierMeal.entry.id}`, { method: 'PATCH', headers: h, body: JSON.stringify({ categories: ['meal'] }) });
+
+    classify.mockResolvedValue({ ...okVerdict, categories: ['exercise', 'meal'] });
+    const k2 = await uploadPhoto(headers);
+    const second = await (await post(headers, { photoKey: k2, takenAt: '2026-09-10T05:00:00Z' })).json();
+    expect(second.projectedPoints).toBe(3);
+    expect(second.cappedCategories).toEqual(['meal']);
+    expect(second.capsHit.meal).toBe(true);
+  });
+
   it('dedupes duplicate AI categories before insert', async () => {
     classify.mockResolvedValue({ ...okVerdict, categories: ['exercise', 'exercise'] as any });
     const { headers } = await asUser('u1', { activate: true });

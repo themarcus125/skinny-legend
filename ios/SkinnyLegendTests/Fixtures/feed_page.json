@@ -1,0 +1,19 @@
+{
+  "entries": [
+    {
+      "id": "55555555-5555-4555-8555-555555555555",
+      "userId": "44444444-4444-4444-8444-444444444444",
+      "photoUrl": "https://photos.example.com/photos/4444/x.jpg",
+      "thumbUrl": "https://photos.example.com/thumbs/4444/x.jpg",
+      "takenAt": "2026-09-11T09:40:00.000Z",
+      "localDate": "2026-09-11",
+      "status": "confirmed",
+      "categories": ["meal"],
+      "placeName": "Cơm tấm Ba Ghiền",
+      "placeSource": "poi",
+      "createdAt": "2026-09-11T09:41:00.000Z",
+      "user": { "id": "44444444-4444-4444-8444-444444444444", "displayName": "Linh", "avatarUrl": null }
+    }
+  ],
+  "nextCursor": null
+}
