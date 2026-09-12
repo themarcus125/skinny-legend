@@ -58,6 +58,8 @@ struct DashboardView: View {
                     .foregroundStyle(.secondary)
                 HStack(alignment: .firstTextBaseline, spacing: 12) {
                     BigNumber(value: dashboard.today.points, size: 66)
+                        .accessibilityElement(children: .combine)
+                        .accessibilityLabel("Điểm hôm nay: \(dashboard.today.points)")
                     deltaBadge(dashboard.deltaVsYesterday)
                 }
                 if dashboard.today.categories.isEmpty {
@@ -84,6 +86,8 @@ struct DashboardView: View {
         )
         .font(.roundedLabel(13, weight: .semibold))
         .foregroundStyle(delta > 0 ? Theme.meal : delta < 0 ? Theme.flame : Color.secondary)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(delta == 0 ? "Bằng hôm qua" : delta > 0 ? "Hơn hôm qua \(delta) điểm" : "Kém hôm qua \(-delta) điểm")
     }
 
     private func streakCard(_ dashboard: DashboardDTO) -> some View {
@@ -112,6 +116,8 @@ struct DashboardView: View {
                         .font(.roundedLabel(16, weight: .bold))
                         .foregroundStyle(.secondary)
                 }
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("Xếp hạng \(dashboard.rank) trên \(dashboard.memberCount)")
                 Text("trong nhóm")
                     .font(.roundedLabel(12, weight: .medium))
                     .foregroundStyle(.secondary)
@@ -159,6 +165,12 @@ struct DashboardView: View {
                 Spacer()
                 BigNumber(value: dashboard.total, size: 40)
             }
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel(
+                dashboard.streak.bonusPoints == 0
+                    ? "Tổng điểm: \(dashboard.total)"
+                    : "Tổng điểm: \(dashboard.total) (thưởng chuỗi \(dashboard.streak.bonusPoints))"
+            )
         }
     }
 }
