@@ -39,10 +39,14 @@ struct AccountView: View {
                         Image(systemName: "chevron.right")
                             .font(.system(size: 13, weight: .bold))
                             .foregroundStyle(.secondary)
+                            .accessibilityHidden(true)
                     }
                     .padding(.vertical, 4)
                 }
                 .buttonStyle(.plain)
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("Hồ sơ của \(env.currentUser?.displayName ?? "")")
+                .accessibilityHint("Nhấn để chỉnh sửa hồ sơ")
             }
 
             Section {
@@ -189,7 +193,7 @@ private struct HistoryRow: View {
 
             VStack(alignment: .leading, spacing: 6) {
                 GlassEffectContainer(spacing: 6) {
-                    HStack(spacing: 6) {
+                    FlowLayout(spacing: 6, rowSpacing: 6) {
                         ForEach(entry.categories) { category in
                             CategoryChip(category: category)
                         }
