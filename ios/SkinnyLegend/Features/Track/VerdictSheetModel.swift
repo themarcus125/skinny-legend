@@ -14,10 +14,16 @@ final class VerdictSheetModel: Identifiable {
     }
 
     private let api: any APIClient
-    private let initialSelection: Set<Category>
-    private let serverProjectedPoints: Int
-    private let capsHit: CapsHit
-    private let cappedCategories: Set<Category>
+    /// Mutable so a successful `.edit`-mode `confirm()` can replace the constructor's placeholder
+    /// caps/projection with the server's real, post-save numbers (ruling 2).
+    private var initialSelection: Set<Category>
+    private var serverProjectedPoints: Int
+    private var capsHit: CapsHit
+    private var cappedCategories: Set<Category>
+    /// `.edit` mode opens on a historical entry with no fresh server projection — the caller's
+    /// `capsHit`/`cappedCategories` are placeholders, not real data (ruling 2), so they are
+    /// ignored until a successful `confirm()` replaces them with the PATCH response's real ones.
+    private var hasConfirmedProjection = false
 
     let id: String
     let entry: EntryDTO
@@ -79,7 +85,13 @@ final class VerdictSheetModel: Identifiable {
     /// blocked when re-projecting locally: a category `capsHit` reports as full for the entry's
     /// period, but that isn't one of the initial (server-scored) categories, was filled by another
     /// entry and stays blocked if added back.
+    ///
+    /// A history edit (`.edit`) has no fresh server projection until it is saved once, so nothing
+    /// is claimed as capped before that (ruling 2) — a locally re-projected point total while
+    /// editing is a plain, un-capped estimate, replaced by the real numbers once `confirm()`
+    /// succeeds.
     private var blockedCategories: Set<Category> {
+        if case .edit = mode, !hasConfirmedProjection { return [] }
         guard selected != initialSelection else { return cappedCategories }
         let filledByOtherEntries = Category.allCases.filter { capsHit[$0] && !initialSelection.contains($0) }
         return cappedCategories.union(filledByOtherEntries)
@@ -128,6 +140,16 @@ final class VerdictSheetModel: Identifiable {
             )
             let response = try await api.confirmEntry(id: entry.id, input)
             confirmedEntry = response.entry
+            if case .edit = mode {
+                // The PATCH response is the first real projection this history edit has ever had
+                // (ruling 2) — adopt it as the new baseline so `projectedPoints`/`capWarnings`
+                // immediately reflect it instead of the placeholder caps passed at init.
+                capsHit = response.capsHit
+                cappedCategories = Set(response.cappedCategories)
+                serverProjectedPoints = response.projectedPoints
+                initialSelection = selected
+                hasConfirmedProjection = true
+            }
             return response.entry
         } catch let error as APIError {
             errorMessage = error.userMessage

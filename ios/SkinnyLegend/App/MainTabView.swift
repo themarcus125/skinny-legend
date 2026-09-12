@@ -28,25 +28,10 @@ struct MainTabView: View {
                 NavigationStack { TrendsView(api: env.api) }
             }
             Tab("Tài khoản", systemImage: "person.crop.circle", value: AppTab.account) {
-                NavigationStack { TabStub(title: "Tài khoản", symbol: "person.crop.circle") }
+                NavigationStack { AccountView(api: env.api) }
             }
         }
         .tabBarMinimizeBehavior(.onScrollDown)
         .tint(Theme.flame)
-    }
-}
-
-/// Temporary tab content. Each feature task replaces exactly one `TabStub(...)` call above with
-/// its real view; the last feature task (Task 13) deletes this type.
-struct TabStub: View {
-    let title: String
-    let symbol: String
-
-    var body: some View {
-        ZStack {
-            WarmBackground()
-            ContentUnavailableView("Chưa có dữ liệu", systemImage: symbol, description: Text("Màn hình đang được xây dựng."))
-        }
-        .navigationTitle(title)
     }
 }

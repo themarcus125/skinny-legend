@@ -153,4 +153,48 @@ struct VerdictSheetModelTests {
         #expect(model.errorMessage == "Không tìm thấy dữ liệu.")
         #expect(model.confirmedEntry == nil)
     }
+
+    // MARK: - Ruling 2: history edits have no fresh server projection until save
+
+    @Test("An edit-mode sheet ignores caller-supplied caps before save and reflects the PATCH response after")
+    func editModeIgnoresCallerCapsBeforeSaveAndReflectsResponseAfter() async throws {
+        // "today" is pinned far outside the seed window so this test's own entries are the only
+        // ones scored that day — the seed data cannot accidentally pre-cap exercise for "me".
+        let client = MockAPIClient(today: "2026-01-01")
+        let takenAt = Date()
+
+        let first = try await client.createEntry(
+            CreateEntryInput(photoKey: "photos/a.jpg", takenAt: takenAt, lat: nil, lng: nil, placeName: nil, placeSource: nil)
+        )
+        _ = try await client.confirmEntry(
+            id: first.entry.id, ConfirmEntryInput(categories: [.exercise], placeName: nil, placeSource: PlaceSource.none)
+        )
+
+        let second = try await client.createEntry(
+            CreateEntryInput(photoKey: "photos/b.jpg", takenAt: takenAt, lat: nil, lng: nil, placeName: nil, placeSource: nil)
+        )
+        let model = VerdictSheetModel(
+            api: client, entry: second.entry, mode: .edit,
+            // Falsified as if real (ruling 2) — the model must ignore these before save.
+            capsHit: CapsHit(exercise: true, meal: true, group: true), cappedCategories: [.exercise, .meal, .group],
+            projectedPoints: 999, placeName: nil, placeSource: PlaceSource.none
+        )
+        // Toggle to exactly [.exercise], regardless of whichever categories the mock's
+        // deterministic "AI" suggestion pre-selected.
+        let desired: Set<SkinnyLegend.Category> = [.exercise]
+        for category in Category.allCases where model.selected.contains(category) != desired.contains(category) {
+            model.toggle(category)
+        }
+        #expect(model.selected == [.exercise])
+        #expect(model.capWarnings.isEmpty)
+        #expect(!model.isCapped(.exercise))
+
+        // Exercise's daily cap (1/day) is already filled by `first`, so the PATCH should report it capped.
+        let confirmed = try #require(await model.confirm())
+        #expect(confirmed.categories == [.exercise])
+        #expect(model.errorMessage == nil)
+        #expect(model.projectedPoints == 0)
+        #expect(model.isCapped(.exercise))
+        #expect(model.capWarnings == ["Đã đủ Tập luyện hôm nay — mục này không cộng thêm điểm."])
+    }
 }
