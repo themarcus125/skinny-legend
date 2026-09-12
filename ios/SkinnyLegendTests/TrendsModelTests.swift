@@ -40,10 +40,13 @@ struct TrendsModelTests {
         #expect(model.cell(week: "1999-W01", weekday: "T2") == nil)
     }
 
-    @Test("Weekday labels run Monday to Sunday in Vietnamese")
+    @Test("Weekday domain values run Monday to Sunday and are language-neutral keys")
     func weekdayLabels() {
         #expect(TrendsModel.weekdayLabels == ["T2", "T3", "T4", "T5", "T6", "T7", "CN"])
     }
+
+    // `weekdayTitle`/`weekLabel` read the process-global in-app language, so their vi/en text
+    // is asserted in `LocalizedTests`.
 
     // The heat-cell VoiceOver label (`TrendsModel.accessibilityLabel(for:)`) is asserted in
     // `LocalizedTests` — it reads the process-global in-app language, so it must not race here.

@@ -67,8 +67,8 @@
     "not_found": "Nothing found. This item may have just been deleted.",
     "internal": "The server hit a problem. Please try again later.",
     "offline": "Can't reach the server. Check your connection or the API's CORS_ORIGINS setting.",
-    "no_device_tokens": "This member has not enabled notifications on their iPhone.",
-    "push_failed": "Push delivery failed. Please try again later."
+    "no_device_tokens": "This member hasn't turned on notifications on their iPhone.",
+    "push_failed": "Couldn't send the notification. Please try again later."
   },
   "auth": {
     "signInHint": "Sign in with an admin Google account.",
@@ -99,7 +99,7 @@
     "daysLeft": "{days, plural, one {# day} other {# days}} left",
     "endedOn": "Ended {date}",
     "latestFeedback": "Latest feedback",
-    "latestFeedbackHint": "Recent, from the iOS app.",
+    "latestFeedbackHint": "Recently sent from the iOS app.",
     "viewAllFeedback": "View all feedback"
   },
   "members": {
@@ -145,7 +145,7 @@
     "subtitle": "Edit the points, limits and dates of the running challenge.",
     "empty": "No challenge yet.",
     "timeline": "Timeline",
-    "timezoneNote": "Server-side fixed timezone: {timezone} (not editable through the API).",
+    "timezoneNote": "The server's timezone is fixed to {timezone} (not editable through the API).",
     "startDate": "Start date",
     "endDate": "End date",
     "streak": "Streak",
@@ -180,7 +180,7 @@
   "feedback": {
     "title": "Feedback",
     "subtitle": "Feedback sent from the iOS app, newest first. Read-only.",
-    "count": "{count, plural, one {# item} other {# items}}",
+    "count": "{count, plural, one {# feedback item} other {# feedback items}}",
     "empty": "No feedback yet.",
     "viewScreenshot": "View screenshot"
   },
@@ -205,9 +205,9 @@
       "sentAt": "Sent at"
     },
     "kinds": {
-      "inactive_1d": "Away 1 day",
-      "inactive_3d": "Away 3 days",
-      "inactive_7d": "Away 7 days",
+      "inactive_1d": "Inactive 1 day",
+      "inactive_3d": "Inactive 3 days",
+      "inactive_7d": "Inactive 7 days",
       "rank_nudge": "Rank nudge"
     },
     "form": {
@@ -217,8 +217,8 @@
       "sending": "Sending…"
     },
     "toast": {
-      "sent": "Sent to {sent}/{tokens} device(s)",
-      "none": "Couldn't deliver to any of the {tokens} device(s).",
+      "sent": "Sent to {sent}/{tokens, plural, one {# device} other {# devices}}",
+      "none": "Delivery failed on {tokens, plural, one {# device} other {all # devices}}.",
       "removed": "Removed {count, plural, one {# stale device} other {# stale devices}}."
     }
   }

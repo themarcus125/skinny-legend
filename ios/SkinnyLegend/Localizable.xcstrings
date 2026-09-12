@@ -188,6 +188,18 @@
         }
       }
     },
+    "CN" : {
+      "comment" : "Trends heatmap weekday axis: Sunday (Chủ Nhật)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sun"
+          }
+        }
+      }
+    },
     "Chuỗi %lld ngày liên tiếp" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -502,7 +514,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Still scorable today"
+            "value" : "Left to score today"
           }
         }
       }
@@ -1085,7 +1097,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Reminds you to log your activity every evening"
+            "value" : "Reminds you to track your activity every evening"
           }
         }
       }
@@ -1152,6 +1164,90 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Edit activity"
+          }
+        }
+      }
+    },
+    "T%@" : {
+      "comment" : "Trends week axis label: T37 = tuần 37 (ISO week number)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "W%@"
+          }
+        }
+      }
+    },
+    "T2" : {
+      "comment" : "Trends heatmap weekday axis: Monday (Thứ Hai)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mon"
+          }
+        }
+      }
+    },
+    "T3" : {
+      "comment" : "Trends heatmap weekday axis: Tuesday (Thứ Ba)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tue"
+          }
+        }
+      }
+    },
+    "T4" : {
+      "comment" : "Trends heatmap weekday axis: Wednesday (Thứ Tư)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wed"
+          }
+        }
+      }
+    },
+    "T5" : {
+      "comment" : "Trends heatmap weekday axis: Thursday (Thứ Năm)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Thu"
+          }
+        }
+      }
+    },
+    "T6" : {
+      "comment" : "Trends heatmap weekday axis: Friday (Thứ Sáu)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fri"
+          }
+        }
+      }
+    },
+    "T7" : {
+      "comment" : "Trends heatmap weekday axis: Saturday (Thứ Bảy)",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sat"
           }
         }
       }
@@ -1646,7 +1742,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Finding your location…"
+            "value" : "Finding places nearby…"
           }
         }
       }
@@ -1690,7 +1786,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "The official score is calculated by the server on confirm."
+            "value" : "The official score is calculated by the server when you confirm."
           }
         }
       }
@@ -1833,7 +1929,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "You've already hit your %2$@ %1$@ limit — this one earns no extra points."
+            "value" : "You've hit your %1$@ limit for %2$@ — this one earns no extra points."
           }
         }
       }
@@ -1998,7 +2094,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@ limit reached"
+            "value" : "Done for %@"
           }
         }
       }

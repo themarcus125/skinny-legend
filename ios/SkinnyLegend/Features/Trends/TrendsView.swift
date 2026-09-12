@@ -74,7 +74,7 @@ struct TrendsView: View {
 
     private func weeklyBars(_ trends: TrendsDTO) -> some View {
         let bars = trends.weeks.flatMap { week -> [WeeklyBar] in
-            let label = Self.weekLabel(week.week)
+            let label = TrendsModel.weekLabel(week.week)
             return [
                 WeeklyBar(id: "\(week.week)-me", week: label, series: Self.mineSeries, points: Double(week.mine)),
                 WeeklyBar(id: "\(week.week)-avg", week: label, series: Self.groupSeries, points: week.groupAvg),
@@ -117,11 +117,22 @@ struct TrendsView: View {
                 .chartForegroundStyleScale(range: Gradient(colors: [Theme.flame.opacity(0.10), Theme.ember, Theme.flame]))
                 .chartXScale(domain: TrendsModel.weekdayLabels)
                 .chartYScale(domain: Array(model.weekKeys.reversed()))
+                // Both axes keep language-neutral domain values (the tap gesture maps them back
+                // to cells) and localise only the label text.
+                .chartXAxis {
+                    AxisMarks { value in
+                        AxisValueLabel {
+                            if let weekday = value.as(String.self) {
+                                Text(TrendsModel.weekdayTitle(weekday)).font(.roundedLabel(11, weight: .medium))
+                            }
+                        }
+                    }
+                }
                 .chartYAxis {
                     AxisMarks(position: .leading) { value in
                         AxisValueLabel {
                             if let week = value.as(String.self) {
-                                Text(Self.weekLabel(week)).font(.roundedLabel(11, weight: .medium))
+                                Text(TrendsModel.weekLabel(week)).font(.roundedLabel(11, weight: .medium))
                             }
                         }
                     }
@@ -224,11 +235,11 @@ struct TrendsView: View {
                     .font(.roundedLabel(13, weight: .bold))
                     .foregroundStyle(.secondary)
                 Chart(trends.weeks) { week in
-                    LineMark(x: .value("Tuần", Self.weekLabel(week.week)), y: .value("Hạng", Double(week.rank)))
+                    LineMark(x: .value("Tuần", TrendsModel.weekLabel(week.week)), y: .value("Hạng", Double(week.rank)))
                         .foregroundStyle(Theme.flame)
                         .interpolationMethod(.catmullRom)
                         .lineStyle(StrokeStyle(lineWidth: 3, lineCap: .round))
-                    PointMark(x: .value("Tuần", Self.weekLabel(week.week)), y: .value("Hạng", Double(week.rank)))
+                    PointMark(x: .value("Tuần", TrendsModel.weekLabel(week.week)), y: .value("Hạng", Double(week.rank)))
                         .foregroundStyle(Theme.flame)
                         .symbolSize(80)
                 }
@@ -247,10 +258,5 @@ struct TrendsView: View {
                 .frame(height: 180)
             }
         }
-    }
-
-    /// `2026-W37` → `T37`.
-    private static func weekLabel(_ weekKey: String) -> String {
-        "T\(weekKey.suffix(2))"
     }
 }

@@ -21,8 +21,21 @@ final class TrendsModel {
         var id: LocalDate { date }
     }
 
-    /// Monday-first, matching the ISO weeks the server scores with.
+    /// Monday-first, matching the ISO weeks the server scores with. These are the heatmap's
+    /// X-domain values and each cell's identity, so they stay language-neutral (the Vietnamese
+    /// abbreviations double as catalog keys); the axis renders them through `weekdayTitle`.
     static let weekdayLabels = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"]
+
+    /// The axis text for one of `weekdayLabels` in the in-app language: `T2` → `T2` / `Mon`.
+    static func weekdayTitle(_ label: String) -> String {
+        Localized.string(String.LocalizationValue(label))
+    }
+
+    /// The week-axis text for an ISO week key in the in-app language: `2026-W37` → `T37` / `W37`.
+    static func weekLabel(_ weekKey: String) -> String {
+        let number = String(weekKey.suffix(2))
+        return Localized.string("T\(number)")
+    }
 
     /// Eight weeks of squares, which is what `GET /me/trends` reports weeks for.
     private static let gridSpanDays = 55

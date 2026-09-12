@@ -180,10 +180,10 @@ struct LocalizedTests {
         ])
 
         Localized.setLanguage(.en)
-        // The English value swaps the arguments positionally: period noun first, then the label.
+        // The English value addresses the arguments positionally (label, then period noun).
         #expect(model.capWarnings == [
-            "You've already hit your today Exercise limit — this one earns no extra points.",
-            "You've already hit your this week Group activity limit — this one earns no extra points.",
+            "You've hit your Exercise limit for today — this one earns no extra points.",
+            "You've hit your Group activity limit for this week — this one earns no extra points.",
         ])
         let confirmed = await model.confirm()
         #expect(confirmed == nil)
@@ -257,6 +257,20 @@ struct LocalizedTests {
         #expect(day.errorMessage == "Couldn't load this day's activity.")
         #expect(TrendsModel.accessibilityLabel(for: active) == "Wednesday, 09/09: 12 points")
         #expect(TrendsModel.accessibilityLabel(for: inactive) == "Thursday, 10/09: no activity")
+    }
+
+    /// The heatmap's domain values stay `T2…CN` in every language (they are cell identities the
+    /// tap gesture maps back); only the axis text follows the picker.
+    @MainActor @Test func trendsAxisLabelsFollowTheInAppLanguage() {
+        defer { Localized.setLanguage(.vi) }
+        #expect(TrendsModel.weekdayLabels.map(TrendsModel.weekdayTitle) == ["T2", "T3", "T4", "T5", "T6", "T7", "CN"])
+        #expect(TrendsModel.weekLabel("2026-W37") == "T37")
+        #expect(TrendsModel.weekLabel("2026-W05") == "T05")
+
+        Localized.setLanguage(.en)
+        #expect(TrendsModel.weekdayLabels.map(TrendsModel.weekdayTitle) == ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"])
+        #expect(TrendsModel.weekLabel("2026-W37") == "W37")
+        #expect(TrendsModel.weekLabel("2026-W05") == "W05")
     }
 
     @MainActor @Test func accountHistoryLabelsFollowTheInAppLanguage() {
