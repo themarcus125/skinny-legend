@@ -9,6 +9,9 @@ struct SignInBackground: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.scenePhase) private var scenePhase
     @State private var failed = false
+    /// The mode actually on screen, published to the owner so foreground styling can follow it —
+    /// including a mid-session player failure, which only this view can observe.
+    @Binding var mode: SignInBackgroundMode
 
     nonisolated static let assetURL: URL? = Bundle.main.url(forResource: "signin-bg", withExtension: "mp4")
 
@@ -16,18 +19,25 @@ struct SignInBackground: View {
         (reduceMotion || !assetAvailable) ? .gradient : .video
     }
 
+    private var effectiveMode: SignInBackgroundMode {
+        Self.mode(reduceMotion: reduceMotion, assetAvailable: Self.assetURL != nil && !failed)
+    }
+
     var body: some View {
-        switch Self.mode(reduceMotion: reduceMotion, assetAvailable: Self.assetURL != nil && !failed) {
-        case .gradient:
-            WarmBackground()
-        case .video:
-            ZStack {
-                LoopingVideoBackground(url: Self.assetURL!, isActive: scenePhase == .active, onFailure: { failed = true })
-                LinearGradient(colors: [.black.opacity(0.15), .black.opacity(0.65)], startPoint: .top, endPoint: .bottom)
+        Group {
+            switch effectiveMode {
+            case .gradient:
+                WarmBackground()
+            case .video:
+                ZStack {
+                    LoopingVideoBackground(url: Self.assetURL!, isActive: scenePhase == .active, onFailure: { failed = true })
+                    LinearGradient(colors: [.black.opacity(0.15), .black.opacity(0.65)], startPoint: .top, endPoint: .bottom)
+                }
+                .ignoresSafeArea()
+                .accessibilityHidden(true)
             }
-            .ignoresSafeArea()
-            .accessibilityHidden(true)
         }
+        .onChange(of: effectiveMode, initial: true) { _, newMode in mode = newMode }
     }
 }
 

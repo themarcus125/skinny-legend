@@ -3,19 +3,29 @@ import SwiftUI
 
 struct SignInView: View {
     @Environment(AppEnvironment.self) private var env
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var errorMessage: String?
     @State private var isWorking = false
 
-    /// Matches `SignInBackground`'s own mode so the text stays legible over either layer:
-    /// white against the video's dark gradient, the default palette against the warm gradient.
-    private var showsVideoBackground: Bool {
-        SignInBackground.mode(reduceMotion: reduceMotion, assetAvailable: SignInBackground.assetURL != nil) == .video
+    /// The mode `SignInBackground` is actually rendering (it reports player failures back through
+    /// this binding). Seeded with the same rule the background uses so the first frame already matches.
+    @State private var backgroundMode = SignInBackground.mode(
+        reduceMotion: UIAccessibility.isReduceMotionEnabled,
+        assetAvailable: SignInBackground.assetURL != nil
+    )
+
+    /// Text stays legible over either layer: white against the video's dark gradient,
+    /// the default palette against the warm gradient.
+    nonisolated static func textColor(for mode: SignInBackgroundMode) -> Color {
+        mode == .video ? .white : .primary
+    }
+
+    nonisolated static func secondaryTextColor(for mode: SignInBackgroundMode) -> Color {
+        mode == .video ? .white.opacity(0.85) : .secondary
     }
 
     var body: some View {
         ZStack {
-            SignInBackground()
+            SignInBackground(mode: $backgroundMode)
                 .ignoresSafeArea()
 
             VStack(spacing: 28) {
@@ -27,11 +37,11 @@ struct SignInView: View {
                         .foregroundStyle(LinearGradient(colors: [Theme.ember, Theme.flame], startPoint: .top, endPoint: .bottom))
                     Text("Operation\nSkinny Legend")
                         .font(.roundedLabel(34, weight: .heavy))
-                        .foregroundStyle(showsVideoBackground ? Color.white : Color.primary)
+                        .foregroundStyle(Self.textColor(for: backgroundMode))
                         .multilineTextAlignment(.center)
                     Text("Chụp ảnh, ghi điểm, giữ chuỗi.")
                         .font(.roundedLabel(16, weight: .medium))
-                        .foregroundStyle(showsVideoBackground ? Color.white.opacity(0.85) : Color.secondary)
+                        .foregroundStyle(Self.secondaryTextColor(for: backgroundMode))
                 }
 
                 Spacer()
@@ -60,7 +70,7 @@ struct SignInView: View {
                     if !env.auth.isGoogleAvailable {
                         Text("Đăng nhập Google chưa được cấu hình trên bản dựng này.")
                             .font(.roundedLabel(12, weight: .medium))
-                            .foregroundStyle(showsVideoBackground ? Color.white.opacity(0.85) : Color.secondary)
+                            .foregroundStyle(Self.secondaryTextColor(for: backgroundMode))
                             .multilineTextAlignment(.center)
                     }
 
