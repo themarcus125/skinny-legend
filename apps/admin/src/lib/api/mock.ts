@@ -9,6 +9,7 @@ import type {
   EntryPatch,
   EntryStatus,
   FeedbackItem,
+  MapPin,
   RulesPayload,
   RulesResponse,
   ScoringRule,
@@ -36,6 +37,17 @@ function addDays(localDate: string, days: number): string {
 }
 
 const CHALLENGE_START = '2026-09-08';
+
+/** Fixed HCMC coordinates for seeded places — same table as the iOS mock (task-4-brief.md). */
+const PLACE_COORDINATES: Record<string, { lat: number; lng: number }> = {
+  'California Fitness Q1': { lat: 10.7769, lng: 106.7009 },
+  'Công viên Gia Định': { lat: 10.8122, lng: 106.674 },
+  'Sân cầu lông Tân Bình': { lat: 10.801, lng: 106.652 },
+  'Hồ bơi Lam Sơn': { lat: 10.783, lng: 106.695 },
+  'Bún chả Hương Liên': { lat: 10.774, lng: 106.703 },
+  'Cơm tấm Ba Ghiền': { lat: 10.789, lng: 106.691 },
+};
+const PLACE_NAMES = Object.keys(PLACE_COORDINATES);
 
 const SEED_USERS: AdminUser[] = [
   { id: '11111111-1111-4111-8111-111111111111', firebaseUid: 'uid-khoa', displayName: 'Khoa', avatarKey: null, role: 'admin', status: 'active', createdAt: '2026-09-08T01:00:00.000Z' },
@@ -70,6 +82,8 @@ function seedEntries(): AdminEntry[] {
     const takenAt = `${localDate}T${String(6 + (i % 12)).padStart(2, '0')}:30:00+07:00`;
     const hue = (i * 37) % 360;
     const hasPlace = i % 3 === 0;
+    const placeName = hasPlace ? PLACE_NAMES[Math.floor(i / 3) % PLACE_NAMES.length]! : null;
+    const coords = placeName ? PLACE_COORDINATES[placeName]! : null;
     entries.push({
       id: `e-${String(i + 1).padStart(2, '0')}`,
       userId: member.id,
@@ -79,12 +93,12 @@ function seedEntries(): AdminEntry[] {
       localDate,
       status: pattern.status,
       categories: [...pattern.categories],
-      placeName: hasPlace ? 'California Fitness Hai Bà Trưng' : null,
+      placeName,
       placeSource: hasPlace ? 'poi' : 'none',
       createdAt: takenAt,
       user: { id: member.id, displayName: member.displayName },
-      lat: hasPlace ? 10.7809 : null,
-      lng: hasPlace ? 106.6997 : null,
+      lat: coords?.lat ?? null,
+      lng: coords?.lng ?? null,
       // Every 7th entry has no verdict row, mirroring an entry created before the vision call landed.
       verdict:
         i % 7 === 6
@@ -231,5 +245,30 @@ export class MockAdminApi implements AdminApi {
   async listFeedback(): Promise<FeedbackItem[]> {
     await delay();
     return this.feedback.map((item) => ({ ...item }));
+  }
+
+  async mapPins(days: number): Promise<MapPin[]> {
+    await delay();
+    const since = Date.now() - days * 24 * 60 * 60 * 1000;
+    return this.entries
+      .filter(
+        (entry) =>
+          entry.status === 'confirmed' &&
+          entry.lat !== null &&
+          entry.lng !== null &&
+          new Date(entry.takenAt).getTime() >= since,
+      )
+      .map((entry) => ({
+        entryId: entry.id,
+        lat: entry.lat!,
+        lng: entry.lng!,
+        placeName: entry.placeName,
+        takenAt: entry.takenAt,
+        localDate: entry.localDate,
+        categories: [...entry.categories],
+        thumbUrl: entry.thumbUrl,
+        user: { id: entry.user.id, displayName: entry.user.displayName, avatarUrl: null },
+      }))
+      .sort((a, b) => (a.takenAt < b.takenAt ? 1 : -1));
   }
 }

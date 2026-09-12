@@ -139,3 +139,16 @@ export interface EntryPatch {
   categories?: Category[];
   status?: EntryStatus;
 }
+
+/** A row of `GET /entries/map?days=`. */
+export interface MapPin {
+  entryId: string;
+  lat: number;
+  lng: number;
+  placeName: string | null;
+  takenAt: string;
+  localDate: string;
+  categories: Category[];
+  thumbUrl: string | null;
+  user: { id: string; displayName: string; avatarUrl: string | null };
+}

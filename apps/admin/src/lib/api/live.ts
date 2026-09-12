@@ -6,6 +6,7 @@ import type {
   EntryFilters,
   EntryPatch,
   FeedbackItem,
+  MapPin,
   RulesPayload,
   RulesResponse,
   UserPatch,
@@ -93,5 +94,10 @@ export class LiveAdminApi implements AdminApi {
   async listFeedback(): Promise<FeedbackItem[]> {
     const { feedback } = await this.request<{ feedback: FeedbackItem[] }>('/admin/feedback');
     return feedback;
+  }
+
+  async mapPins(days: number): Promise<MapPin[]> {
+    const { pins } = await this.request<{ pins: MapPin[] }>(`/entries/map?days=${days}`);
+    return pins;
   }
 }

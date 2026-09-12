@@ -6,6 +6,7 @@ import {
   FlameIcon,
   ImagesIcon,
   LayoutDashboardIcon,
+  MapIcon,
   MessageSquareTextIcon,
   SlidersHorizontalIcon,
   UsersIcon,
@@ -19,6 +20,7 @@ const NAV = [
   { href: '/', label: 'Tổng quan', icon: LayoutDashboardIcon },
   { href: '/members', label: 'Thành viên', icon: UsersIcon },
   { href: '/entries', label: 'Mục ghi', icon: ImagesIcon },
+  { href: '/map', label: 'Bản đồ', icon: MapIcon },
   { href: '/rules', label: 'Luật chơi', icon: SlidersHorizontalIcon },
   { href: '/feedback', label: 'Góp ý', icon: MessageSquareTextIcon },
 ] as const;

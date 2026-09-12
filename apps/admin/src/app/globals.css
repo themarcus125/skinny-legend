@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+@import "leaflet/dist/leaflet.css";
 
 /* KEEP: ui/* still carries dark: utilities and shadcn/tailwind.css uses `@variant dark`
    inside @utility shimmer. Nothing ever applies .dark, so these compile to no-ops. */

@@ -5,6 +5,7 @@ import type {
   EntryFilters,
   EntryPatch,
   FeedbackItem,
+  MapPin,
   RulesPayload,
   RulesResponse,
   UserPatch,
@@ -32,6 +33,7 @@ export interface AdminApi {
   getRules(): Promise<RulesResponse>;
   putRules(payload: RulesPayload): Promise<void>;
   listFeedback(): Promise<FeedbackItem[]>;
+  mapPins(days: number): Promise<MapPin[]>;
 }
 
 /** Serialises entry filters, dropping empty values. Returns '' or '?a=b&c=d'. */
