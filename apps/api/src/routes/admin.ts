@@ -1,13 +1,14 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
-import { and, desc, eq, gte, lte, type SQL } from 'drizzle-orm';
-import { schema, type Category } from '@skinny/shared';
+import { and, desc, eq, gte, inArray, lte, type SQL } from 'drizzle-orm';
+import { schema, TEST_NOTIFICATION, type Category } from '@skinny/shared';
 import { db } from '../db.js';
 import { ApiError } from '../errors.js';
 import { validate, uuidParam } from '../validate.js';
 import { authenticate, requireAdmin, type AuthEnv } from '../middleware/auth.js';
 import { writeAudit } from '../services/audit.js';
 import { storage } from '../services/storage.js';
+import { localeFor, pushSender, type PushResult } from '../services/push.js';
 import { toEntryDto } from './entries.js';
 
 export const adminRoutes = new Hono<AuthEnv>();
@@ -128,4 +129,50 @@ adminRoutes.get('/feedback', async (c) => {
     feedback.push({ ...f, screenshotUrl: f.screenshotKey ? await storage.publicUrl(f.screenshotKey) : null, user: { id: user.id, displayName: user.displayName } });
   }
   return c.json({ feedback });
+});
+
+// ---- notifications (spec §E)
+const notificationsQuery = z.object({ limit: z.coerce.number().int().min(1).max(200).default(100) });
+adminRoutes.get('/notifications', validate('query', notificationsQuery), async (c) => {
+  const { limit } = c.req.valid('query');
+  const rows = await db.select({ n: schema.notificationLog, user: schema.users }).from(schema.notificationLog)
+    .innerJoin(schema.users, eq(schema.users.id, schema.notificationLog.userId)).orderBy(desc(schema.notificationLog.sentAt)).limit(limit);
+  return c.json({
+    notifications: rows.map(({ n, user }) => ({
+      id: n.id, kind: n.kind, payload: n.payloadJson, sentAt: n.sentAt.toISOString(),
+      user: { id: user.id, displayName: user.displayName },
+    })),
+  });
+});
+
+const testNotification = z.object({ userId: z.string().uuid() });
+adminRoutes.post('/notifications/test', validate('json', testNotification), async (c) => {
+  const { userId } = c.req.valid('json');
+  const [target] = await db.select({ id: schema.users.id }).from(schema.users).where(eq(schema.users.id, userId));
+  if (!target) throw new ApiError(404, 'not_found', 'User not found');
+
+  const devices = await db.select().from(schema.deviceTokens).where(eq(schema.deviceTokens.userId, userId));
+  if (devices.length === 0) throw new ApiError(400, 'no_device_tokens', 'User has no registered devices');
+
+  // Locale selection is shared with the notify job (services/push.localeFor): most recently seen device wins.
+  const copy = TEST_NOTIFICATION[localeFor(devices)];
+  let results: PushResult[];
+  try {
+    results = await pushSender.send(devices.map((d) => ({ token: d.token, title: copy.title, body: copy.body, data: { deepLink: 'track', kind: 'test' } })));
+  } catch (err) {
+    // fcmSender() throws on a whole-batch failure (network, auth); fakeSender never does. Nothing
+    // was delivered and no per-token verdicts exist, so no tokens are dropped and nothing is audited.
+    const reason = err instanceof Error ? err.message : String(err);
+    throw new ApiError(502, 'push_failed', `Push delivery failed: ${reason}`);
+  }
+
+  const dead = results.filter((r) => r.unregistered).map((r) => r.token);
+  if (dead.length > 0) await db.delete(schema.deviceTokens).where(inArray(schema.deviceTokens.token, dead));
+
+  const sent = results.filter((r) => r.ok).length;
+  // A test send is not a planned reminder: it never touches notification_log (whose `kind` enum has no
+  // `test` value) and must not suppress tomorrow's real one through the 24h dedupe rule. It is an
+  // admin write, so it does get an audit row.
+  await writeAudit(c.get('user').id, 'notification.test', 'user', userId, { tokens: devices.length, sent, removedTokens: dead.length });
+  return c.json({ sent, tokens: devices.length, removedTokens: dead.length });
 });

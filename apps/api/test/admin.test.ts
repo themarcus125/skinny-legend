@@ -4,6 +4,7 @@ import { schema } from '@skinny/shared';
 import { db } from '../src/db.js';
 import { createApp } from '../src/app.js';
 import { storage } from '../src/services/storage.js';
+import { pushSender, type FakeSender } from '../src/services/push.js';
 import { resetDb, asUser } from './helpers.js';
 import type { Verdict } from '../src/services/vision.js';
 
@@ -11,8 +12,12 @@ const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR
 const verdict: Verdict = { categories: ['exercise'], healthy: null, confidence: 1, reason: '', model: 'fake', latencyMs: 1, raw: '', failed: false };
 const app = createApp({ classify: vi.fn(async () => verdict) });
 const json = (h: Record<string, string>) => ({ ...h, 'content-type': 'application/json' });
+const fake = pushSender as FakeSender;
 
-beforeEach(resetDb);
+beforeEach(async () => {
+  await resetDb();
+  fake.reset();
+});
 
 async function createEntry(headers: Record<string, string>) {
   const presign = await (await app.request('/uploads/presign', { method: 'POST', headers: json(headers), body: JSON.stringify({ kind: 'photo', contentType: 'image/png' }) })).json();
@@ -173,5 +178,166 @@ describe('admin feedback', () => {
     await app.request('/feedback', { method: 'POST', headers: json(u.headers), body: JSON.stringify({ message: 'hi', appVersion: '1' }) });
     const list = await (await app.request('/admin/feedback', { headers: admin.headers })).json();
     expect(list.feedback[0]).toMatchObject({ message: 'hi', user: { displayName: 'U' } });
+  });
+});
+
+// ---- notifications (spec §E, SKI-70)
+async function seedLog(userId: string, kind: 'inactive_1d' | 'rank_nudge', sentAt: Date) {
+  await db.insert(schema.notificationLog).values({ userId, kind, payloadJson: { title: 'T', body: 'B', locale: 'vi', vars: {} }, sentAt });
+}
+
+function testSend(headers: Record<string, string>, userId: string) {
+  return app.request('/admin/notifications/test', { method: 'POST', headers: json(headers), body: JSON.stringify({ userId }) });
+}
+
+describe('GET /admin/notifications', () => {
+  it('returns the log newest first with the member joined in', async () => {
+    const admin = await asUser('adm', { admin: true });
+    const member = await asUser('m', { activate: true, name: 'Minh' });
+    await seedLog(member.user.id, 'inactive_1d', new Date('2026-09-18T13:00:00Z'));
+    await seedLog(member.user.id, 'rank_nudge', new Date('2026-09-19T13:00:00Z'));
+
+    const res = await app.request('/admin/notifications', { headers: admin.headers });
+    expect(res.status).toBe(200);
+    const { notifications } = await res.json();
+    expect(notifications.map((n: { kind: string }) => n.kind)).toEqual(['rank_nudge', 'inactive_1d']);
+    expect(notifications[0].user).toEqual({ id: member.user.id, displayName: 'Minh' });
+    expect(notifications[0].payload).toMatchObject({ title: 'T', body: 'B', locale: 'vi' });
+    expect(notifications[0].sentAt).toBe('2026-09-19T13:00:00.000Z');
+    expect(typeof notifications[0].id).toBe('string');
+  });
+
+  it('honours the limit', async () => {
+    const admin = await asUser('adm', { admin: true });
+    const member = await asUser('m', { activate: true });
+    for (let i = 0; i < 3; i += 1) await seedLog(member.user.id, 'inactive_1d', new Date(`2026-09-1${i + 1}T13:00:00Z`));
+    const res = await app.request('/admin/notifications?limit=2', { headers: admin.headers });
+    expect(res.status).toBe(200);
+    expect((await res.json()).notifications).toHaveLength(2);
+  });
+
+  it('rejects a limit outside 1..200 with 400', async () => {
+    const admin = await asUser('adm', { admin: true });
+    for (const limit of ['201', '0', 'abc']) {
+      const res = await app.request(`/admin/notifications?limit=${limit}`, { headers: admin.headers });
+      expect(res.status).toBe(400);
+      expect((await res.json()).error.code).toBe('invalid_body');
+    }
+  });
+
+  it('is admin only', async () => {
+    const member = await asUser('m', { activate: true });
+    expect((await app.request('/admin/notifications', { headers: member.headers })).status).toBe(403);
+  });
+});
+
+describe('POST /admin/notifications/test', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it('sends to every device the member has and audits it', async () => {
+    const admin = await asUser('adm', { admin: true });
+    const member = await asUser('m', { activate: true });
+    await db.insert(schema.deviceTokens).values([
+      { userId: member.user.id, token: 'tok-a', platform: 'ios', locale: 'vi' },
+      { userId: member.user.id, token: 'tok-b', platform: 'ios', locale: 'vi' },
+    ]);
+
+    const res = await testSend(admin.headers, member.user.id);
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ sent: 2, tokens: 2, removedTokens: 0 });
+    expect(fake.sent.map((m) => m.token).sort()).toEqual(['tok-a', 'tok-b']);
+    expect(fake.sent[0]!.title).toBe('Thử thông báo');
+    expect(fake.sent[0]!.data).toEqual({ deepLink: 'track', kind: 'test' });
+
+    const audit = await db.select().from(schema.auditLog);
+    expect(audit).toHaveLength(1);
+    expect(audit[0]).toMatchObject({ actorId: admin.user.id, action: 'notification.test', targetType: 'user', targetId: member.user.id });
+  });
+
+  it('uses the locale of the most recently seen device, not the last inserted', async () => {
+    const admin = await asUser('adm', { admin: true });
+    const member = await asUser('m', { activate: true });
+    await db.insert(schema.deviceTokens).values([
+      { userId: member.user.id, token: 'tok-en', platform: 'ios', locale: 'en', lastSeenAt: new Date('2026-09-12T10:00:00Z') },
+      { userId: member.user.id, token: 'tok-vi', platform: 'ios', locale: 'vi', lastSeenAt: new Date('2026-09-01T10:00:00Z') },
+    ]);
+    expect((await testSend(admin.headers, member.user.id)).status).toBe(200);
+    expect(fake.sent).toHaveLength(2);
+    expect(fake.sent.every((m) => m.title === 'Test notification')).toBe(true);
+  });
+
+  it('writes no notification_log row: a test send is not a planned reminder', async () => {
+    const admin = await asUser('adm', { admin: true });
+    const member = await asUser('m', { activate: true });
+    await db.insert(schema.deviceTokens).values({ userId: member.user.id, token: 'tok-a', platform: 'ios', locale: 'vi' });
+    expect((await testSend(admin.headers, member.user.id)).status).toBe(200);
+    expect(await db.select().from(schema.notificationLog)).toHaveLength(0);
+  });
+
+  it('drops a token FCM reports as unregistered', async () => {
+    const admin = await asUser('adm', { admin: true });
+    const member = await asUser('m', { activate: true });
+    await db.insert(schema.deviceTokens).values([
+      { userId: member.user.id, token: 'tok-dead', platform: 'ios', locale: 'vi' },
+      { userId: member.user.id, token: 'tok-live', platform: 'ios', locale: 'vi' },
+    ]);
+    fake.failures.set('tok-dead', { unregistered: true, error: 'gone' });
+
+    const res = await testSend(admin.headers, member.user.id);
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ sent: 1, tokens: 2, removedTokens: 1 });
+    expect((await db.select().from(schema.deviceTokens)).map((d) => d.token)).toEqual(['tok-live']);
+  });
+
+  it('keeps a token that failed for a reason other than unregistered', async () => {
+    const admin = await asUser('adm', { admin: true });
+    const member = await asUser('m', { activate: true });
+    await db.insert(schema.deviceTokens).values({ userId: member.user.id, token: 'tok-flaky', platform: 'ios', locale: 'vi' });
+    fake.failures.set('tok-flaky', { unregistered: false, error: 'internal' });
+
+    expect(await (await testSend(admin.headers, member.user.id)).json()).toEqual({ sent: 0, tokens: 1, removedTokens: 0 });
+    expect(await db.select().from(schema.deviceTokens)).toHaveLength(1);
+  });
+
+  it('maps a thrown FCM outage to a 502 envelope and writes no audit row', async () => {
+    const admin = await asUser('adm', { admin: true });
+    const member = await asUser('m', { activate: true });
+    await db.insert(schema.deviceTokens).values({ userId: member.user.id, token: 'tok-a', platform: 'ios', locale: 'vi' });
+    vi.spyOn(pushSender, 'send').mockRejectedValueOnce(new Error('fcm down'));
+
+    const res = await testSend(admin.headers, member.user.id);
+    expect(res.status).toBe(502);
+    expect((await res.json()).error.code).toBe('push_failed');
+    expect(await db.select().from(schema.auditLog)).toHaveLength(0);
+    expect(await db.select().from(schema.deviceTokens)).toHaveLength(1);
+  });
+
+  it('returns 400 no_device_tokens when the member has no device', async () => {
+    const admin = await asUser('adm', { admin: true });
+    const member = await asUser('m', { activate: true });
+    const res = await testSend(admin.headers, member.user.id);
+    expect(res.status).toBe(400);
+    expect((await res.json()).error.code).toBe('no_device_tokens');
+    expect(fake.sent).toHaveLength(0);
+  });
+
+  it('returns 404 for an unknown user', async () => {
+    const admin = await asUser('adm', { admin: true });
+    const res = await testSend(admin.headers, '00000000-0000-4000-8000-000000000000');
+    expect(res.status).toBe(404);
+    expect((await res.json()).error.code).toBe('not_found');
+  });
+
+  it('rejects a non-uuid userId with 400', async () => {
+    const admin = await asUser('adm', { admin: true });
+    const res = await testSend(admin.headers, 'nope');
+    expect(res.status).toBe(400);
+    expect((await res.json()).error.code).toBe('invalid_body');
+  });
+
+  it('is admin only', async () => {
+    const member = await asUser('m', { activate: true });
+    expect((await testSend(member.headers, member.user.id)).status).toBe(403);
+    expect(fake.sent).toHaveLength(0);
   });
 });
