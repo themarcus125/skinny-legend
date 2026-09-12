@@ -28,7 +28,7 @@ struct DayEntriesView: View {
                                     .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                                 VStack(alignment: .leading, spacing: 6) {
                                     GlassEffectContainer(spacing: 6) {
-                                        HStack(spacing: 6) {
+                                        FlowLayout(spacing: 6, rowSpacing: 6) {
                                             ForEach(entry.categories) { category in
                                                 CategoryChip(category: category)
                                             }

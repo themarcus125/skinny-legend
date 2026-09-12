@@ -78,7 +78,7 @@ private struct MemberEntryRow: View {
                 Text(LocalDay.display(entry.localDate))
                     .font(.roundedLabel(15, weight: .bold))
                 GlassEffectContainer(spacing: 6) {
-                    HStack(spacing: 6) {
+                    FlowLayout(spacing: 6, rowSpacing: 6) {
                         ForEach(entry.categories) { category in
                             CategoryChip(category: category)
                         }

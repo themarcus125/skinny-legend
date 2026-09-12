@@ -77,7 +77,7 @@ private struct FeedRow: View {
                 }
 
                 GlassEffectContainer(spacing: 8) {
-                    HStack(spacing: 8) {
+                    FlowLayout(spacing: 8, rowSpacing: 8) {
                         ForEach(entry.categories) { category in
                             CategoryChip(category: category)
                         }

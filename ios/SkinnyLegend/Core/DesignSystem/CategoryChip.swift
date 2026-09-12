@@ -29,6 +29,7 @@ struct CategoryChip: View {
                 .font(.system(size: 13, weight: .bold))
             Text(category.shortLabel)
                 .font(.roundedLabel(14))
+                .lineLimit(1)
             if isCapped {
                 Image(systemName: "exclamationmark.triangle.fill")
                     .font(.system(size: 11, weight: .bold))
@@ -38,5 +39,10 @@ struct CategoryChip: View {
         .foregroundStyle(isOn ? Color.primary : Color.secondary)
         .padding(.horizontal, 14)
         .padding(.vertical, 9)
+        // Chip rows sit in tight HStacks that can squeeze a chip below its label's natural width;
+        // without this the label wraps mid-word ("Tập luyệ / n") instead of the row wrapping onto
+        // a second line. `FlowLayout` (Core/DesignSystem/FlowLayout.swift) is what makes room for
+        // that second line at each call site.
+        .fixedSize(horizontal: true, vertical: false)
     }
 }
