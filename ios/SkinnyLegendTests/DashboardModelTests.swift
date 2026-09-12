@@ -81,9 +81,10 @@ actor SlowDashboardClient: APIClient {
     }
 }
 
-/// Fails every read so error paths can be exercised. Shared by the read-model suites.
+/// Fails every call so error paths can be exercised. Shared by the read-model suites; pass an
+/// `APIError` to hit the `userMessage` path or any other error to hit a model's own fallback copy.
 struct FailingClient: APIClient {
-    let error: APIError
+    let error: any Error
 
     func session() async throws -> UserDTO { throw error }
     func me() async throws -> UserDTO { throw error }

@@ -1,6 +1,50 @@
 {
   "sourceLanguage" : "vi",
   "strings" : {
+    "%lld so với hôm qua" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld vs yesterday"
+          }
+        }
+      }
+    },
+    "+%lld so với hôm qua" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "+%lld vs yesterday"
+          }
+        }
+      }
+    },
+    "AI nhận định" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI verdict"
+          }
+        }
+      }
+    },
+    "AI đang xem ảnh…" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI is looking at the photo…"
+          }
+        }
+      }
+    },
     "Bạn chưa đăng nhập." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -8,6 +52,39 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "You're not signed in."
+          }
+        }
+      }
+    },
+    "Bản đồ" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Map"
+          }
+        }
+      }
+    },
+    "Bằng hôm qua" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Same as yesterday"
+          }
+        }
+      }
+    },
+    "Bỏ địa điểm" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Remove place"
           }
         }
       }
@@ -45,6 +122,17 @@
         }
       }
     },
+    "Chuỗi ngày" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Streak"
+          }
+        }
+      }
+    },
     "Chào %@!" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -67,6 +155,50 @@
         }
       }
     },
+    "Chưa có hoạt động nào" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No activity yet"
+          }
+        }
+      }
+    },
+    "Chưa ghi nhận hoạt động nào hôm nay." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nothing tracked today yet."
+          }
+        }
+      }
+    },
+    "Chụp buổi tập, bữa ăn lành mạnh hoặc hoạt động nhóm — mỗi ảnh một lần ghi điểm." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Snap a workout, a healthy meal or a group activity — one photo, one score."
+          }
+        }
+      }
+    },
+    "Chụp ảnh" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Take a photo"
+          }
+        }
+      }
+    },
     "Chụp ảnh, ghi điểm, giữ chuỗi." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -74,6 +206,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Snap a photo, score points, keep your streak."
+          }
+        }
+      }
+    },
+    "Dài nhất: %lld ngày" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Longest: %lld days"
           }
         }
       }
@@ -111,6 +254,72 @@
         }
       }
     },
+    "Huỷ" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cancel"
+          }
+        }
+      }
+    },
+    "Hãy chọn hạng mục phù hợp bên dưới." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pick the right categories below."
+          }
+        }
+      }
+    },
+    "Hôm nay bạn đã làm gì?" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "What did you do today?"
+          }
+        }
+      }
+    },
+    "Hôm nay còn ghi điểm được" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Still scorable today"
+          }
+        }
+      }
+    },
+    "Hơn hôm qua %lld điểm" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld points more than yesterday"
+          }
+        }
+      }
+    },
+    "Hạng mục" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Categories"
+          }
+        }
+      }
+    },
     "Hệ thống" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -118,6 +327,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "System"
+          }
+        }
+      }
+    },
+    "Khi cả nhóm ghi nhận hoạt động, chúng sẽ xuất hiện ở đây." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "When the group tracks activities, they'll show up here."
           }
         }
       }
@@ -133,6 +353,17 @@
         }
       }
     },
+    "Không lưu được, hãy thử lại." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't save, please try again."
+          }
+        }
+      }
+    },
     "Không mở được cửa sổ đăng nhập." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -144,6 +375,17 @@
         }
       }
     },
+    "Không nhận diện được ảnh" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't read the photo"
+          }
+        }
+      }
+    },
     "Không nhận được thông tin đăng nhập." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -151,6 +393,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "No sign-in credentials came back."
+          }
+        }
+      }
+    },
+    "Không phân tích được ảnh, hãy thử lại." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't analyse the photo, please try again."
           }
         }
       }
@@ -177,6 +430,28 @@
         }
       }
     },
+    "Không tìm thấy địa điểm nào gần đây." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No places found nearby."
+          }
+        }
+      }
+    },
+    "Không tải được" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't load"
+          }
+        }
+      }
+    },
     "Không tải được dữ liệu" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -188,6 +463,39 @@
         }
       }
     },
+    "Không tải được dữ liệu." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't load data."
+          }
+        }
+      }
+    },
+    "Không tải được nhật ký nhóm." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't load the group feed."
+          }
+        }
+      }
+    },
+    "Không đúng?" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not right?"
+          }
+        }
+      }
+    },
     "Kiểm tra lại" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -195,6 +503,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Check again"
+          }
+        }
+      }
+    },
+    "Kém hôm qua %lld điểm" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld points fewer than yesterday"
           }
         }
       }
@@ -232,6 +551,17 @@
         }
       }
     },
+    "Nhật ký nhóm" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Group feed"
+          }
+        }
+      }
+    },
     "Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -243,6 +573,39 @@
         }
       }
     },
+    "Sửa hoạt động" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Edit activity"
+          }
+        }
+      }
+    },
+    "Thư viện" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Library"
+          }
+        }
+      }
+    },
+    "Thưởng chuỗi: +%lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Streak bonus: +%lld"
+          }
+        }
+      }
+    },
     "Thời gian chụp ảnh không hợp lệ." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -250,6 +613,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "The photo's capture time isn't valid."
+          }
+        }
+      }
+    },
+    "Thứ hạng" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rank"
           }
         }
       }
@@ -331,6 +705,17 @@
         }
       }
     },
+    "Tải ảnh lên thất bại." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Photo upload failed."
+          }
+        }
+      }
+    },
     "Tập luyện" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -353,6 +738,50 @@
         }
       }
     },
+    "Tổng điểm thử thách" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Challenge total"
+          }
+        }
+      }
+    },
+    "Tổng điểm: %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Total: %lld"
+          }
+        }
+      }
+    },
+    "Tổng điểm: %lld (thưởng chuỗi %lld)" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Total: %lld (streak bonus %lld)"
+          }
+        }
+      }
+    },
+    "Xong" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Done"
+          }
+        }
+      }
+    },
     "Xu hướng" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -364,6 +793,28 @@
         }
       }
     },
+    "Xác nhận" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Confirm"
+          }
+        }
+      }
+    },
+    "Xác nhận hoạt động" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Confirm activity"
+          }
+        }
+      }
+    },
     "Xếp hạng" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -371,6 +822,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Leaderboard"
+          }
+        }
+      }
+    },
+    "Xếp hạng %lld trên %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rank %lld of %lld"
+          }
+        }
+      }
+    },
+    "bằng hôm qua" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "same as yesterday"
           }
         }
       }
@@ -397,6 +870,17 @@
         }
       }
     },
+    "trong nhóm" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "in the group"
+          }
+        }
+      }
+    },
     "tuần này" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -404,6 +888,50 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "this week"
+          }
+        }
+      }
+    },
+    "Đang lưu…" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saving…"
+          }
+        }
+      }
+    },
+    "Đang nén ảnh…" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Compressing photo…"
+          }
+        }
+      }
+    },
+    "Đang tìm địa điểm…" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Finding your location…"
+          }
+        }
+      }
+    },
+    "Đang tải ảnh lên… %lld%%" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Uploading photo… %lld%%"
           }
         }
       }
@@ -419,6 +947,61 @@
         }
       }
     },
+    "Điểm chính thức do máy chủ tính khi xác nhận." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The official score is calculated by the server on confirm."
+          }
+        }
+      }
+    },
+    "Điểm dự kiến" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Projected points"
+          }
+        }
+      }
+    },
+    "Điểm hôm nay" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Today's points"
+          }
+        }
+      }
+    },
+    "Điểm hôm nay: %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Today's points: %lld"
+          }
+        }
+      }
+    },
+    "Điểm sẽ được máy chủ tính lại khi lưu." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The server recalculates points when you save."
+          }
+        }
+      }
+    },
     "Đã có lỗi xảy ra." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -430,6 +1013,28 @@
         }
       }
     },
+    "Đã ghi nhận" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tracked"
+          }
+        }
+      }
+    },
+    "Đã ghi nhận, giữ chuỗi nhé!" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tracked — keep the streak going!"
+          }
+        }
+      }
+    },
     "Đã huỷ đăng nhập." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -437,6 +1042,39 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Sign-in cancelled."
+          }
+        }
+      }
+    },
+    "Đã phân tích xong" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Analysis done"
+          }
+        }
+      }
+    },
+    "Đã tải ảnh lên" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Photo uploaded"
+          }
+        }
+      }
+    },
+    "Đã đủ %@ %@ — mục này không cộng thêm điểm." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You've already hit your %2$@ %1$@ limit — this one earns no extra points."
           }
         }
       }
@@ -514,6 +1152,50 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "The server address isn't valid."
+          }
+        }
+      }
+    },
+    "Địa điểm gần bạn" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Places near you"
+          }
+        }
+      }
+    },
+    "Đổi" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Change"
+          }
+        }
+      }
+    },
+    "Đổi địa điểm" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Change place"
+          }
+        }
+      }
+    },
+    "đã đủ %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ limit reached"
           }
         }
       }

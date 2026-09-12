@@ -84,8 +84,12 @@ struct LocalizedTests {
 
     @Test func capNounsFollowTheInAppLanguage() {
         defer { Localized.setLanguage(.vi) }
+        #expect(Rulebook.capNoun(for: .exercise) == "hôm nay")
+        #expect(Rulebook.capNoun(for: .meal) == "hôm nay")
+        #expect(Rulebook.capNoun(for: .group) == "tuần này")
         Localized.setLanguage(.en)
         #expect(Rulebook.capNoun(for: .exercise) == "today")
+        #expect(Rulebook.capNoun(for: .meal) == "today")
         #expect(Rulebook.capNoun(for: .group) == "this week")
     }
 
@@ -126,5 +130,73 @@ struct LocalizedTests {
         Localized.setLanguage(.en)
         #expect(LocalDay.display("2026-09-08") == "Tuesday, 08/09")
         #expect(LocalDay.weekdaySymbol(0) == "Monday")
+    }
+
+    // MARK: - Feature-model strings (Track, Dashboard, Feed): the models hand the views plain
+    // `String`s, so their own fallback copy must follow the in-app language as well. A plain
+    // `URLError` skips the `APIError.userMessage` path and lands on each model's literal.
+
+    @MainActor @Test func trackModelFailuresFollowTheInAppLanguage() async {
+        defer { Localized.setLanguage(.vi) }
+        let model = TrackModel(api: FailingClient(error: URLError(.badServerResponse)))
+        await model.prepare(imageData: Data("nope".utf8))
+        #expect(model.phase == .failed("Ảnh không hợp lệ, hãy chọn ảnh khác."))
+
+        Localized.setLanguage(.en)
+        await model.prepare(imageData: Data("nope".utf8))
+        #expect(model.phase == .failed("That photo isn't valid, pick another one."))
+
+        await model.prepare(imageData: JPEGFactory.make(width: 600, height: 400))
+        await model.upload()
+        #expect(model.phase == .failed("Photo upload failed."))
+
+        model.photoKey = "photos/test.jpg"
+        await model.createEntry(placeName: nil, placeSource: PlaceSource.none, point: nil)
+        #expect(model.phase == .failed("Couldn't analyse the photo, please try again."))
+    }
+
+    @MainActor @Test func verdictSheetModelStringsFollowTheInAppLanguage() async {
+        defer { Localized.setLanguage(.vi) }
+        let entry = EntryDTO(id: "e1", userId: "u1", photoUrl: "mock://photo/1", thumbUrl: "mock://photo/1",
+                             takenAt: Date(), localDate: LocalDay.today, status: .pending, categories: [.exercise, .group],
+                             placeName: nil, placeSource: PlaceSource.none, createdAt: Date())
+        let verdict = VerdictDTO(categories: [.exercise, .group], healthy: nil, confidence: 0.8,
+                                 reason: "Ảnh chụp tại phòng gym với hai người.", model: "mock/offline", failed: false)
+        let model = VerdictSheetModel(
+            api: FailingClient(error: URLError(.badServerResponse)), entry: entry, mode: .created(verdict),
+            capsHit: CapsHit(exercise: true, meal: false, group: true), cappedCategories: [.exercise, .group],
+            projectedPoints: 0, placeName: nil, placeSource: PlaceSource.none
+        )
+        #expect(model.capWarnings == [
+            "Đã đủ Tập luyện hôm nay — mục này không cộng thêm điểm.",
+            "Đã đủ Hoạt động nhóm tuần này — mục này không cộng thêm điểm.",
+        ])
+
+        Localized.setLanguage(.en)
+        // The English value swaps the arguments positionally: period noun first, then the label.
+        #expect(model.capWarnings == [
+            "You've already hit your today Exercise limit — this one earns no extra points.",
+            "You've already hit your this week Group activity limit — this one earns no extra points.",
+        ])
+        let confirmed = await model.confirm()
+        #expect(confirmed == nil)
+        #expect(model.errorMessage == "Couldn't save, please try again.")
+    }
+
+    @MainActor @Test func dashboardAndFeedFailuresFollowTheInAppLanguage() async {
+        defer { Localized.setLanguage(.vi) }
+        let client = FailingClient(error: URLError(.badServerResponse))
+        let dashboard = DashboardModel(api: client)
+        let feed = FeedModel(api: client)
+        await dashboard.load()
+        await feed.loadFirstPage()
+        #expect(dashboard.state == .failed("Không tải được dữ liệu."))
+        #expect(feed.errorMessage == "Không tải được nhật ký nhóm.")
+
+        Localized.setLanguage(.en)
+        await dashboard.load()
+        await feed.loadFirstPage()
+        #expect(dashboard.state == .failed("Couldn't load data."))
+        #expect(feed.errorMessage == "Couldn't load the group feed.")
     }
 }

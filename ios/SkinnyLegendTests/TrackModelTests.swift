@@ -21,7 +21,7 @@ struct TrackModelTests {
     func rejectsBadPhoto() async {
         let model = TrackModel(api: MockAPIClient())
         await model.use(imageData: Data("nope".utf8))
-        #expect(model.phase == .failed("Ảnh không hợp lệ, hãy chọn ảnh khác."))
+        #expect(model.phase == .failed(Localized.string("Ảnh không hợp lệ, hãy chọn ảnh khác.")))
         #expect(model.photoKey == nil)
     }
 

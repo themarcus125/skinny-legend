@@ -11,6 +11,12 @@ struct VerdictSheetModelTests {
                  placeName: "Phòng gym California", placeSource: .poi, createdAt: Date())
     }
 
+    /// Built through `Localized` like the model's own copy, so the assertion cannot race the
+    /// `.serialized` `LocalizedTests` suite's English windows (`Localized` is process-global).
+    private func capWarning(_ category: SkinnyLegend.Category) -> String {
+        Localized.string("Đã đủ \(category.label) \(Rulebook.capNoun(for: category)) — mục này không cộng thêm điểm.")
+    }
+
     private func verdict(_ categories: [SkinnyLegend.Category], failed: Bool = false, healthy: Bool? = nil) -> VerdictDTO {
         VerdictDTO(categories: categories, healthy: healthy, confidence: 0.8,
                    reason: failed ? "" : "Ảnh chụp tại phòng gym với hai người.", model: "mock/offline", failed: failed)
@@ -55,7 +61,7 @@ struct VerdictSheetModelTests {
             projectedPoints: 0, placeName: nil, placeSource: PlaceSource.none
         )
         #expect(model.projectedPoints == 0)
-        #expect(model.capWarnings == ["Đã đủ Tập luyện hôm nay — mục này không cộng thêm điểm."])
+        #expect(model.capWarnings == [capWarning(.exercise)])
 
         model.toggle(.meal)
         #expect(model.projectedPoints == 2)   // meal is not blocked
@@ -68,7 +74,7 @@ struct VerdictSheetModelTests {
             capsHit: CapsHit(exercise: false, meal: false, group: true), cappedCategories: [.group],
             projectedPoints: 0, placeName: nil, placeSource: PlaceSource.none
         )
-        #expect(model.capWarnings == ["Đã đủ Hoạt động nhóm tuần này — mục này không cộng thêm điểm."])
+        #expect(model.capWarnings == [capWarning(.group)])
     }
 
     @Test("A mixed entry blocks only the category the server actually capped")
@@ -83,7 +89,7 @@ struct VerdictSheetModelTests {
         #expect(model.projectedPoints == 3)
         #expect(model.isCapped(.meal))
         #expect(model.isCapped(.exercise) == false)
-        #expect(model.capWarnings == ["Đã đủ Bữa ăn lành mạnh hôm nay — mục này không cộng thêm điểm."])
+        #expect(model.capWarnings == [capWarning(.meal)])
 
         model.toggle(.meal)   // deselect the already-capped meal
         #expect(model.selected == [.exercise])
@@ -150,7 +156,7 @@ struct VerdictSheetModelTests {
         // "e1" is not in the mock store, so the PATCH 404s.
         let confirmed = await model.confirm()
         #expect(confirmed == nil)
-        #expect(model.errorMessage == "Không tìm thấy dữ liệu.")
+        #expect(model.errorMessage == Localized.string("Không tìm thấy dữ liệu."))
         #expect(model.confirmedEntry == nil)
     }
 
@@ -196,7 +202,7 @@ struct VerdictSheetModelTests {
         #expect(model.errorMessage == nil)
         #expect(model.projectedPoints == 0)
         #expect(model.isCapped(.exercise))
-        #expect(model.capWarnings == ["Đã đủ Tập luyện hôm nay — mục này không cộng thêm điểm."])
+        #expect(model.capWarnings == [capWarning(.exercise)])
         #expect(model.hasConfirmedProjection == true)
     }
 }

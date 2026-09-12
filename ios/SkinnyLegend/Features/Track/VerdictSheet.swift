@@ -94,7 +94,7 @@ struct VerdictSheet: View {
                         Text(verdict.failed ? "Không nhận diện được ảnh" : "AI nhận định")
                             .font(.roundedLabel(13, weight: .bold))
                             .foregroundStyle(.secondary)
-                        Text(verdict.failed ? "Hãy chọn hạng mục phù hợp bên dưới." : verdict.reason)
+                        Text(verdict.failed ? Localized.string("Hãy chọn hạng mục phù hợp bên dưới.") : verdict.reason)
                             .font(.roundedLabel(16, weight: .medium))
                     }
                 }

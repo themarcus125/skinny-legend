@@ -105,10 +105,12 @@ final class VerdictSheetModel: Identifiable {
             : Rulebook.projectedPoints(for: selected, capped: blockedCategories)
     }
 
+    /// Catalog key `Đã đủ %@ %@ — mục này không cộng thêm điểm.` — argument 1 is the category
+    /// label, argument 2 the period noun; the English value reorders them positionally.
     var capWarnings: [String] {
         Category.allCases
             .filter { selected.contains($0) && blockedCategories.contains($0) }
-            .map { "Đã đủ \($0.label) \(Rulebook.capNoun(for: $0)) — mục này không cộng thêm điểm." }
+            .map { Localized.string("Đã đủ \($0.label) \(Rulebook.capNoun(for: $0)) — mục này không cộng thêm điểm.") }
     }
 
     func isCapped(_ category: Category) -> Bool {
@@ -156,7 +158,7 @@ final class VerdictSheetModel: Identifiable {
             errorMessage = error.userMessage
             return nil
         } catch {
-            errorMessage = "Không lưu được, hãy thử lại."
+            errorMessage = Localized.string("Không lưu được, hãy thử lại.")
             return nil
         }
     }

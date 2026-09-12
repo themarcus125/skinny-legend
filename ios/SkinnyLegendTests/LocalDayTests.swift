@@ -57,9 +57,4 @@ struct LocalDayTests {
         #expect(LocalDay.weekdaySymbol(0, locale: en) == "Monday")
         #expect(LocalDay.weekdaySymbol(6, locale: en) == "Sunday")
     }
-
-    @Test("display without a locale follows the in-app language, which defaults to Vietnamese")
-    func displayDefaultsToTheAppLanguage() {
-        #expect(LocalDay.display("2026-09-08") == "Thứ Ba, 08/09")
-    }
 }

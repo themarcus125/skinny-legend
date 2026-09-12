@@ -98,13 +98,20 @@ struct DashboardView: View {
 
     private func deltaBadge(_ delta: Int) -> some View {
         Label(
-            delta == 0 ? "bằng hôm qua" : "\(delta > 0 ? "+" : "")\(delta) so với hôm qua",
+            deltaCaption(delta),
             systemImage: delta > 0 ? "arrow.up.right" : delta < 0 ? "arrow.down.right" : "equal"
         )
         .font(.roundedLabel(13, weight: .semibold))
         .foregroundStyle(delta > 0 ? Theme.meal : delta < 0 ? Theme.flame : Color.secondary)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(delta == 0 ? "Bằng hôm qua" : delta > 0 ? "Hơn hôm qua \(delta) điểm" : "Kém hôm qua \(-delta) điểm")
+    }
+
+    /// Two explicit catalog keys (`+%lld so với hôm qua` / `%lld so với hôm qua`) rather than an
+    /// interpolated sign, so both languages read naturally; a negative delta carries its own minus.
+    private func deltaCaption(_ delta: Int) -> LocalizedStringKey {
+        if delta == 0 { return "bằng hôm qua" }
+        return delta > 0 ? "+\(delta) so với hôm qua" : "\(delta) so với hôm qua"
     }
 
     private func streakCard(_ dashboard: DashboardDTO) -> some View {

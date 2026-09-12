@@ -23,13 +23,6 @@ struct RulebookTests {
         #expect(Rulebook.challengeEnd == "2026-12-25")
     }
 
-    @Test("Cap nouns are Vietnamese and period-correct")
-    func capNouns() {
-        #expect(Rulebook.capNoun(for: .exercise) == "hôm nay")
-        #expect(Rulebook.capNoun(for: .meal) == "hôm nay")
-        #expect(Rulebook.capNoun(for: .group) == "tuần này")
-    }
-
     @Test("Projects points for a set of categories, skipping capped ones")
     func projectsPoints() {
         #expect(Rulebook.projectedPoints(for: [.exercise, .group], capped: []) == 6)

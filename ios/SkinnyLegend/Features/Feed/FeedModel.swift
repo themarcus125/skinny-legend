@@ -42,7 +42,7 @@ final class FeedModel {
         } catch let error as APIError {
             errorMessage = error.userMessage
         } catch {
-            errorMessage = "Không tải được nhật ký nhóm."
+            errorMessage = Localized.string("Không tải được nhật ký nhóm.")
         }
     }
 }

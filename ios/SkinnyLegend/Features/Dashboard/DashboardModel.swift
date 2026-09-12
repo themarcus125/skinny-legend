@@ -31,7 +31,7 @@ final class DashboardModel {
         } catch let error as APIError {
             state = .failed(error.userMessage)
         } catch {
-            state = .failed("Không tải được dữ liệu.")
+            state = .failed(Localized.string("Không tải được dữ liệu."))
         }
     }
 }

@@ -49,7 +49,7 @@ final class TrackModel {
         } catch {
             prepared = nil
             previewImage = nil
-            phase = .failed("Ảnh không hợp lệ, hãy chọn ảnh khác.")
+            phase = .failed(Localized.string("Ảnh không hợp lệ, hãy chọn ảnh khác."))
             return false
         }
     }
@@ -92,7 +92,7 @@ final class TrackModel {
             } catch let error as APIError {
                 if attempt == 2 { phase = .failed(error.userMessage) }
             } catch {
-                if attempt == 2 { phase = .failed("Tải ảnh lên thất bại.") }
+                if attempt == 2 { phase = .failed(Localized.string("Tải ảnh lên thất bại.")) }
             }
         }
     }
@@ -116,7 +116,7 @@ final class TrackModel {
         } catch let error as APIError {
             phase = .failed(error.userMessage)
         } catch {
-            phase = .failed("Không phân tích được ảnh, hãy thử lại.")
+            phase = .failed(Localized.string("Không phân tích được ảnh, hãy thử lại."))
         }
     }
 
