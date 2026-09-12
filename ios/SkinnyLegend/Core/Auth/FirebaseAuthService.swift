@@ -34,7 +34,7 @@ final class FirebaseAuthService: AuthService {
             return try await user.getIDToken()
         } catch {
             log.error("ID token refresh failed: \(error.localizedDescription, privacy: .public)")
-            throw AuthError.provider("Không thể làm mới phiên đăng nhập. Vui lòng đăng nhập lại.")
+            throw AuthError.provider(Localized.string("Không thể làm mới phiên đăng nhập. Vui lòng đăng nhập lại."))
         }
     }
 
@@ -103,10 +103,10 @@ final class FirebaseAuthService: AuthService {
     // MARK: - Helpers
 
     /// SDK errors (`error.localizedDescription`) are raw English strings not meant for end
-    /// users; log the real one and surface a Vietnamese generic instead.
+    /// users; log the real one and surface a localized generic instead.
     private func providerFailure(_ provider: String, _ error: any Error) -> AuthError {
         log.error("\(provider, privacy: .public) sign-in failed: \(error.localizedDescription, privacy: .public)")
-        return .provider("Đăng nhập với \(provider) thất bại. Vui lòng thử lại.")
+        return .provider(Localized.string("Đăng nhập với \(provider) thất bại. Vui lòng thử lại."))
     }
 
     private static func topViewController() -> UIViewController? {

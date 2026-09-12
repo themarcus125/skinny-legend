@@ -48,7 +48,9 @@ struct PendingApprovalView: View {
         }
     }
 
-    private var greeting: String {
+    /// A `LocalizedStringKey` (catalog key `Chào %@!`), so the `Text` above resolves it against
+    /// the environment locale like every other literal in this view.
+    private var greeting: LocalizedStringKey {
         user.displayName.isEmpty ? "Chào bạn!" : "Chào \(user.displayName)!"
     }
 }

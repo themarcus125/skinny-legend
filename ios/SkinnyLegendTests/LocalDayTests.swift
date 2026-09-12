@@ -39,8 +39,27 @@ struct LocalDayTests {
         #expect(LocalDay.each(from: "2026-09-11", to: "2026-09-08").isEmpty)
     }
 
-    @Test("display renders a Vietnamese weekday and day/month")
-    func display() {
+    @Test("display renders the weekday in the given locale, then day/month")
+    func displayUsesVietnameseWeekdayNames() {
+        #expect(LocalDay.display("2026-09-08", locale: Locale(identifier: "vi_VN")) == "Thứ Ba, 08/09")
+        #expect(LocalDay.display("2026-09-13", locale: Locale(identifier: "vi_VN")) == "Chủ Nhật, 13/09")
+    }
+
+    @Test("display renders English weekday names under an English locale")
+    func displayUsesEnglishWeekdayNamesUnderEn() {
+        #expect(LocalDay.display("2026-09-08", locale: Locale(identifier: "en_US")) == "Tuesday, 08/09")
+        #expect(LocalDay.display("2026-09-13", locale: Locale(identifier: "en_US")) == "Sunday, 13/09")
+    }
+
+    @Test("weekdaySymbol maps the Monday-first index onto Sunday-first Foundation symbols")
+    func weekdaySymbolIsMondayFirst() {
+        let en = Locale(identifier: "en_US")
+        #expect(LocalDay.weekdaySymbol(0, locale: en) == "Monday")
+        #expect(LocalDay.weekdaySymbol(6, locale: en) == "Sunday")
+    }
+
+    @Test("display without a locale follows the in-app language, which defaults to Vietnamese")
+    func displayDefaultsToTheAppLanguage() {
         #expect(LocalDay.display("2026-09-08") == "Thứ Ba, 08/09")
     }
 }

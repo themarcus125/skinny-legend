@@ -20,7 +20,10 @@ final class AppEnvironment {
 
     /// Shared copy for the disabled state, however it's reached (a `status: disabled` body, or
     /// the more common real-API shape: a 403 `disabled` thrown before any body comes back).
-    private static let disabledMessage = "Tài khoản của bạn đã bị khoá. Liên hệ quản trị viên."
+    /// Computed so it follows the in-app language instead of freezing at first use.
+    private static var disabledMessage: String {
+        Localized.string("Tài khoản của bạn đã bị khoá. Liên hệ quản trị viên.")
+    }
 
     let api: any APIClient
     let auth: any AuthService
@@ -87,7 +90,7 @@ final class AppEnvironment {
         } catch let error as APIError {
             handle(error)
         } catch {
-            session = .failed("Đã có lỗi xảy ra.")
+            session = .failed(Localized.string("Đã có lỗi xảy ra."))
         }
     }
 
@@ -102,7 +105,7 @@ final class AppEnvironment {
         } catch let error as APIError {
             handle(error)
         } catch {
-            session = .failed("Đã có lỗi xảy ra.")
+            session = .failed(Localized.string("Đã có lỗi xảy ra."))
         }
     }
 

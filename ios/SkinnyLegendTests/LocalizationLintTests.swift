@@ -20,6 +20,7 @@ struct LocalizationLintTests {
     static let allowedFiles: Set<String> = [
         "Core/Mock/MockSeed.swift",   // seeded place names, AI reasons and display names — test fixtures
         "Core/Mock/MockPlace.swift",  // seeded POI names for the offline place picker
+        "Core/Mock/MockAPIClient.swift",  // canned AI-verdict reasons the offline mock returns as server data, not UI copy
     ]
 
     /// Placeholder every interpolation and printf directive collapses to, so a source literal

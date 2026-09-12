@@ -30,9 +30,9 @@ enum Rulebook {
         rule(for: category)?.points ?? 0
     }
 
-    /// The Vietnamese period noun used in cap warnings: "Đã đạt giới hạn hôm nay".
+    /// The localized period noun used in cap warnings: "Đã đạt giới hạn hôm nay".
     static func capNoun(for category: Category) -> String {
-        rule(for: category)?.capPeriod == .week ? "tuần này" : "hôm nay"
+        rule(for: category)?.capPeriod == .week ? Localized.string("tuần này") : Localized.string("hôm nay")
     }
 
     static func projectedPoints(for categories: Set<Category>, capped: Set<Category>) -> Int {

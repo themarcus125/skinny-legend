@@ -8,21 +8,24 @@ enum Category: String, Codable, CaseIterable, Sendable, Identifiable, Hashable {
 
     var id: String { rawValue }
 
-    /// Full rulebook wording, used in the verdict sheet and the dashboard checklist.
+    /// Full rulebook wording, used in the verdict sheet and the dashboard checklist. Resolved
+    /// through `Localized` (not a bare literal) because it feeds plain `String` sites —
+    /// accessibility sentences, chart series, joined lists — that the environment locale
+    /// cannot reach.
     var label: String {
         switch self {
-        case .exercise: "Tập luyện"
-        case .meal: "Bữa ăn lành mạnh"
-        case .group: "Hoạt động nhóm"
+        case .exercise: Localized.string("Tập luyện")
+        case .meal: Localized.string("Bữa ăn lành mạnh")
+        case .group: Localized.string("Hoạt động nhóm")
         }
     }
 
     /// Compact wording for chips in dense lists.
     var shortLabel: String {
         switch self {
-        case .exercise: "Tập luyện"
-        case .meal: "Bữa ăn"
-        case .group: "Nhóm"
+        case .exercise: Localized.string("Tập luyện")
+        case .meal: Localized.string("Bữa ăn")
+        case .group: Localized.string("Nhóm")
         }
     }
 

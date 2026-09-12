@@ -11,11 +11,11 @@ enum AuthError: Error, Equatable {
 
     var userMessage: String {
         switch self {
-        case .cancelled: "Đã huỷ đăng nhập."
-        case .googleUnavailable: "Đăng nhập Google chưa được cấu hình trên bản dựng này."
-        case .noPresenter: "Không mở được cửa sổ đăng nhập."
-        case .missingToken: "Không nhận được thông tin đăng nhập."
-        case .notSignedIn: "Bạn chưa đăng nhập."
+        case .cancelled: Localized.string("Đã huỷ đăng nhập.")
+        case .googleUnavailable: Localized.string("Đăng nhập Google chưa được cấu hình trên bản dựng này.")
+        case .noPresenter: Localized.string("Không mở được cửa sổ đăng nhập.")
+        case .missingToken: Localized.string("Không nhận được thông tin đăng nhập.")
+        case .notSignedIn: Localized.string("Bạn chưa đăng nhập.")
         case .provider(let message): message
         }
     }

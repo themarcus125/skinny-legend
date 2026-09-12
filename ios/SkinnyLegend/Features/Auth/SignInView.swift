@@ -102,7 +102,7 @@ struct SignInView: View {
             } catch let error as APIError {
                 errorMessage = error.userMessage
             } catch {
-                errorMessage = "Đăng nhập thất bại."
+                errorMessage = Localized.string("Đăng nhập thất bại.")
             }
             isWorking = false
         }
