@@ -6,6 +6,8 @@ struct AccountView: View {
     @State private var model: AccountModel
     @State private var editing: VerdictSheetModel?
     @State private var isProfileSheetPresented = false
+    @State private var isFeedbackSheetPresented = false
+    @State private var isSignOutConfirming = false
     @Environment(AppEnvironment.self) private var env
     private let apiClient: any APIClient
 
@@ -41,6 +43,33 @@ struct AccountView: View {
                     .padding(.vertical, 4)
                 }
                 .buttonStyle(.plain)
+            }
+
+            Section {
+                Button {
+                    isFeedbackSheetPresented = true
+                } label: {
+                    Label("Gửi góp ý", systemImage: "bubble.left.and.text.bubble.right")
+                        .font(.roundedLabel(16, weight: .medium))
+                }
+                .buttonStyle(.plain)
+
+                Button(role: .destructive) {
+                    isSignOutConfirming = true
+                } label: {
+                    Label("Đăng xuất", systemImage: "rectangle.portrait.and.arrow.right")
+                        .font(.roundedLabel(16, weight: .medium))
+                }
+                .buttonStyle(.plain)
+
+                HStack {
+                    Label("Phiên bản", systemImage: "info.circle")
+                        .font(.roundedLabel(16, weight: .medium))
+                    Spacer()
+                    Text(AppMode.appVersion)
+                        .font(.roundedLabel(15, weight: .medium))
+                        .foregroundStyle(.secondary)
+                }
             }
 
             if let errorMessage = model.errorMessage {
@@ -117,6 +146,13 @@ struct AccountView: View {
                     }
                 }
             }
+        }
+        .sheet(isPresented: $isFeedbackSheetPresented) {
+            FeedbackSheet(api: apiClient)
+        }
+        .confirmationDialog("Đăng xuất khỏi Skinny Legend?", isPresented: $isSignOutConfirming, titleVisibility: .visible) {
+            Button("Đăng xuất", role: .destructive) { env.signOut() }
+            Button("Huỷ", role: .cancel) {}
         }
     }
 
