@@ -85,7 +85,7 @@ struct DashboardView: View {
                         .foregroundStyle(.secondary)
                 } else {
                     GlassEffectContainer(spacing: 8) {
-                        HStack(spacing: 8) {
+                        FlowLayout(spacing: 8, rowSpacing: 8) {
                             ForEach(dashboard.today.categories) { category in
                                 CategoryChip(category: category)
                             }

@@ -100,6 +100,8 @@ struct ProfileEditSheet: View {
                                     .font(.roundedLabel(15))
                             }
                             .buttonStyle(.glass)
+                            .accessibilityLabel("Đổi ảnh đại diện")
+                            .accessibilityHint("Nhấn để chọn ảnh từ thư viện")
                         }
                         Spacer()
                     }
@@ -110,6 +112,7 @@ struct ProfileEditSheet: View {
                     TextField("Tên hiển thị", text: $model.displayName)
                         .font(.roundedLabel(17, weight: .medium))
                         .textInputAutocapitalization(.words)
+                        .accessibilityLabel("Tên hiển thị")
                 }
 
                 if let errorMessage = model.errorMessage {
