@@ -26,7 +26,11 @@ struct VerdictSheet: View {
                             .glassEffect(.regular, in: Capsule())
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
-                    pointsCard
+                    if model.mode != .edit || model.hasConfirmedProjection {
+                        pointsCard
+                    } else {
+                        pendingProjectionNote
+                    }
                     if let errorMessage = model.errorMessage {
                         Text(errorMessage)
                             .font(.roundedLabel(14, weight: .medium))
@@ -140,6 +144,18 @@ struct VerdictSheet: View {
     /// Collapsed, the sheet shows only what the AI found; expanded, it shows all three.
     private var visibleCategories: [Category] {
         model.isEditingCategories ? Category.allCases : Category.allCases.filter { model.selected.contains($0) }
+    }
+
+    /// Ruling 2: an `.edit`-mode sheet has no real projection until the first successful
+    /// `confirm()`, so the points card (which would otherwise show an uncapped local estimate)
+    /// is replaced by this note until the server's PATCH response lands.
+    private var pendingProjectionNote: some View {
+        GlassCard {
+            Text("Điểm sẽ được máy chủ tính lại khi lưu.")
+                .font(.roundedLabel(14, weight: .medium))
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
     }
 
     private var pointsCard: some View {

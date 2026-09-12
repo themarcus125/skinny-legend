@@ -23,7 +23,8 @@ final class VerdictSheetModel: Identifiable {
     /// `.edit` mode opens on a historical entry with no fresh server projection — the caller's
     /// `capsHit`/`cappedCategories` are placeholders, not real data (ruling 2), so they are
     /// ignored until a successful `confirm()` replaces them with the PATCH response's real ones.
-    private var hasConfirmedProjection = false
+    /// Exposed read-only so `VerdictSheet` can hide the pre-save projection card (ruling 2 gap).
+    private(set) var hasConfirmedProjection = false
 
     let id: String
     let entry: EntryDTO

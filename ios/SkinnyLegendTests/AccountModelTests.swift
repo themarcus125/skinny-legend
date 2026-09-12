@@ -77,6 +77,32 @@ struct AccountModelTests {
         #expect(model.errorMessage == error.userMessage)
     }
 
+    // MARK: - ios-accessibility: HistoryRow's combined VoiceOver label
+
+    @Test("Describes an active row with its place and points")
+    func accessibilityLabelForActiveRow() {
+        let entry = HistoryEntryDTO(
+            id: "e1", userId: "u1", photoUrl: "mock://photo/1", thumbUrl: nil,
+            takenAt: Date(), localDate: "2026-09-08", status: .confirmed,
+            categories: [.exercise, .meal], placeName: "Phòng gym California", placeSource: .poi,
+            createdAt: Date(), points: 5, capped: false
+        )
+        #expect(AccountModel.accessibilityLabel(for: entry) ==
+                "Thứ Ba, 08/09, Tập luyện, Bữa ăn lành mạnh, Phòng gym California, 5 điểm")
+    }
+
+    @Test("Names the cap and falls back to 'no place' wording for a capped row")
+    func accessibilityLabelForCappedRowWithNoPlace() {
+        let entry = HistoryEntryDTO(
+            id: "e2", userId: "u1", photoUrl: "mock://photo/2", thumbUrl: nil,
+            takenAt: Date(), localDate: "2026-09-08", status: .confirmed,
+            categories: [.group], placeName: nil, placeSource: PlaceSource.none,
+            createdAt: Date(), points: 0, capped: true
+        )
+        #expect(AccountModel.accessibilityLabel(for: entry) ==
+                "Thứ Ba, 08/09, Hoạt động nhóm, không có địa điểm, 0 điểm, đã đủ giới hạn")
+    }
+
     // MARK: - Ruling 1: loadProfile() must not swallow errors with `try?`
 
     @Test("Surfaces a profile load failure while keeping the successfully loaded history")

@@ -32,16 +32,15 @@ struct AccountView: View {
             ForEach(model.sections) { section in
                 Section {
                     ForEach(section.entries) { entry in
+                        let delete: () -> Void = { Task { await model.delete(entry) } }
                         Button {
                             editing = makeEditModel(for: entry)
                         } label: {
-                            HistoryRow(entry: entry)
+                            HistoryRow(entry: entry, onDelete: delete)
                         }
                         .buttonStyle(.plain)
                         .swipeActions(edge: .trailing) {
-                            Button("Xoá", role: .destructive) {
-                                Task { await model.delete(entry) }
-                            }
+                            Button("Xoá", role: .destructive, action: delete)
                         }
                         .task { await model.loadNextPageIfNeeded(after: entry) }
                     }
@@ -54,6 +53,8 @@ struct AccountView: View {
                             .font(.numerals(14))
                             .foregroundStyle(Theme.flame)
                     }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel("\(LocalDay.display(section.date)): \(section.points) điểm")
                 }
             }
 
@@ -86,6 +87,8 @@ struct AccountView: View {
             api: apiClient,
             entry: entry.entry,
             mode: .edit,
+            // Placeholders: VerdictSheetModel ignores capsHit/cappedCategories in `.edit` mode
+            // until a successful `confirm()` replaces them with the PATCH response's real ones.
             capsHit: CapsHit.none,
             cappedCategories: [],
             projectedPoints: entry.points,
@@ -97,6 +100,7 @@ struct AccountView: View {
 
 private struct HistoryRow: View {
     let entry: HistoryEntryDTO
+    let onDelete: () -> Void
 
     var body: some View {
         HStack(spacing: 14) {
@@ -136,5 +140,12 @@ private struct HistoryRow: View {
             PointsBadge(points: entry.points, isCapped: entry.capped)
         }
         .padding(.vertical, 4)
+        // ios-accessibility: group this row into one VoiceOver/Switch Control stop, and expose
+        // the swipe-to-delete gesture (which Switch Control users cannot perform) as a named
+        // custom action mirroring the swipeActions button above.
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(AccountModel.accessibilityLabel(for: entry))
+        .accessibilityHint("Nhấn đúp để sửa")
+        .accessibilityAction(named: "Xoá", onDelete)
     }
 }

@@ -188,6 +188,7 @@ struct VerdictSheetModelTests {
         #expect(model.selected == [.exercise])
         #expect(model.capWarnings.isEmpty)
         #expect(!model.isCapped(.exercise))
+        #expect(model.hasConfirmedProjection == false)
 
         // Exercise's daily cap (1/day) is already filled by `first`, so the PATCH should report it capped.
         let confirmed = try #require(await model.confirm())
@@ -196,5 +197,6 @@ struct VerdictSheetModelTests {
         #expect(model.projectedPoints == 0)
         #expect(model.isCapped(.exercise))
         #expect(model.capWarnings == ["Đã đủ Tập luyện hôm nay — mục này không cộng thêm điểm."])
+        #expect(model.hasConfirmedProjection == true)
     }
 }

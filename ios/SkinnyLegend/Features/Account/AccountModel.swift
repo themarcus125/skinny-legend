@@ -30,6 +30,22 @@ final class AccountModel {
 
     var hasMore: Bool { nextCursor != nil }
 
+    /// VoiceOver label for a combined `HistoryRow` (ios-accessibility skill: group related
+    /// content, then describe it in one sentence instead of leaving each child as its own
+    /// swipe stop). Pure so it can be unit tested without a view.
+    static func accessibilityLabel(for entry: HistoryEntryDTO) -> String {
+        let day = LocalDay.display(entry.localDate)
+        let categories = entry.categories.isEmpty
+            ? "Chưa chọn hạng mục"
+            : entry.categories.map(\.label).joined(separator: ", ")
+        let place = entry.placeName ?? "không có địa điểm"
+        var label = "\(day), \(categories), \(place), \(entry.points) điểm"
+        if entry.capped {
+            label += ", đã đủ giới hạn"
+        }
+        return label
+    }
+
     var sections: [DaySection] {
         Dictionary(grouping: entries, by: \.localDate)
             .map { DaySection(date: $0.key, entries: $0.value.sorted { $0.takenAt > $1.takenAt }) }
