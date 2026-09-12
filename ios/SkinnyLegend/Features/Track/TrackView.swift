@@ -72,10 +72,11 @@ struct TrackView: View {
                 // Spec §E: ask for notification permission after the first confirmed entry,
                 // never at launch. Wait out the celebration overlay (1.8 s) so the system
                 // alert does not land on top of it. No-ops on every later entry.
+                guard let userID = env.currentUser?.id else { return }
                 let push = env.push
                 Task {
                     try? await Task.sleep(for: .seconds(2))
-                    await push.requestAfterFirstConfirmedEntry()
+                    await push.requestAfterFirstConfirmedEntry(userID: userID)
                 }
             }
         }

@@ -40,9 +40,18 @@ struct PendingApprovalView: View {
             .buttonStyle(.glassProminent)
             .disabled(isChecking)
 
-            Button("Đăng xuất") { Task { await env.signOut() } }
-                .font(.roundedLabel(15, weight: .medium))
-                .foregroundStyle(.secondary)
+            Button {
+                Task { await env.signOut() }
+            } label: {
+                if env.isSigningOut {
+                    ProgressView()
+                } else {
+                    Text("Đăng xuất")
+                        .font(.roundedLabel(15, weight: .medium))
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .disabled(env.isSigningOut)
 
             Spacer()
         }

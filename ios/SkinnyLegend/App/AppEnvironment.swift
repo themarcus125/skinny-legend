@@ -38,6 +38,9 @@ final class AppEnvironment {
     private let log = Logger(subsystem: "com.themarcus125.skinnylegend", category: "locale")
 
     var session: SessionState = .loading
+    /// `signOut()` is running — the DELETE of the device row is bounded, but the sign-out
+    /// buttons still disable themselves and show progress for its duration.
+    private(set) var isSigningOut = false
 
     /// The user's language choice (spec §D). `.system` follows the device; `vi`/`en` pin it.
     /// This is local state — the server only ever sees the *resolved* `UserDTO.Locale`.
@@ -175,8 +178,12 @@ final class AppEnvironment {
 
     /// Unregisters the device first — while the ID token that `DELETE /me/devices` needs is still
     /// valid — so a signed-out phone stops receiving this account's reminders, and clears the
-    /// install-scoped push flags so the next account is asked afresh (spec §E).
+    /// install-scoped push flags so the next account starts from "reminders off" (spec §E). The
+    /// DELETE is bounded (`PushRegistrar.signOutDeadline`): an offline sign-out still signs out.
     func signOut() async {
+        guard !isSigningOut else { return }
+        isSigningOut = true
+        defer { isSigningOut = false }
         await push.resetForSignOut()
         try? auth.signOut()
         session = .signedOut
@@ -215,6 +222,9 @@ final class AppEnvironment {
     /// its own state rather than falling into the generic "Thử lại" failure screen.
     private func handle(_ error: APIError) {
         if error.isUnauthenticated {
+            // No ID token to DELETE the row with; the local flags still must not leak into the
+            // next account's session.
+            push.clearLocalState()
             try? auth.signOut()
             session = .signedOut
         } else if error.isDisabled {

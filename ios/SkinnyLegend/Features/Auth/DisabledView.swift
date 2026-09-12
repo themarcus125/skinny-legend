@@ -30,12 +30,19 @@ struct DisabledView: View {
             Button {
                 Task { await env.signOut() }
             } label: {
-                Text("Đăng xuất")
-                    .font(.roundedLabel(16))
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 52)
+                Group {
+                    if env.isSigningOut {
+                        ProgressView()
+                    } else {
+                        Text("Đăng xuất")
+                            .font(.roundedLabel(16))
+                    }
+                }
+                .frame(maxWidth: .infinity)
+                .frame(height: 52)
             }
             .buttonStyle(.glassProminent)
+            .disabled(env.isSigningOut)
             .padding(.horizontal, 24)
 
             Spacer()

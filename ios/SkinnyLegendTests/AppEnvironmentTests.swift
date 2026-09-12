@@ -6,6 +6,9 @@ import Foundation
 /// tested without touching Firebase or the network.
 private struct StubAPIClient: APIClient {
     var sessionResult: Result<UserDTO, APIError>
+    /// `unregisterDevice` runs this, then (when `deleteHangs`) never returns — an offline sign-out.
+    var onUnregister: (@Sendable () async -> Void)?
+    var deleteHangs = false
 
     func session() async throws -> UserDTO { try sessionResult.get() }
     func me() async throws -> UserDTO { try sessionResult.get() }
@@ -23,16 +26,33 @@ private struct StubAPIClient: APIClient {
     func entries(ofUser userID: String, cursor: String?) async throws -> EntryPage { EntryPage(entries: [], nextCursor: nil) }
     func sendFeedback(message: String, screenshotKey: String?, appVersion: String) async throws {}
     func registerDevice(token: String, platform: DevicePlatform, locale: DeviceLocale) async throws {}
-    func unregisterDevice(token: String) async throws {}
+    func unregisterDevice(token: String) async throws {
+        await onUnregister?()
+        if deleteHangs { try? await Task.sleep(for: .seconds(3600)) }
+    }
     func mapPins(days: Int) async throws -> MapPinsPage { MapPinsPage(pins: []) }
 }
 
 /// A registrar on mocks and a throwaway defaults suite, so no environment built in a test can
 /// reach the system permission prompt or the process-wide defaults. Shared with `AppLocaleTests`.
 @MainActor
-func stubPush(_ api: any APIClient) -> PushRegistrar {
+func stubPush(_ api: any APIClient, signOutDeadline: Duration = PushRegistrar.defaultSignOutDeadline) -> PushRegistrar {
     PushRegistrar(api: api, authorizer: MockPushAuthorizer(), tokens: MockPushTokenSource(),
-                  defaults: UserDefaults(suiteName: "env-tests-\(UUID().uuidString)")!, locale: .vi)
+                  defaults: UserDefaults(suiteName: "env-tests-\(UUID().uuidString)")!, locale: .vi,
+                  signOutDeadline: signOutDeadline)
+}
+
+/// Records each DELETE the stub saw, and what `AppEnvironment.isSigningOut` read at that moment.
+@MainActor
+private final class SignOutProbe {
+    weak var env: AppEnvironment?
+    var deleteCount = 0
+    var sawSigningOut = false
+
+    func record() {
+        deleteCount += 1
+        sawSigningOut = env?.isSigningOut ?? false
+    }
 }
 
 @MainActor
@@ -155,6 +175,48 @@ struct AppEnvironmentTests {
         let env = makeEnvironment(api: StubAPIClient(sessionResult: .failure(APIError.unauthenticated)), auth: MockAuthService(startSignedIn: true))
         await env.bootstrap()
         #expect(env.session == .signedOut)
+    }
+
+    @Test("The 401 teardown clears the push flags too, without a DELETE it has no token for")
+    func unauthenticatedClearsPushState() async {
+        let probe = SignOutProbe()
+        var api = StubAPIClient(sessionResult: .failure(APIError.unauthenticated))
+        api.onUnregister = { await MainActor.run { probe.record() } }
+        let env = makeEnvironment(api: api, auth: MockAuthService(startSignedIn: true))
+        #expect(await env.push.enable())
+        #expect(env.push.isEnabled)
+
+        await env.bootstrap()
+
+        #expect(env.session == .signedOut)
+        #expect(!env.push.isEnabled)
+        #expect(!env.push.isRegistrationPending)
+        #expect(env.push.registeredToken == nil)
+        #expect(probe.deleteCount == 0)
+    }
+
+    @Test("Sign-out is bounded when the DELETE hangs, and flags itself busy while it runs")
+    func signOutIsBoundedAndBusy() async {
+        let probe = SignOutProbe()
+        var api = StubAPIClient(sessionResult: .success(activeUser()))
+        api.deleteHangs = true
+        api.onUnregister = { await MainActor.run { probe.record() } }
+        let env = AppEnvironment(api: api, auth: MockAuthService(startSignedIn: true),
+                                 push: stubPush(api, signOutDeadline: .milliseconds(20)))
+        probe.env = env
+        await env.bootstrap()
+        #expect(await env.push.enable())
+        #expect(!env.isSigningOut)
+
+        let elapsed = await ContinuousClock().measure { await env.signOut() }
+
+        #expect(elapsed < .seconds(2))
+        #expect(probe.deleteCount == 1)
+        #expect(probe.sawSigningOut)
+        #expect(!env.isSigningOut)
+        #expect(env.session == .signedOut)
+        #expect(!env.push.isEnabled)
+        #expect(env.push.registeredToken == nil)
     }
 
     @Test("Signing out clears the session")

@@ -130,10 +130,17 @@ struct AccountView: View {
                 Button(role: .destructive) {
                     isSignOutConfirming = true
                 } label: {
-                    Label("Đăng xuất", systemImage: "rectangle.portrait.and.arrow.right")
-                        .font(.roundedLabel(16, weight: .medium))
+                    HStack {
+                        Label("Đăng xuất", systemImage: "rectangle.portrait.and.arrow.right")
+                            .font(.roundedLabel(16, weight: .medium))
+                        if env.isSigningOut {
+                            Spacer()
+                            ProgressView()
+                        }
+                    }
                 }
                 .buttonStyle(.plain)
+                .disabled(env.isSigningOut)
 
                 HStack {
                     Label("Phiên bản", systemImage: "info.circle")
