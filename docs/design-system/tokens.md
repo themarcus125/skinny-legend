@@ -80,6 +80,36 @@ Decisions (2026-09-14): accent **Vanilla** is the default; both **light and dark
 ## Dark (`.dark`, accent Vanilla)
 | Token | Value |
 |---|---|
+| `--bg` | `#171717` |
+| `--surface` | `#232325` |
+| `--surface2` | `#2B2B2E` |
+| `--elevated` | `#2F2F32` |
+| `--border` | `#3A3A3E` |
+| `--border-strong` | `#4C4C52` |
+| `--track` | `#3A3A3E` |
+| `--fg` | `var(--ghost)` |
+| `--fg-muted` | `#B4B4BB` |
+| `--fg-subtle` | `#8A8A93` |
+| `--fg-onaccent` | `var(--eerie)` |
+| `--primary` | `var(--vanilla)` |
+| `--primary-h` | `#F5F6BE` |
+| `--primary-a` | `#DEDF90` |
+| `--primary-soft` | `#3A3B24` |
+| `--primary-border` | `#55562F` |
+| `--success` | `#A9C6A4` |
+| `--success-soft` | `#2C3A2B` |
+| `--warning` | `#E0C57E` |
+| `--warning-soft` | `#3A3122` |
+| `--destructive` | `#E4A09A` |
+| `--destructive-h` | `#EDB4AF` |
+| `--destructive-a` | `#D28C86` |
+| `--destructive-soft` | `#3C2725` |
+| `--destructive-fg` | `var(--eerie)` |
+| `--info` | `#AABCD5` |
+| `--info-soft` | `#262E3A` |
+| `--sh1` | `0 1px 2px rgba(0,0,0,.5)` |
+| `--sh2` | `0 4px 14px rgba(0,0,0,.55),0 1px 3px rgba(0,0,0,.4)` |
+| `--sh3` | `0 18px 44px rgba(0,0,0,.65),0 3px 10px rgba(0,0,0,.45)` |
 
 
 ## Accent variants (not default)
