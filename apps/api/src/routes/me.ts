@@ -1,15 +1,34 @@
 import { Hono } from 'hono';
 import { and, eq } from 'drizzle-orm';
-import { schema, patchMeBody as patchMe, registerDeviceBody as registerDevice } from '@skinny/shared';
+import { schema, patchMeBody as patchMe, registerDeviceBody as registerDevice, type DeviceDto, type UserDto } from '@skinny/shared';
 import { db } from '../db.js';
 import { authenticate, requireActive, type AuthEnv } from '../middleware/auth.js';
 import { ApiError } from '../errors.js';
 import { validate } from '../validate.js';
 
+/**
+ * The DB rows carry `Date`s where the wire carries ISO strings. `c.json` would serialise
+ * them identically, but mapping explicitly is what lets the handlers be checked against
+ * the shared DTOs, so a column rename becomes a compile error instead of a client bug.
+ */
+function toUserDto(u: typeof schema.users.$inferSelect): UserDto {
+  return {
+    id: u.id, firebaseUid: u.firebaseUid, displayName: u.displayName, avatarKey: u.avatarKey,
+    role: u.role, status: u.status, locale: u.locale, createdAt: u.createdAt.toISOString(),
+  };
+}
+
+function toDeviceDto(d: typeof schema.deviceTokens.$inferSelect): DeviceDto {
+  return {
+    id: d.id, userId: d.userId, token: d.token, platform: d.platform, locale: d.locale,
+    createdAt: d.createdAt.toISOString(), lastSeenAt: d.lastSeenAt.toISOString(),
+  };
+}
+
 export const meRoutes = new Hono<AuthEnv>();
 meRoutes.use(authenticate);
 
-meRoutes.get('/', (c) => c.json({ user: c.get('user') }));
+meRoutes.get('/', (c) => c.json({ user: toUserDto(c.get('user')) }));
 
 meRoutes.patch('/', validate('json', patchMe), async (c) => {
   const me = c.get('user');
@@ -20,7 +39,7 @@ meRoutes.patch('/', validate('json', patchMe), async (c) => {
     throw new ApiError(403, 'forbidden', 'Avatar does not belong to you');
   }
   const [user] = await db.update(schema.users).set(patch).where(eq(schema.users.id, me.id)).returning();
-  return c.json({ user });
+  return c.json({ user: toUserDto(user!) });
 });
 
 // ---- push devices (spec §E)
@@ -43,7 +62,7 @@ meRoutes.post('/devices', validate('json', registerDevice), async (c) => {
       set: { userId: me.id, platform: body.platform, locale: body.locale, lastSeenAt: new Date() },
     })
     .returning();
-  return c.json({ device }, 201);
+  return c.json({ device: toDeviceDto(device!) }, 201);
 });
 
 meRoutes.delete('/devices/:token', async (c) => {

@@ -3,7 +3,8 @@ import { and, desc, eq, lt, ne } from 'drizzle-orm';
 import {
   computeScore, isoWeekKey, schema, toLocalDate,
   createEntryBody as createBody, patchEntryBody as patchBody, historyQuery,
-  type Category, type ConfirmedEntry, type LocalDate,
+  type Category, type ConfirmedEntry, type EntryDto, type EntryMutationResponse,
+  type HistoryEntryDto, type HistoryResponse, type LocalDate, type VerdictDto,
 } from '@skinny/shared';
 import { db } from '../db.js';
 import { ApiError } from '../errors.js';
@@ -24,7 +25,7 @@ const TAKEN_AT_FUTURE_TOLERANCE_MS = 10 * 60 * 1000;
 
 type EntryRow = typeof schema.entries.$inferSelect;
 
-export async function toEntryDto(row: EntryRow, categories: Category[]) {
+export async function toEntryDto(row: EntryRow, categories: Category[]): Promise<EntryDto> {
   return {
     id: row.id,
     userId: row.userId,
@@ -40,7 +41,7 @@ export async function toEntryDto(row: EntryRow, categories: Category[]) {
   };
 }
 
-function toVerdictDto(v: Verdict) {
+function toVerdictDto(v: Verdict): VerdictDto {
   return { categories: v.categories, healthy: v.healthy, confidence: v.confidence, reason: v.reason, model: v.model, failed: v.failed };
 }
 
@@ -141,7 +142,7 @@ export function entryRoutes(deps: EntryDeps) {
     // so an auto-confirmed entry is not counted twice against its own caps.
     const others = (await loadConfirmedEntries([user.id])).get(user.id) ?? [];
     const proj = await projection(challenge, entry, categories, others);
-    return c.json({ entry: await toEntryDto(entry, categories), verdict: toVerdictDto(verdict), ...proj }, 201);
+    return c.json({ entry: await toEntryDto(entry, categories), verdict: toVerdictDto(verdict), ...proj } satisfies EntryMutationResponse, 201);
   });
 
   r.patch('/:id', validate('param', uuidParam), validate('json', patchBody), async (c) => {
@@ -165,7 +166,7 @@ export function entryRoutes(deps: EntryDeps) {
 
     const others = (await loadConfirmedEntries([user.id])).get(user.id) ?? [];
     const proj = await projection(challenge, updated!, categories, others);
-    return c.json({ entry: await toEntryDto(updated!, categories), ...proj });
+    return c.json({ entry: await toEntryDto(updated!, categories), ...proj } satisfies EntryMutationResponse);
   });
 
   r.delete('/:id', validate('param', uuidParam), async (c) => {
@@ -188,7 +189,7 @@ export function entryRoutes(deps: EntryDeps) {
       ))
       .orderBy(desc(schema.entries.takenAt)).limit(HISTORY_PAGE_SIZE);
     const score = computeScore({ entries: (await loadConfirmedEntries([user.id])).get(user.id) ?? [], rules: challenge.rules, challenge: challenge.config, asOf: todayLocal(challenge.config) });
-    const entries = [];
+    const entries: HistoryEntryDto[] = [];
     for (const row of rows) {
       const cats = await categoriesOf(row.id);
       const points = score.scored.filter((s) => s.entryId === row.id).reduce((sum, s) => sum + s.points, 0);
@@ -196,7 +197,7 @@ export function entryRoutes(deps: EntryDeps) {
       entries.push({ ...(await toEntryDto(row, cats)), points, capped });
     }
     const nextCursor = rows.length === HISTORY_PAGE_SIZE ? rows[rows.length - 1]!.takenAt.toISOString() : null;
-    return c.json({ entries, nextCursor });
+    return c.json({ entries, nextCursor } satisfies HistoryResponse);
   });
 
   return r;

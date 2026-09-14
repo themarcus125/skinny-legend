@@ -112,3 +112,32 @@ describe('EntryDto', () => {
     expect(entry.categories).toEqual(['exercise']);
   });
 });
+
+describe('browser safety', () => {
+  // The web app imports `@skinny/shared/wire` and `@skinny/shared/scoring`; neither subpath
+  // may reach `db/schema.ts`, whose top level calls pgTable/pgEnum and pulls in drizzle.
+  const roots = ['src/wire', 'src/scoring'];
+
+  it('never imports drizzle or db/schema from the wire and scoring subpaths', async () => {
+    const { readdirSync, readFileSync } = await import('node:fs');
+    const { join } = await import('node:path');
+    const offenders: string[] = [];
+    for (const root of roots) {
+      const dir = new URL(`../${root}/`, import.meta.url).pathname;
+      for (const file of readdirSync(dir).filter((f) => f.endsWith('.ts'))) {
+        const src = readFileSync(join(dir, file), 'utf8');
+        if (/from '.*drizzle/.test(src) || /from '.*db\/schema/.test(src)) offenders.push(`${root}/${file}`);
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  it('declares the subpath exports and sideEffects: false', async () => {
+    const { readFileSync } = await import('node:fs');
+    const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
+    expect(pkg.sideEffects).toBe(false);
+    expect(pkg.exports['./wire']).toEqual({ types: './dist/wire/index.d.ts', import: './dist/wire/index.js' });
+    expect(pkg.exports['./scoring']).toEqual({ types: './dist/scoring/index.d.ts', import: './dist/scoring/index.js' });
+    expect(pkg.exports['.']).toEqual({ types: './dist/index.d.ts', import: './dist/index.js' });
+  });
+});

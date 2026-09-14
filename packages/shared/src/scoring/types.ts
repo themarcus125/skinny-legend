@@ -1,7 +1,7 @@
 import type { LocalDate } from '../dates.js';
 
-export type Category = 'exercise' | 'meal' | 'group';
-export const CATEGORIES: readonly Category[] = ['exercise', 'meal', 'group'] as const;
+export const CATEGORIES = ['exercise', 'meal', 'group'] as const;
+export type Category = (typeof CATEGORIES)[number];
 
 export interface ScoringRule {
   category: Category;

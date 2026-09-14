@@ -1,6 +1,11 @@
 import { Hono } from 'hono';
 import { and, desc, eq, gte, isNotNull, lt } from 'drizzle-orm';
-import { isoWeekKey, addDays, schema, feedQuery, mapQuery, historyQuery, type Category, type ScoreResult, CATEGORIES } from '@skinny/shared';
+import {
+  isoWeekKey, addDays, schema, feedQuery, mapQuery, historyQuery, CATEGORIES,
+  type Category, type DashboardDto, type FeedEntryDto, type FeedResponse, type HistoryResponse,
+  type LeaderboardResponse, type LeaderboardRowDto, type MapPinDto, type MapResponse,
+  type ScoreResult, type TrendsResponse, type UserSummaryDto,
+} from '@skinny/shared';
 import { db } from '../db.js';
 import { validate, uuidParam } from '../validate.js';
 import { authenticate, requireActive, type AuthEnv } from '../middleware/auth.js';
@@ -10,7 +15,7 @@ import { toEntryDto, HISTORY_PAGE_SIZE } from './entries.js';
 
 type UserRow = typeof schema.users.$inferSelect;
 
-async function userDto(u: UserRow) {
+async function userDto(u: UserRow): Promise<UserSummaryDto> {
   return { id: u.id, displayName: u.displayName, avatarUrl: u.avatarKey ? await storage.publicUrl(u.avatarKey) : null };
 }
 
@@ -34,11 +39,11 @@ readRoutes.get('/leaderboard', async (c) => {
   const today = todayLocal(challenge.config);
   const board = await scoreboard(challenge, today);
   const week = isoWeekKey(today);
-  const leaderboard = [];
+  const leaderboard: LeaderboardRowDto[] = [];
   for (const r of board) {
     leaderboard.push({ rank: r.rank, user: await userDto(r.user), total: r.score.total, weekPoints: pointsInWeek(r.score, week), isMe: r.user.id === me.id });
   }
-  return c.json({ leaderboard });
+  return c.json({ leaderboard } satisfies LeaderboardResponse);
 });
 
 readRoutes.get('/me/dashboard', async (c) => {
@@ -61,7 +66,7 @@ readRoutes.get('/me/dashboard', async (c) => {
     memberCount: board.length,
     capsHit: s.capsHit,
     remaining,
-  });
+  } satisfies DashboardDto);
 });
 
 readRoutes.get('/me/trends', async (c) => {
@@ -85,7 +90,7 @@ readRoutes.get('/me/trends', async (c) => {
   });
 
   const heatmap = Object.entries(mine.byDay).map(([date, v]) => ({ date, points: v.points })).sort((a, b) => a.date.localeCompare(b.date));
-  return c.json({ weeks, heatmap, byCategory: mine.byCategory, streakBonus: mine.streakBonus });
+  return c.json({ weeks, heatmap, byCategory: mine.byCategory, streakBonus: mine.streakBonus } satisfies TrendsResponse);
 });
 
 readRoutes.get('/feed', validate('query', feedQuery), async (c) => {
@@ -96,13 +101,13 @@ readRoutes.get('/feed', validate('query', feedQuery), async (c) => {
   const rows = await db.select({ entry: schema.entries, user: schema.users })
     .from(schema.entries).innerJoin(schema.users, eq(schema.users.id, schema.entries.userId))
     .where(where).orderBy(desc(schema.entries.createdAt)).limit(30);
-  const entries = [];
+  const entries: FeedEntryDto[] = [];
   for (const { entry, user } of rows) {
     const cats = (await db.select().from(schema.entryCategories).where(eq(schema.entryCategories.entryId, entry.id))).map((r) => r.category as Category);
     entries.push({ ...(await toEntryDto(entry, cats)), user: await userDto(user) });
   }
   const nextCursor = rows.length === 30 ? rows[rows.length - 1]!.entry.createdAt.toISOString() : null;
-  return c.json({ entries, nextCursor });
+  return c.json({ entries, nextCursor } satisfies FeedResponse);
 });
 
 readRoutes.get('/entries/map', validate('query', mapQuery), async (c) => {
@@ -112,12 +117,13 @@ readRoutes.get('/entries/map', validate('query', mapQuery), async (c) => {
     .from(schema.entries).innerJoin(schema.users, eq(schema.users.id, schema.entries.userId))
     .where(and(eq(schema.entries.status, 'confirmed'), eq(schema.users.status, 'active'), isNotNull(schema.entries.lat), isNotNull(schema.entries.lng), gte(schema.entries.takenAt, since)))
     .orderBy(desc(schema.entries.takenAt)).limit(500);
-  const pins = [];
+  // `lat`/`lng` are nullable columns, but the query filters both to NOT NULL.
+  const pins: MapPinDto[] = [];
   for (const { entry, user } of rows) {
     const cats = (await db.select().from(schema.entryCategories).where(eq(schema.entryCategories.entryId, entry.id))).map((r) => r.category as Category);
-    pins.push({ entryId: entry.id, lat: entry.lat, lng: entry.lng, placeName: entry.placeName, takenAt: entry.takenAt.toISOString(), localDate: entry.localDate, categories: cats, thumbUrl: entry.thumbKey ? await storage.publicUrl(entry.thumbKey) : null, user: await userDto(user) });
+    pins.push({ entryId: entry.id, lat: entry.lat!, lng: entry.lng!, placeName: entry.placeName, takenAt: entry.takenAt.toISOString(), localDate: entry.localDate, categories: cats, thumbUrl: entry.thumbKey ? await storage.publicUrl(entry.thumbKey) : null, user: await userDto(user) });
   }
-  return c.json({ pins });
+  return c.json({ pins } satisfies MapResponse);
 });
 
 readRoutes.get('/users/:id/entries', validate('param', uuidParam), validate('query', historyQuery), async (c) => {
@@ -130,11 +136,11 @@ readRoutes.get('/users/:id/entries', validate('param', uuidParam), validate('que
       ...(cursor ? [lt(schema.entries.takenAt, new Date(cursor))] : []),
     ))
     .orderBy(desc(schema.entries.takenAt)).limit(HISTORY_PAGE_SIZE);
-  const entries = [];
+  const entries: HistoryResponse['entries'] = [];
   for (const row of rows) {
     const cats = (await db.select().from(schema.entryCategories).where(eq(schema.entryCategories.entryId, row.id))).map((r) => r.category as Category);
     entries.push(await toEntryDto(row, cats));
   }
   const nextCursor = rows.length === HISTORY_PAGE_SIZE ? rows[rows.length - 1]!.takenAt.toISOString() : null;
-  return c.json({ entries, nextCursor });
+  return c.json({ entries, nextCursor } satisfies HistoryResponse);
 });

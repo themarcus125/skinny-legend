@@ -25,7 +25,7 @@ export type EntryStatus = (typeof ENTRY_STATUSES)[number];
 export type UserStatus = (typeof USER_STATUSES)[number];
 export type Role = (typeof ROLES)[number];
 
-export const categorySchema = z.enum(['exercise', 'meal', 'group']);
+export const categorySchema = z.enum(CATEGORIES);
 export const placeSourceSchema = z.enum(PLACE_SOURCES);
 export const localeSchema = z.enum(USER_LOCALES);
 export const platformSchema = z.enum(DEVICE_PLATFORMS);
