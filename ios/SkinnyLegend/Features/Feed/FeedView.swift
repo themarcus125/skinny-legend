@@ -8,6 +8,10 @@ struct FeedView: View {
     /// locale dependency of its own the way `Text(LocalizedStringKey)` does.
     @Environment(\.locale) private var locale
     @State private var model: FeedModel
+    /// Second half of the "Bản đồ" quick action (`AppRoute.map`): `DashboardView` pushed this
+    /// screen because the flag was up, and this consumes it to push the map on top.
+    @State private var isMapPushed = false
+    private let router = PushRouter.shared
     private let api: any APIClient
 
     init(api: any APIClient) {
@@ -40,6 +44,9 @@ struct FeedView: View {
         // once and never re-resolves when the in-app language changes; this one is recomputed
         // because the view declares `@Environment(\.locale)`.
         .navigationTitle(Localized.string("Nhật ký nhóm"))
+        .navigationDestination(isPresented: $isMapPushed) { MapScreen(api: api) }
+        // Consumed once, so navigating back to the feed by hand does not push the map again.
+        .onAppear { if router.consumeMap() { isMapPushed = true } }
         .task { if model.entries.isEmpty { await model.loadFirstPage() } }
         .refreshable { await model.loadFirstPage() }
         .toolbar {

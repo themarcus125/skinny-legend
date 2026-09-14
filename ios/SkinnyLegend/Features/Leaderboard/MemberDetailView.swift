@@ -31,10 +31,7 @@ struct MemberDetailView: View {
                             .foregroundStyle(.secondary)
                             .padding(.vertical, 24)
                     } else {
-                        ForEach(model.entries) { entry in
-                            MemberEntryRow(entry: entry)
-                                .task { await model.loadNextPageIfNeeded(after: entry) }
-                        }
+                        entriesCard
                         if model.hasMore {
                             ProgressView().padding(.vertical, 12)
                         }
@@ -49,6 +46,27 @@ struct MemberDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .task { if model.entries.isEmpty { await model.loadFirstPage() } }
         .refreshable { await model.loadFirstPage() }
+    }
+
+    /// One grouped section rather than a card per entry, borrowing the grammar of the Account
+    /// history list: a single glass surface whose rows are separated by hairline dividers.
+    /// The stack stays lazy so each row's `.task` — and therefore pagination — still fires only
+    /// as that row comes into view.
+    private var entriesCard: some View {
+        GlassCard(padding: 0) {
+            LazyVStack(spacing: 0) {
+                ForEach(Array(model.entries.enumerated()), id: \.element.id) { index, entry in
+                    if index > 0 {
+                        Divider().padding(.leading, 16)
+                    }
+                    MemberEntryRow(entry: entry)
+                        .task { await model.loadNextPageIfNeeded(after: entry) }
+                }
+            }
+            // The rows have no background of their own, so clip them to the card's shape
+            // rather than letting a thumbnail cross a rounded corner.
+            .clipShape(RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous))
+        }
     }
 
     private var headerCard: some View {
@@ -101,7 +119,8 @@ private struct MemberEntryRow: View {
             }
             Spacer()
         }
-        .padding(14)
-        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous))
+        // No glass of its own: the enclosing `GlassCard` is the single surface for every row.
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
     }
 }

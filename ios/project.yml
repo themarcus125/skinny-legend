@@ -23,7 +23,9 @@ packages:
   Firebase:
     url: https://github.com/firebase/firebase-ios-sdk
     minVersion: 12.0.0
-    maxVersion: 99.0.0
+    # SKI-83: pinned below 13 — Firebase 13 removed the `Messaging.token()` async API the
+    # push registrar is built on.
+    maxVersion: 12.99.0
   GoogleSignIn:
     url: https://github.com/google/GoogleSignIn-iOS
     minVersion: 8.0.0
@@ -73,6 +75,21 @@ targets:
         CFBundleURLTypes:
           - CFBundleURLSchemes:
               - $(GOOGLE_REVERSED_CLIENT_ID)
+        # Home Screen quick actions (long-press the icon). Titles are keys looked up in
+        # InfoPlist.xcstrings; the types are mirrored by `AppShortcut` in Swift.
+        UIApplicationShortcutItems:
+          - UIApplicationShortcutItemType: com.themarcus125.skinnylegend.track
+            UIApplicationShortcutItemTitle: Ghi nhận
+            UIApplicationShortcutItemIconSymbolName: camera.fill
+          - UIApplicationShortcutItemType: com.themarcus125.skinnylegend.leaderboard
+            UIApplicationShortcutItemTitle: Xếp hạng
+            UIApplicationShortcutItemIconSymbolName: trophy.fill
+          - UIApplicationShortcutItemType: com.themarcus125.skinnylegend.trends
+            UIApplicationShortcutItemTitle: Xu hướng
+            UIApplicationShortcutItemIconSymbolName: chart.bar.xaxis
+          - UIApplicationShortcutItemType: com.themarcus125.skinnylegend.map
+            UIApplicationShortcutItemTitle: Bản đồ
+            UIApplicationShortcutItemIconSymbolName: map
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.themarcus125.skinnylegend
@@ -82,6 +99,7 @@ targets:
         CURRENT_PROJECT_VERSION: "1"
         CODE_SIGN_ENTITLEMENTS: SkinnyLegend/SkinnyLegend.entitlements
         TARGETED_DEVICE_FAMILY: "1"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
 
   SkinnyLegendTests:
     type: bundle.unit-test

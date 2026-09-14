@@ -19,6 +19,42 @@
         }
       }
     },
+    "Bản đồ" : {
+      "comment" : "Home Screen quick action title.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Map"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bản đồ"
+          }
+        }
+      }
+    },
+    "Ghi nhận" : {
+      "comment" : "Home Screen quick action title.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Track"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ghi nhận"
+          }
+        }
+      }
+    },
     "NSCameraUsageDescription" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -66,6 +102,42 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Chọn ảnh buổi tập hoặc bữa ăn từ thư viện để ghi nhận điểm."
+          }
+        }
+      }
+    },
+    "Xu hướng" : {
+      "comment" : "Home Screen quick action title.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Trends"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Xu hướng"
+          }
+        }
+      }
+    },
+    "Xếp hạng" : {
+      "comment" : "Home Screen quick action title.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Leaderboard"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Xếp hạng"
           }
         }
       }

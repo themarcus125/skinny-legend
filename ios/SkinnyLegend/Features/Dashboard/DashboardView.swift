@@ -8,6 +8,10 @@ struct DashboardView: View {
     /// locale dependency of its own the way `Text(LocalizedStringKey)` does.
     @Environment(\.locale) private var locale
     @State private var model: DashboardModel
+    /// First half of the "Bản đồ" quick action (`AppRoute.map`): the router raises the flag,
+    /// this pushes the group feed, and `FeedView` consumes the flag to push the map.
+    @State private var isFeedPushed = false
+    private let router = PushRouter.shared
     private let apiClient: any APIClient
 
     init(api: any APIClient) {
@@ -38,6 +42,13 @@ struct DashboardView: View {
         // once and never re-resolves when the in-app language changes; this one is recomputed
         // because the view declares `@Environment(\.locale)`.
         .navigationTitle(Localized.string("Tổng quan"))
+        .navigationDestination(isPresented: $isFeedPushed) { FeedView(api: apiClient) }
+        // `onAppear` covers a cold launch, where the quick action is routed before this view
+        // exists; `onChange` covers a long-press while the app is already on this tab.
+        .onAppear { if router.isMapRequested { isFeedPushed = true } }
+        .onChange(of: router.isMapRequested) { _, isRequested in
+            if isRequested { isFeedPushed = true }
+        }
         .task { await model.load() }
         .refreshable { await model.load() }
     }
