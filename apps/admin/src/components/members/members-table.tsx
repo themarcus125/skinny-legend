@@ -63,7 +63,7 @@ export function MembersTable({
             <TableHead>{t('common.name')}</TableHead>
             <TableHead>{t('common.status')}</TableHead>
             <TableHead>{t('members.role')}</TableHead>
-            <TableHead>{t('members.joined')}</TableHead>
+            <TableHead className="text-right">{t('members.joined')}</TableHead>
             <TableHead className="text-right">{t('common.actions')}</TableHead>
           </TableRow>
         </TableHeader>
@@ -75,14 +75,19 @@ export function MembersTable({
             const actions = availableActions(user).filter((action) => !(isSelf && action.key === 'disable'));
             return (
               <TableRow key={user.id}>
-                <TableCell className="font-medium text-foreground">
-                  <span
-                    aria-hidden
-                    className="mr-2.5 inline-flex size-7 items-center justify-center rounded-full bg-secondary align-middle text-xs font-semibold text-secondary-foreground"
-                  >
-                    {user.displayName.charAt(0).toUpperCase()}
+                <TableCell>
+                  <span className="flex items-center gap-3">
+                    <span
+                      aria-hidden
+                      className="flex size-9 shrink-0 items-center justify-center rounded-full bg-surface-2 text-sm font-bold text-secondary-foreground"
+                    >
+                      {user.displayName.charAt(0).toUpperCase()}
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block truncate text-base font-semibold text-foreground">{user.displayName}</span>
+                      <span className="type-label block text-foreground-subtle">{t(ROLE_LABELS[user.role])}</span>
+                    </span>
                   </span>
-                  {user.displayName}
                 </TableCell>
                 <TableCell>
                   <Badge variant={STATUS_TONE[statusVariant(user.status)]}>{t(USER_STATUS_LABELS[user.status])}</Badge>
@@ -111,7 +116,7 @@ export function MembersTable({
                     </SelectContent>
                   </Select>
                 </TableCell>
-                <TableCell className="text-sm tabular-nums text-foreground-secondary">
+                <TableCell className="text-right text-sm tabular-nums text-foreground-secondary">
                   {formatDateTime(user.createdAt)}
                 </TableCell>
                 <TableCell className="space-x-2 text-right">
@@ -121,7 +126,7 @@ export function MembersTable({
                       size="sm"
                       variant={action.confirm ? 'outline' : 'default'}
                       className={
-                        action.confirm ? 'text-destructive hover:border-destructive/30 hover:bg-danger-soft' : undefined
+                        action.confirm ? 'text-destructive hover:border-destructive hover:bg-destructive-soft' : undefined
                       }
                       disabled={isPatching}
                       onClick={() => run(user, action)}

@@ -10,7 +10,7 @@ import { ENTRY_STATUS_LABELS } from '@/lib/labels';
 import { ALL, EMPTY_FILTER_FORM, type FilterForm } from './filters';
 
 /** The 36px rail is taller than the primitive's 32px, so pull the ink underline back onto its baseline. */
-const TAB_TRIGGER_CLASS = 'px-0 text-sm font-medium group-data-horizontal/tabs:after:-bottom-px';
+const TAB_TRIGGER_CLASS = 'px-0 text-sm font-semibold group-data-horizontal/tabs:after:-bottom-px';
 
 export function EntriesFilters({
   value,
@@ -43,7 +43,7 @@ export function EntriesFilters({
       {/* One flex unit so the fields wrap together (never a stray reset button) below ~1100px. */}
       <div className="flex flex-wrap items-end gap-x-4 gap-y-3">
         <div className="flex flex-col gap-1.5">
-          <label className="text-label font-medium text-secondary-foreground" htmlFor="filter-user">
+          <label className="type-label text-muted-foreground" htmlFor="filter-user">
             {t('common.member')}
           </label>
           <Select
@@ -66,7 +66,7 @@ export function EntriesFilters({
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <label className="text-label font-medium text-secondary-foreground" htmlFor="filter-from">
+          <label className="type-label text-muted-foreground" htmlFor="filter-from">
             {t('entries.from')}
           </label>
           <Input
@@ -79,7 +79,7 @@ export function EntriesFilters({
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <label className="text-label font-medium text-secondary-foreground" htmlFor="filter-to">
+          <label className="type-label text-muted-foreground" htmlFor="filter-to">
             {t('entries.to')}
           </label>
           <Input

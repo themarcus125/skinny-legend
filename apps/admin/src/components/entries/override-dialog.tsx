@@ -72,16 +72,16 @@ function OverrideDialogBody({
           <img
             src={entry.photoUrl}
             alt={t('entries.photoOf', { name: entry.user.displayName })}
-            className="h-40 w-full rounded-lg object-cover ring-1 ring-border sm:h-52"
+            className="h-40 w-full rounded-md object-cover ring-1 ring-border sm:h-52"
           />
 
           {entry.verdict?.reason ? (
-            <p className="rounded-lg bg-muted px-3 py-2 text-sm text-foreground-secondary">“{entry.verdict.reason}”</p>
+            <p className="rounded-md bg-surface-2 px-3 py-2 text-sm text-foreground-secondary">“{entry.verdict.reason}”</p>
           ) : null}
 
           <div className="space-y-1">
             {CATEGORIES.map((category) => (
-              <div key={category} className="flex h-10 items-center justify-between rounded-lg px-3 hover:bg-muted">
+              <div key={category} className="flex h-11 items-center justify-between rounded-md px-3 hover:bg-surface-2">
                 <label htmlFor={`cat-${category}`} className="text-base">
                   {t(CATEGORY_LABELS[category])}
                 </label>
@@ -95,7 +95,7 @@ function OverrideDialogBody({
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-label font-medium text-secondary-foreground" htmlFor="override-status">
+            <label className="type-label text-muted-foreground" htmlFor="override-status">
               {t('common.status')}
             </label>
             <Select items={statusItems} value={status} onValueChange={(next) => setStatus(next as EntryStatus)}>

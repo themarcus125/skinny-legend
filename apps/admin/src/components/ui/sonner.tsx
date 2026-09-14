@@ -30,10 +30,24 @@ const Toaster = ({ ...props }: ToasterProps) => {
       }}
       style={
         {
+          // Alert spec: soft semantic fill, matching ink, hairline border, radius md.
           "--normal-bg": "var(--popover)",
           "--normal-text": "var(--popover-foreground)",
           "--normal-border": "var(--border)",
+          "--success-bg": "var(--success-soft)",
+          "--success-text": "var(--success)",
+          "--success-border": "var(--success-soft)",
+          "--warning-bg": "var(--warning-soft)",
+          "--warning-text": "var(--warning)",
+          "--warning-border": "var(--warning-soft)",
+          "--error-bg": "var(--destructive-soft)",
+          "--error-text": "var(--destructive)",
+          "--error-border": "var(--destructive-soft)",
+          "--info-bg": "var(--info-soft)",
+          "--info-text": "var(--info)",
+          "--info-border": "var(--info-soft)",
           "--border-radius": "var(--radius)",
+          boxShadow: "var(--shadow-2)",
         } as React.CSSProperties
       }
       toastOptions={{

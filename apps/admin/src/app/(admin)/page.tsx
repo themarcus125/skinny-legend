@@ -26,7 +26,7 @@ const DEFAULT_START = '2026-09-08';
 const DEFAULT_END = '2026-12-25';
 
 const LINK_CLASS =
-  'rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring text-sm font-medium text-brand-fg hover:underline';
+  'rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring text-sm font-semibold text-foreground underline decoration-border-strong underline-offset-4 hover:decoration-foreground';
 
 function KpiTile({
   label,
@@ -48,22 +48,22 @@ function KpiTile({
   const t = useTranslations();
   return (
     <div className="rounded-xl border border-border bg-card px-5 py-4 shadow-card">
-      <p className="flex items-center gap-1.5 text-label font-medium text-muted-foreground">
+      <p className="type-label flex items-center gap-1.5 text-muted-foreground">
         {label}
-        {attention ? <span aria-hidden className="size-1.5 rounded-full bg-brand" /> : null}
+        {attention ? <span aria-hidden className="size-1.5 rounded-full bg-warning" /> : null}
       </p>
-      <p data-slot="kpi-value" className="mt-2 text-3xl font-semibold tracking-[-0.02em] text-foreground">
+      <p data-slot="kpi-value" className="type-h1 mt-3 text-foreground">
         {isPending ? (
-          <span className="inline-block h-8 w-16 animate-pulse rounded-md bg-muted motion-reduce:animate-none" />
+          <span className="inline-block h-8 w-16 animate-pulse rounded-md bg-surface-2 motion-reduce:animate-none" />
         ) : error ? (
           '—'
         ) : (
           value
         )}
       </p>
-      <p className={error ? 'mt-1 text-label text-danger-fg' : 'mt-1 text-label text-muted-foreground'}>
+      <p className={error ? 'mt-2 text-label text-destructive' : 'mt-2 text-label text-muted-foreground'}>
         {isPending ? (
-          <span className="inline-block h-[18px] w-24 animate-pulse rounded bg-muted align-top motion-reduce:animate-none" />
+          <span className="inline-block h-[18px] w-24 animate-pulse rounded bg-surface-2 align-top motion-reduce:animate-none" />
         ) : error ? (
           t(describeError(error))
         ) : (
@@ -79,7 +79,7 @@ function Initial({ name }: { name: string }) {
   return (
     <span
       aria-hidden
-      className="flex size-7 shrink-0 items-center justify-center rounded-full bg-secondary text-xs font-semibold text-secondary-foreground"
+      className="flex size-9 shrink-0 items-center justify-center rounded-full bg-surface-2 text-sm font-bold text-secondary-foreground"
     >
       {name.charAt(0).toUpperCase()}
     </span>
@@ -172,10 +172,10 @@ export default function OverviewPage() {
                 aria-valuemin={0}
                 aria-valuemax={progress.total}
                 aria-valuenow={progress.day}
-                className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-muted"
+                className="mt-4 h-2 w-full overflow-hidden rounded-full bg-track"
               >
                 <div
-                  className="h-full rounded-full bg-brand"
+                  className="h-full rounded-full bg-primary"
                   style={{ width: `${(progress.day / progress.total) * 100}%` }}
                 />
               </div>
@@ -186,7 +186,7 @@ export default function OverviewPage() {
         <div className="grid gap-6 lg:grid-cols-[3fr_2fr]">
           <Card>
             <CardHeader className="border-b">
-              <CardTitle>{t('todo')}</CardTitle>
+              <CardTitle className="type-h2">{t('todo')}</CardTitle>
               <CardDescription>{t('todoHint')}</CardDescription>
             </CardHeader>
             <CardContent className="px-0">
@@ -200,7 +200,7 @@ export default function OverviewPage() {
                   {pendingUsers.map((pending) => (
                     <li key={pending.id} className="flex items-center gap-3 px-5 py-3">
                       <Initial name={pending.displayName} />
-                      <span className="text-sm font-medium">{pending.displayName}</span>
+                      <span className="min-w-0 truncate text-base font-semibold">{pending.displayName}</span>
                       <Badge variant="warning">{tRoot(USER_STATUS_LABELS.pending)}</Badge>
                       <Link href="/members" className={`ml-auto ${LINK_CLASS}`}>
                         {tRoot('members.approve')}
@@ -209,7 +209,7 @@ export default function OverviewPage() {
                   ))}
                   {pendingEntries > 0 ? (
                     <li className="flex items-center gap-3 px-5 py-3">
-                      <span className="text-sm font-medium">{t('pendingEntriesTodo', { count: pendingEntries })}</span>
+                      <span className="text-base font-semibold">{t('pendingEntriesTodo', { count: pendingEntries })}</span>
                       <Link href="/entries" className={`ml-auto ${LINK_CLASS}`}>
                         {tRoot('common.view')}
                       </Link>
@@ -222,7 +222,7 @@ export default function OverviewPage() {
 
           <Card>
             <CardHeader className="border-b">
-              <CardTitle>{t('latestFeedback')}</CardTitle>
+              <CardTitle className="type-h2">{t('latestFeedback')}</CardTitle>
               <CardDescription>{t('latestFeedbackHint')}</CardDescription>
             </CardHeader>
             <CardContent className="px-0">
@@ -236,12 +236,12 @@ export default function OverviewPage() {
                   {feedback.slice(0, 3).map((item) => (
                     <li key={item.id} className="px-5 py-3">
                       <div className="flex items-center justify-between gap-3">
-                        <span className="text-sm font-medium">{item.user.displayName}</span>
-                        <span className="text-label tabular-nums text-muted-foreground">
+                        <span className="text-base font-semibold">{item.user.displayName}</span>
+                        <span className="type-label shrink-0 tabular-nums text-foreground-subtle">
                           {formatDateTime(item.createdAt)}
                         </span>
                       </div>
-                      <p className="mt-1 line-clamp-2 text-sm text-foreground-secondary">{item.message}</p>
+                      <p className="mt-1.5 line-clamp-2 text-sm text-foreground-secondary">{item.message}</p>
                     </li>
                   ))}
                 </ul>

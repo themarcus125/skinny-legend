@@ -236,7 +236,7 @@ export function RulesForm({
               ))}
 
               {form.formState.errors.rules?.root ? (
-                <p role="alert" className="rounded-lg bg-danger-soft px-3 py-2 text-sm text-danger-fg">
+                <p role="alert" className="rounded-md bg-destructive-soft px-3 py-2 text-sm font-medium text-destructive">
                   {form.formState.errors.rules.root.message}
                 </p>
               ) : null}

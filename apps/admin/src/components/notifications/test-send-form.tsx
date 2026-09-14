@@ -27,14 +27,14 @@ export function TestSendForm({
   return (
     <div className="flex flex-wrap items-end gap-3">
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="test-send-user" className="text-label font-medium text-muted-foreground">
+        <label htmlFor="test-send-user" className="type-label text-muted-foreground">
           {t('member')}
         </label>
         <select
           id="test-send-user"
           value={userId}
           onChange={(event) => setUserId(event.target.value)}
-          className="h-9 rounded-lg border border-input bg-card pr-2 pl-3 text-sm shadow-card transition-colors outline-none hover:border-border-strong focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+          className="h-11 rounded-md border border-input bg-card pr-2 pl-3 text-sm transition-colors outline-none hover:border-border-strong focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
         >
           <option value="">{t('placeholder')}</option>
           {candidates.map((user) => (

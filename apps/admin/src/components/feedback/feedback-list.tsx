@@ -14,15 +14,15 @@ export function FeedbackList({ items }: { items: FeedbackItem[] }) {
             <div className="flex items-center gap-2.5">
               <span
                 aria-hidden
-                className="flex size-7 items-center justify-center rounded-full bg-secondary text-xs font-semibold text-secondary-foreground"
+                className="flex size-9 items-center justify-center rounded-full bg-surface-2 text-sm font-bold text-secondary-foreground"
               >
                 {item.user.displayName.charAt(0).toUpperCase()}
               </span>
-              <p className="text-sm font-semibold">{item.user.displayName}</p>
+              <p className="text-base font-semibold">{item.user.displayName}</p>
             </div>
             <div className="flex items-center gap-2">
               {item.appVersion ? <Badge variant="secondary">{item.appVersion}</Badge> : null}
-              <span className="text-label tabular-nums text-muted-foreground">{formatDateTime(item.createdAt)}</span>
+              <span className="type-label shrink-0 tabular-nums text-foreground-subtle">{formatDateTime(item.createdAt)}</span>
             </div>
           </div>
           <p className="mt-2 whitespace-pre-wrap text-base text-foreground">{item.message}</p>
@@ -31,7 +31,7 @@ export function FeedbackList({ items }: { items: FeedbackItem[] }) {
               href={item.screenshotUrl}
               target="_blank"
               rel="noreferrer"
-              className="mt-2 inline-flex items-center gap-1.5 rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring text-sm font-medium text-brand-fg underline-offset-4 hover:underline"
+              className="mt-3 inline-flex items-center gap-1.5 rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring text-sm font-semibold text-foreground underline decoration-border-strong underline-offset-4 hover:decoration-foreground"
             >
               <ImageIcon aria-hidden className="size-4" />
               {t('viewScreenshot')}

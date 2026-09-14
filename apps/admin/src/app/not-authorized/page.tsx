@@ -7,12 +7,12 @@ export default function NotAuthorizedPage() {
   const t = useTranslations();
   return (
     <main className="flex min-h-dvh flex-col items-center justify-center bg-background p-8 text-center">
-      <div className="flex w-full max-w-md flex-col items-center gap-3 rounded-xl border border-border bg-card p-8 shadow-raised">
-        <h1 className="text-xl font-semibold tracking-[-0.01em]">{t('auth.notAuthorized')}</h1>
+      <div className="flex w-full max-w-md flex-col items-center gap-3 rounded-xl border border-border bg-card p-8 shadow-popover">
+        <h1 className="type-h2">{t('auth.notAuthorized')}</h1>
         <p className="text-base text-muted-foreground">
           {t.rich('auth.notAuthorizedHint', { code: (chunks) => <code>{chunks}</code> })}
         </p>
-        <Link href="/" className="rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring text-sm font-medium text-brand-fg underline-offset-4 hover:underline">
+        <Link href="/" className="rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring text-sm font-semibold text-foreground underline decoration-border-strong underline-offset-4 hover:decoration-foreground">
           {t('common.retry')}
         </Link>
         <SignOutButton />
