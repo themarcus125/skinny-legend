@@ -11,6 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { CATEGORIES, ENTRY_STATUSES, type AdminEntry, type Category, type EntryPatch, type EntryStatus } from '@/lib/api/types';
@@ -72,16 +73,16 @@ function OverrideDialogBody({
           <img
             src={entry.photoUrl}
             alt={t('entries.photoOf', { name: entry.user.displayName })}
-            className="h-40 w-full rounded-lg object-cover ring-1 ring-border sm:h-52"
+            className="h-40 w-full rounded-md object-cover ring-1 ring-border sm:h-52"
           />
 
           {entry.verdict?.reason ? (
-            <p className="rounded-lg bg-muted px-3 py-2 text-sm text-foreground-secondary">“{entry.verdict.reason}”</p>
+            <p className="rounded-md bg-surface-2 px-3 py-2 text-sm text-foreground-secondary">“{entry.verdict.reason}”</p>
           ) : null}
 
           <div className="space-y-1">
             {CATEGORIES.map((category) => (
-              <div key={category} className="flex h-10 items-center justify-between rounded-lg px-3 hover:bg-muted">
+              <div key={category} className="flex h-11 items-center justify-between rounded-md px-3 hover:bg-surface-2">
                 <label htmlFor={`cat-${category}`} className="text-base">
                   {t(CATEGORY_LABELS[category])}
                 </label>
@@ -95,9 +96,7 @@ function OverrideDialogBody({
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-label font-medium text-secondary-foreground" htmlFor="override-status">
-              {t('common.status')}
-            </label>
+            <Label htmlFor="override-status">{t('common.status')}</Label>
             <Select items={statusItems} value={status} onValueChange={(next) => setStatus(next as EntryStatus)}>
               <SelectTrigger id="override-status">
                 <SelectValue />

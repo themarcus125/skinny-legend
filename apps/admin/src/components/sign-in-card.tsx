@@ -18,20 +18,20 @@ export function SignInCard({ error }: { error?: string }) {
 
   return (
     <div className="flex min-h-dvh items-center justify-center bg-background p-8">
-      <Card className="w-full max-w-[380px] shadow-raised">
+      <Card className="w-full max-w-[380px] shadow-popover">
         <CardHeader className="items-center justify-items-center text-center">
           <span
             aria-hidden
-            className="mb-3 flex size-10 items-center justify-center rounded-xl bg-brand text-primary-foreground"
+            className="mb-3 flex size-12 items-center justify-center rounded-md bg-brand text-brand-foreground"
           >
             <FlameIcon className="size-5" />
           </span>
-          <CardTitle className="text-xl font-semibold tracking-[-0.01em]">Skinny Legend Admin</CardTitle>
+          <CardTitle className="type-h2">Skinny Legend Admin</CardTitle>
           <CardDescription className="text-base">{t('signInHint')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {error ? (
-            <p role="alert" className="rounded-lg bg-danger-soft px-3 py-2 text-sm text-danger-fg">
+            <p role="alert" className="rounded-md bg-destructive-soft px-3 py-2 text-sm font-medium text-destructive">
               {error}
             </p>
           ) : null}

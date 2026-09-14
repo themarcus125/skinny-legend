@@ -97,9 +97,8 @@ struct ProfileEditSheet: View {
                             }
                             PhotosPicker(selection: $pickerItem, matching: .images, photoLibrary: .shared()) {
                                 Text("Đổi ảnh đại diện")
-                                    .font(.roundedLabel(15))
                             }
-                            .buttonStyle(.glass)
+                            .buttonStyle(.ds(.secondary, size: .md))
                             .accessibilityLabel("Đổi ảnh đại diện")
                             .accessibilityHint("Nhấn để chọn ảnh từ thư viện")
                         }
@@ -110,20 +109,19 @@ struct ProfileEditSheet: View {
 
                 Section("Tên hiển thị") {
                     TextField("Tên hiển thị", text: $model.displayName)
-                        .font(.roundedLabel(17, weight: .medium))
+                        .typeStyle(.bodyMedium)
                         .textInputAutocapitalization(.words)
                         .accessibilityLabel("Tên hiển thị")
                 }
 
                 if let errorMessage = model.errorMessage {
                     Section {
-                        Text(errorMessage)
-                            .font(.roundedLabel(14, weight: .medium))
-                            .foregroundStyle(.red)
+                        AlertBanner(kind: .destructive, message: errorMessage)
                     }
                 }
             }
             .navigationTitle("Hồ sơ")
+            .tint(Theme.primary)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {

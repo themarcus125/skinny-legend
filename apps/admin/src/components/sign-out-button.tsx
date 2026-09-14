@@ -1,6 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { LogOutIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/lib/auth/auth-context';
@@ -30,6 +31,7 @@ export function SignOutButton({
 
   return (
     <Button variant={variant} size={size} className={className} onClick={() => void handleClick()}>
+      <LogOutIcon aria-hidden className="size-4 shrink-0" />
       {t('signOut')}
     </Button>
   );

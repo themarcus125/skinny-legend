@@ -27,7 +27,7 @@ struct SignInBackground: View {
         Group {
             switch effectiveMode {
             case .gradient:
-                WarmBackground()
+                AppBackground()
             case .video:
                 ZStack {
                     LoopingVideoBackground(url: Self.assetURL!, isActive: scenePhase == .active, onFailure: { failed = true })

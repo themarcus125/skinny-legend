@@ -15,6 +15,9 @@
     "subtitle": "Bảng quản trị",
     "mock": "Chế độ mock",
     "language": "Ngôn ngữ",
+    "theme": "Giao diện",
+    "light": "Sáng",
+    "dark": "Tối",
     "vi": "Tiếng Việt",
     "en": "English"
   },

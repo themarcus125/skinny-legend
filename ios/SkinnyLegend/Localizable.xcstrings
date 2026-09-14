@@ -67,6 +67,17 @@
         }
       }
     },
+    "%lld trên 7 ngày của chuỗi hiện tại" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld of 7 days in the current streak"
+          }
+        }
+      }
+    },
     "+%lld so với hôm qua" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -96,6 +107,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "AI is looking at the photo…"
+          }
+        }
+      }
+    },
+    "BẠN" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "YOU"
           }
         }
       }
@@ -394,6 +416,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Longest: %lld days"
+          }
+        }
+      }
+    },
+    "Dùng dữ liệu mẫu" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Use sample data"
           }
         }
       }
@@ -1270,6 +1303,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Sat"
+          }
+        }
+      }
+    },
+    "Thoát dữ liệu mẫu" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Leave sample data"
           }
         }
       }

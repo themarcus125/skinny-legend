@@ -5,6 +5,7 @@ struct SignInView: View {
     @Environment(AppEnvironment.self) private var env
     @State private var errorMessage: String?
     @State private var isWorking = false
+    private let modeStore = AppModeStore.shared
 
     /// The mode `SignInBackground` is actually rendering (it reports player failures back through
     /// this binding). Seeded with the same rule the background uses so the first frame already matches.
@@ -34,52 +35,66 @@ struct SignInView: View {
                 VStack(spacing: 14) {
                     Image(systemName: "flame.fill")
                         .font(.system(size: 72, weight: .bold))
-                        .foregroundStyle(LinearGradient(colors: [Theme.ember, Theme.flame], startPoint: .top, endPoint: .bottom))
+                        .foregroundStyle(Theme.primarySoft)
                     Text("Operation\nSkinny Legend")
-                        .font(.roundedLabel(34, weight: .heavy))
+                        .typeStyle(.h1)
                         .foregroundStyle(Self.textColor(for: backgroundMode))
                         .multilineTextAlignment(.center)
                     Text("Chụp ảnh, ghi điểm, giữ chuỗi.")
-                        .font(.roundedLabel(16, weight: .medium))
+                        .typeStyle(.bodyMedium)
                         .foregroundStyle(Self.secondaryTextColor(for: backgroundMode))
                 }
 
                 Spacer()
 
-                VStack(spacing: 12) {
+                VStack(spacing: Theme.Space.x3) {
+                    // Apple requires its own control, so the two sign-in buttons are matched by
+                    // geometry instead: both are `lg` (54 pt) and clipped to radius `lg`.
                     SignInWithAppleButton(.signIn) { request in
                         env.auth.prepareAppleRequest(request)
                     } onCompletion: { result in
                         run { try await env.auth.completeAppleSignIn(result) }
                     }
                     .signInWithAppleButtonStyle(.black)
-                    .frame(height: 52)
-                    .clipShape(Capsule())
+                    .frame(height: Theme.ControlHeight.lg)
+                    .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.lg, style: .continuous))
 
                     Button {
                         run { try await env.auth.signInWithGoogle() }
                     } label: {
                         Label("Đăng nhập với Google", systemImage: "g.circle.fill")
-                            .font(.roundedLabel(17))
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 52)
                     }
-                    .buttonStyle(.glass)
+                    .buttonStyle(.ds(.primary, size: .lg, fullWidth: true))
                     .disabled(!env.auth.isGoogleAvailable)
 
+                    // Only ever shown when `GoogleService-Info.plist` carries no CLIENT_ID.
                     if !env.auth.isGoogleAvailable {
                         Text("Đăng nhập Google chưa được cấu hình trên bản dựng này.")
-                            .font(.roundedLabel(12, weight: .medium))
+                            .typeStyle(.caption)
                             .foregroundStyle(Self.secondaryTextColor(for: backgroundMode))
                             .multilineTextAlignment(.center)
                     }
 
                     if let errorMessage {
                         Text(errorMessage)
-                            .font(.roundedLabel(13, weight: .medium))
-                            .foregroundStyle(.red)
+                            .typeStyle(.caption)
+                            .foregroundStyle(Theme.destructive)
                             .multilineTextAlignment(.center)
                     }
+
+                    #if DEBUG
+                    // Debug builds only: run the whole app against `MockAPIClient` without a
+                    // relaunch, so the UI can be worked on with no backend and no Firebase.
+                    Button {
+                        modeStore.enterMockMode(outgoing: env.push)
+                    } label: {
+                        // The label carries its own colour: over the video the ghost variant's
+                        // ink `primary` would be invisible.
+                        Text("Dùng dữ liệu mẫu")
+                            .foregroundStyle(Self.textColor(for: backgroundMode))
+                    }
+                    .buttonStyle(.ds(.ghost, size: .md, fullWidth: true))
+                    #endif
                 }
                 .disabled(isWorking)
                 .overlay { if isWorking { ProgressView() } }

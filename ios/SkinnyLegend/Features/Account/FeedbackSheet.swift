@@ -84,7 +84,7 @@ struct FeedbackSheet: View {
             Form {
                 Section("Góp ý của bạn") {
                     TextEditor(text: $model.message)
-                        .font(.roundedLabel(16, weight: .medium))
+                        .typeStyle(.bodyMedium)
                         .frame(minHeight: 140)
                 }
 
@@ -98,31 +98,30 @@ struct FeedbackSheet: View {
                                 .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                             Spacer()
                             Button("Bỏ ảnh", role: .destructive) { model.removeScreenshot() }
-                                .font(.roundedLabel(14))
+                                .typeStyle(.caption)
                         }
                     } else {
                         PhotosPicker(selection: $pickerItem, matching: .images, photoLibrary: .shared()) {
                             Label("Chọn ảnh", systemImage: "photo.on.rectangle")
-                                .font(.roundedLabel(16))
+                                .typeStyle(.bodyMedium)
                         }
                     }
                 }
 
                 if let errorMessage = model.errorMessage {
                     Section {
-                        Text(errorMessage)
-                            .font(.roundedLabel(14, weight: .medium))
-                            .foregroundStyle(.red)
+                        AlertBanner(kind: .destructive, message: errorMessage)
                     }
                 }
 
                 Section {
                     Text("Phiên bản \(AppMode.appVersion) sẽ được gửi kèm.")
-                        .font(.roundedLabel(12, weight: .medium))
-                        .foregroundStyle(.secondary)
+                        .typeStyle(.caption)
+                        .foregroundStyle(Theme.fgMuted)
                 }
             }
             .navigationTitle("Gửi góp ý")
+            .tint(Theme.primary)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {

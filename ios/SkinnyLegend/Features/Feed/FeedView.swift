@@ -21,7 +21,7 @@ struct FeedView: View {
 
     var body: some View {
         ZStack {
-            WarmBackground()
+            AppBackground()
             if model.entries.isEmpty && model.isLoading {
                 ProgressView()
             } else if model.entries.isEmpty, let errorMessage = model.errorMessage {
@@ -31,11 +31,13 @@ struct FeedView: View {
                     Text(errorMessage)
                 } actions: {
                     Button("Thử lại") { Task { await model.loadFirstPage() } }
-                        .buttonStyle(.glassProminent)
+                        .buttonStyle(.ds(.primary, size: .md))
                 }
+                .emptyStateStyle()
             } else if model.entries.isEmpty {
                 ContentUnavailableView("Chưa có hoạt động nào", systemImage: "photo.stack",
                                        description: Text("Khi cả nhóm ghi nhận hoạt động, chúng sẽ xuất hiện ở đây."))
+                    .emptyStateStyle()
             } else {
                 list
             }
@@ -95,32 +97,36 @@ private struct FeedRow: View {
                     AvatarView(url: entry.user.avatarUrl, displayName: entry.user.displayName, size: 34)
                     VStack(alignment: .leading, spacing: 1) {
                         Text(entry.user.displayName)
-                            .font(.roundedLabel(15, weight: .bold))
+                            .typeStyle(.h3)
+                            .foregroundStyle(Theme.fg)
                         Text(LocalDay.display(entry.localDate))
-                            .font(.roundedLabel(12, weight: .medium))
-                            .foregroundStyle(.secondary)
+                            .typeStyle(.caption)
+                            .foregroundStyle(Theme.fgMuted)
                     }
                     Spacer()
                 }
 
-                GlassEffectContainer(spacing: 8) {
-                    FlowLayout(spacing: 8, rowSpacing: 8) {
-                        ForEach(entry.categories) { category in
-                            CategoryChip(category: category)
-                        }
+                FlowLayout(spacing: 8, rowSpacing: 8) {
+                    ForEach(entry.categories) { category in
+                        CategoryChip(category: category)
                     }
                 }
 
                 if let placeName = entry.placeName {
                     Label(placeName, systemImage: "mappin.circle.fill")
-                        .font(.roundedLabel(13, weight: .medium))
-                        .foregroundStyle(.secondary)
+                        .typeStyle(.caption)
+                        .foregroundStyle(Theme.fgMuted)
                         .lineLimit(1)
                 }
             }
             .padding(16)
         }
-        .background(.thinMaterial)
+        .background(Theme.surface)
         .clipShape(RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
+                .strokeBorder(Theme.border, lineWidth: 1)
+        }
+        .elevation(.e1)
     }
 }

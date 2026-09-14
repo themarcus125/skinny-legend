@@ -16,11 +16,12 @@ struct PlacePickerSheet: View {
                         } label: {
                             HStack {
                                 Label(place.name, systemImage: "mappin.circle.fill")
-                                    .font(.roundedLabel(16, weight: .medium))
+                                    .typeStyle(.bodyMedium)
+                                    .foregroundStyle(Theme.fg)
                                 Spacer()
                                 if resolver.selected?.name == place.name {
                                     Image(systemName: "checkmark")
-                                        .foregroundStyle(Theme.flame)
+                                        .foregroundStyle(Theme.primary)
                                 }
                             }
                         }
@@ -28,8 +29,8 @@ struct PlacePickerSheet: View {
                     }
                     if resolver.candidates.isEmpty {
                         Text("Không tìm thấy địa điểm nào gần đây.")
-                            .font(.roundedLabel(15, weight: .medium))
-                            .foregroundStyle(.secondary)
+                            .typeStyle(.bodyMedium)
+                            .foregroundStyle(Theme.fgMuted)
                     }
                 }
                 Section {
@@ -59,43 +60,42 @@ struct PlaceChip: View {
 
     var body: some View {
         if resolver.isResolving {
-            HStack(spacing: 8) {
-                ProgressView().controlSize(.small)
+            HStack(spacing: Theme.Space.x2) {
+                ProgressView().controlSize(.small).tint(Theme.primary)
                 Text("Đang tìm địa điểm…")
-                    .font(.roundedLabel(14, weight: .medium))
-                    .foregroundStyle(.secondary)
+                    .typeStyle(.caption)
+                    .foregroundStyle(Theme.fgMuted)
             }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 9)
-            .glassEffect(.regular, in: Capsule())
+            .padding(.horizontal, Theme.Space.x3)
+            .padding(.vertical, Theme.Space.x2)
+            .background(Theme.surface2, in: Capsule())
+            .overlay { Capsule().strokeBorder(Theme.border, lineWidth: 1) }
         } else if let place = resolver.selected {
-            GlassEffectContainer(spacing: 8) {
-                HStack(spacing: 8) {
-                    Label(place.name, systemImage: "mappin.circle.fill")
-                        .font(.roundedLabel(14, weight: .medium))
-                        .lineLimit(1)
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 9)
-                        .glassEffect(.regular, in: Capsule())
+            HStack(spacing: Theme.Space.x2) {
+                Label(place.name, systemImage: "mappin.circle.fill")
+                    .typeStyle(.caption)
+                    .foregroundStyle(Theme.fgMuted)
+                    .lineLimit(1)
+                    .padding(.horizontal, Theme.Space.x3)
+                    .padding(.vertical, Theme.Space.x2)
+                    .background(Theme.surface2, in: Capsule())
+                    .overlay { Capsule().strokeBorder(Theme.border, lineWidth: 1) }
 
-                    Button("Đổi") { isPickerPresented = true }
-                        .font(.roundedLabel(14))
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 9)
-                        .glassEffect(.regular.tint(Theme.flame.opacity(0.45)).interactive(), in: Capsule())
-                        .buttonStyle(.plain)
+                Button("Đổi") { isPickerPresented = true }
+                    .buttonStyle(.ds(.secondary, size: .sm))
 
-                    Button {
-                        resolver.clear()
-                    } label: {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 12, weight: .bold))
-                            .padding(11)
-                    }
-                    .buttonStyle(.plain)
-                    .glassEffect(.regular.interactive(), in: Circle())
-                    .accessibilityLabel("Bỏ địa điểm")
+                Button {
+                    resolver.clear()
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(Theme.fgMuted)
+                        .frame(width: Theme.ControlHeight.sm, height: Theme.ControlHeight.sm)
+                        .background(Theme.surface2, in: Circle())
+                        .overlay { Circle().strokeBorder(Theme.border, lineWidth: 1) }
                 }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Bỏ địa điểm")
             }
             .sheet(isPresented: $isPickerPresented) {
                 PlacePickerSheet(resolver: resolver)

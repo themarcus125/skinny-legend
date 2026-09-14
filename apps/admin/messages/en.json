@@ -15,6 +15,9 @@
     "subtitle": "Admin console",
     "mock": "Mock mode",
     "language": "Language",
+    "theme": "Theme",
+    "light": "Light",
+    "dark": "Dark",
     "vi": "Tiếng Việt",
     "en": "English"
   },

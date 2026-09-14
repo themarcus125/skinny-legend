@@ -19,7 +19,7 @@ function avatarIcon(marker: PinMarker): L.DivIcon {
     ? `<img src="${marker.avatarUrl}" alt="" style="width:100%;height:100%;object-fit:cover;" />`
     : `<span style="font:600 13px/1 var(--font-sans, system-ui), sans-serif;">${initial}</span>`;
   return L.divIcon({
-    html: `<div style="display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:9999px;overflow:hidden;background:var(--brand);color:var(--primary-foreground);box-shadow:0 0 0 2px var(--card, #fff),0 1px 3px rgba(0,0,0,.28);">${inner}</div>`,
+    html: `<div style="display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:9999px;overflow:hidden;background:var(--brand);color:var(--brand-foreground);box-shadow:0 0 0 2px var(--card),0 1px 3px rgba(0,0,0,.28);">${inner}</div>`,
     className: '',
     iconSize: [36, 36],
     iconAnchor: [18, 18],
@@ -50,7 +50,7 @@ export default function EntryMap({ pins }: { pins: MapPin[] }) {
       center={HCMC_CENTER}
       zoom={12}
       scrollWheelZoom
-      className="h-[70vh] min-h-[420px] w-full rounded-xl border border-border"
+      className="h-[70vh] min-h-[420px] w-full overflow-hidden rounded-xl border border-border shadow-card"
     >
       <TileLayer
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -66,10 +66,10 @@ export default function EntryMap({ pins }: { pins: MapPin[] }) {
                 <img
                   src={marker.thumbUrl}
                   alt={t('photoAlt', { date: formatLocalDate(marker.date) })}
-                  className="h-24 w-full rounded-md object-cover"
+                  className="h-24 w-full rounded-sm object-cover"
                 />
               ) : null}
-              <p className="text-sm font-semibold text-foreground">{marker.label}</p>
+              <p className="text-sm font-semibold text-popover-foreground">{marker.label}</p>
               <CategoryChips categories={marker.categories} />
             </div>
           </Popup>

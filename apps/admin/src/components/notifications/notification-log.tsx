@@ -21,15 +21,15 @@ export function NotificationLog({ items }: { items: NotificationLogItem[] }) {
       <TableBody>
         {items.map((item) => (
           <TableRow key={item.id}>
-            <TableCell className="font-medium">{item.user.displayName}</TableCell>
+            <TableCell className="text-base font-semibold text-foreground">{item.user.displayName}</TableCell>
             <TableCell>
-              <Badge variant="secondary">{t(`kinds.${item.kind}`)}</Badge>
+              <Badge variant="info">{t(`kinds.${item.kind}`)}</Badge>
             </TableCell>
             <TableCell className="max-w-[28rem]">
-              <p className="font-medium">{item.payload.title}</p>
-              <p className="text-sm text-muted-foreground">{item.payload.body}</p>
+              <p className="font-semibold text-foreground">{item.payload.title}</p>
+              <p className="text-sm text-foreground-secondary">{item.payload.body}</p>
             </TableCell>
-            <TableCell className="tabular-nums text-muted-foreground">{formatDateTime(item.sentAt)}</TableCell>
+            <TableCell className="tabular-nums text-foreground-secondary">{formatDateTime(item.sentAt)}</TableCell>
           </TableRow>
         ))}
       </TableBody>

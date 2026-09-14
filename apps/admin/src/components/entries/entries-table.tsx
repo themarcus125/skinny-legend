@@ -50,13 +50,13 @@ export function EntriesTable({
                     height={44}
                     loading="lazy"
                     decoding="async"
-                    className="size-11 rounded-lg object-cover ring-1 ring-border"
+                    className="size-11 rounded-md object-cover ring-1 ring-border"
                   />
                 ) : (
-                  <div className="size-11 rounded-lg bg-muted" role="img" aria-label={t('entries.noThumb')} />
+                  <div className="size-11 rounded-md bg-surface-2" role="img" aria-label={t('entries.noThumb')} />
                 )}
               </TableCell>
-              <TableCell className="font-medium text-foreground">{entry.user.displayName}</TableCell>
+              <TableCell className="text-base font-semibold text-foreground">{entry.user.displayName}</TableCell>
               <TableCell className="text-sm tabular-nums text-foreground-secondary">
                 {formatLocalDate(entry.localDate)}
               </TableCell>
@@ -77,7 +77,7 @@ export function EntriesTable({
                   {summary}
                 </span>
                 {entry.verdict?.reason ? (
-                  <span className="block truncate text-label text-muted-foreground" title={entry.verdict.reason}>
+                  <span className="block truncate text-label text-foreground-secondary" title={entry.verdict.reason}>
                     {entry.verdict.reason}
                   </span>
                 ) : null}
@@ -89,7 +89,7 @@ export function EntriesTable({
                 <Button
                   size="sm"
                   variant="outline"
-                  className="text-destructive hover:border-destructive/30 hover:bg-danger-soft"
+                  className="text-destructive hover:border-destructive hover:bg-destructive-soft"
                   disabled={isMutating || entry.status === 'rejected'}
                   onClick={() => onReject(entry)}
                 >

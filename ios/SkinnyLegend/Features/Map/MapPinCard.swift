@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Detail sheet for a single map pin. `FeedRow` (Features/Feed/FeedView.swift) is `private` with
 /// no tap target of its own, so this rebuilds the same visual grammar — photo, author, categories,
-/// place — as a standalone `GlassCard` sheet instead of reusing it.
+/// place — as a standalone `SurfaceCard` sheet instead of reusing it.
 struct MapPinCard: View {
     /// Declared so this body re-runs when the Account picker changes the language: it renders
     /// `String`s from `Localized` (labels, `LocalDay.display`), and `Text(String)` carries no
@@ -22,7 +22,7 @@ struct MapPinCard: View {
     /// Scrolls inside the sheet: a 16:9 photo, header, wrapped chips and place can exceed the
     /// medium detent on smaller devices.
     private var card: some View {
-        GlassCard(padding: 0) {
+        SurfaceCard(padding: 0) {
             VStack(alignment: .leading, spacing: 0) {
                 RemoteImage(url: pin.thumbUrl)
                     .aspectRatio(16.0 / 9.0, contentMode: .fill)
@@ -34,26 +34,25 @@ struct MapPinCard: View {
                         AvatarView(url: pin.user.avatarUrl, displayName: pin.user.displayName, size: 34)
                         VStack(alignment: .leading, spacing: 1) {
                             Text(pin.user.displayName)
-                                .font(.roundedLabel(15, weight: .bold))
+                                .typeStyle(.h3)
+                                .foregroundStyle(Theme.fg)
                             Text(LocalDay.display(pin.localDate))
-                                .font(.roundedLabel(12, weight: .medium))
-                                .foregroundStyle(.secondary)
+                                .typeStyle(.caption)
+                                .foregroundStyle(Theme.fgMuted)
                         }
                         Spacer()
                     }
 
-                    GlassEffectContainer(spacing: 8) {
-                        FlowLayout(spacing: 8, rowSpacing: 8) {
-                            ForEach(pin.categories) { category in
-                                CategoryChip(category: category)
-                            }
+                    FlowLayout(spacing: 8, rowSpacing: 8) {
+                        ForEach(pin.categories) { category in
+                            CategoryChip(category: category)
                         }
                     }
 
                     if let placeName = pin.placeName {
                         Label(placeName, systemImage: "mappin.circle.fill")
-                            .font(.roundedLabel(13, weight: .medium))
-                            .foregroundStyle(.secondary)
+                            .typeStyle(.caption)
+                            .foregroundStyle(Theme.fgMuted)
                             .lineLimit(1)
                     }
                 }

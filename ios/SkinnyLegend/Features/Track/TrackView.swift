@@ -31,7 +31,7 @@ struct TrackView: View {
 
     var body: some View {
         ZStack {
-            WarmBackground()
+            AppBackground()
             ScrollView {
                 VStack(spacing: 20) {
                     header
@@ -138,13 +138,14 @@ struct TrackView: View {
     }
 
     private var header: some View {
-        GlassCard {
+        SurfaceCard {
             VStack(alignment: .leading, spacing: 8) {
                 Text("Hôm nay bạn đã làm gì?")
-                    .font(.roundedLabel(22, weight: .bold))
+                    .typeStyle(.h2)
+                    .foregroundStyle(Theme.fg)
                 Text("Chụp buổi tập, bữa ăn lành mạnh hoặc hoạt động nhóm — mỗi ảnh một lần ghi điểm.")
-                    .font(.roundedLabel(14, weight: .medium))
-                    .foregroundStyle(.secondary)
+                    .typeStyle(.caption)
+                    .foregroundStyle(Theme.fgMuted)
             }
         }
     }
@@ -164,10 +165,15 @@ struct TrackView: View {
                 } label: {
                     Image(systemName: "xmark")
                         .font(.system(size: 13, weight: .bold))
-                        .padding(9)
+                        .foregroundStyle(Theme.fg)
+                        .padding(10)
+                        .background(Theme.surface, in: Circle())
+                        .overlay { Circle().strokeBorder(Theme.border, lineWidth: 1) }
+                        .elevation(.e1)
                 }
-                .buttonStyle(.glass)
+                .buttonStyle(.plain)
                 .padding(10)
+                .accessibilityLabel("Bỏ ảnh")
             }
     }
 
@@ -177,48 +183,48 @@ struct TrackView: View {
         case .idle:
             EmptyView()
         case .preparing:
-            GlassCard {
+            SurfaceCard {
                 Label("Đang nén ảnh…", systemImage: "wand.and.sparkles")
-                    .font(.roundedLabel(15))
+                    .typeStyle(.bodyMedium)
+                    .foregroundStyle(Theme.fgMuted)
             }
         case .uploading(let fraction):
-            GlassCard {
-                VStack(alignment: .leading, spacing: 10) {
+            SurfaceCard {
+                VStack(alignment: .leading, spacing: Theme.Space.x3) {
                     Text("Đang tải ảnh lên… \(Int(fraction * 100))%")
-                        .font(.roundedLabel(15))
-                    ProgressView(value: fraction)
-                        .tint(Theme.flame)
+                        .typeStyle(.bodyMedium)
+                        .foregroundStyle(Theme.fg)
+                    ProgressBar(progress: fraction)
                 }
             }
         case .uploaded:
-            GlassCard {
+            SurfaceCard {
                 Label("Đã tải ảnh lên", systemImage: "checkmark.circle.fill")
-                    .font(.roundedLabel(15))
-                    .foregroundStyle(Theme.meal)
+                    .typeStyle(.bodyMedium)
+                    .foregroundStyle(Theme.success)
             }
         case .analyzing:
-            GlassCard {
-                HStack(spacing: 10) {
-                    ProgressView().controlSize(.small)
+            SurfaceCard {
+                HStack(spacing: Theme.Space.x3) {
+                    ProgressView().controlSize(.small).tint(Theme.primary)
                     Text("AI đang xem ảnh…")
-                        .font(.roundedLabel(15))
+                        .typeStyle(.bodyMedium)
+                        .foregroundStyle(Theme.fg)
                 }
             }
         case .ready:
-            GlassCard {
+            SurfaceCard {
                 Label("Đã phân tích xong", systemImage: "sparkles")
-                    .font(.roundedLabel(15))
-                    .foregroundStyle(Theme.ember)
+                    .typeStyle(.bodyMedium)
+                    .foregroundStyle(Theme.info)
             }
         case .failed(let message):
-            GlassCard {
-                VStack(alignment: .leading, spacing: 12) {
-                    Label(message, systemImage: "exclamationmark.triangle.fill")
-                        .font(.roundedLabel(15))
-                        .foregroundStyle(Theme.flame)
+            SurfaceCard {
+                VStack(alignment: .leading, spacing: Theme.Space.x3) {
+                    AlertBanner(kind: .destructive, message: message)
                     if model.prepared != nil {
                         Button("Thử lại") { Task { await model.retryUpload() } }
-                            .buttonStyle(.glassProminent)
+                            .buttonStyle(.ds(.primary, size: .md))
                     }
                 }
             }
@@ -226,29 +232,20 @@ struct TrackView: View {
     }
 
     private var actionButtons: some View {
-        GlassEffectContainer(spacing: 14) {
-            HStack(spacing: 14) {
-                Button {
-                    isCameraPresented = true
-                } label: {
-                    Label("Chụp ảnh", systemImage: "camera.fill")
-                        .font(.roundedLabel(17))
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 54)
-                }
-                .buttonStyle(.glassProminent)
-                .tint(Theme.flame)
-                .disabled(!CameraPicker.isAvailable || model.isBusy)
-
-                PhotosPicker(selection: $pickerItem, matching: .images, photoLibrary: .shared()) {
-                    Label("Thư viện", systemImage: "photo.on.rectangle")
-                        .font(.roundedLabel(17))
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 54)
-                }
-                .buttonStyle(.glass)
-                .disabled(model.isBusy)
+        HStack(spacing: Theme.Space.x3) {
+            Button {
+                isCameraPresented = true
+            } label: {
+                Label("Chụp ảnh", systemImage: "camera.fill")
             }
+            .buttonStyle(.ds(.primary, size: .lg, fullWidth: true))
+            .disabled(!CameraPicker.isAvailable || model.isBusy)
+
+            PhotosPicker(selection: $pickerItem, matching: .images, photoLibrary: .shared()) {
+                Label("Thư viện", systemImage: "photo.on.rectangle")
+            }
+            .buttonStyle(.ds(.secondary, size: .lg, fullWidth: true))
+            .disabled(model.isBusy)
         }
     }
 }

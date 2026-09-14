@@ -4,19 +4,20 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const badgeVariants = cva(
-  "inline-flex h-[22px] w-fit shrink-0 items-center justify-center gap-1 rounded-full border border-transparent px-2.5 text-xs font-medium whitespace-nowrap [&>svg]:pointer-events-none [&>svg]:size-3!",
+  // Semantic soft fills: the tint carries the state, the ink carries the reading.
+  "inline-flex h-6 w-fit shrink-0 items-center justify-center gap-1 rounded-full border border-transparent px-2.5 text-xs font-semibold whitespace-nowrap [&>svg]:pointer-events-none [&>svg]:size-3!",
   {
     variants: {
       variant: {
         default: "bg-primary text-primary-foreground",
-        secondary: "bg-secondary text-secondary-foreground",
-        success: "bg-success-soft text-success-fg",
-        warning: "bg-warning-soft text-warning-fg",
-        destructive: "bg-danger-soft text-danger-fg",
-        outline: "border-border bg-card text-foreground-secondary",
-        ghost:
-          "hover:bg-muted hover:text-muted-foreground dark:hover:bg-muted/50",
-        link: "text-primary underline-offset-4 hover:underline",
+        secondary: "bg-surface-2 text-secondary-foreground",
+        success: "bg-success-soft text-success",
+        warning: "bg-warning-soft text-warning",
+        destructive: "bg-destructive-soft text-destructive",
+        info: "bg-info-soft text-info",
+        outline: "border-border-strong bg-card text-foreground-secondary",
+        ghost: "hover:bg-surface-2 hover:text-foreground",
+        link: "text-foreground underline underline-offset-4",
       },
     },
     defaultVariants: {

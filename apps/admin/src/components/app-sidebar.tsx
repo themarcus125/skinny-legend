@@ -10,14 +10,24 @@ import {
   MapIcon,
   MessageSquareTextIcon,
   SlidersHorizontalIcon,
+  UserRoundIcon,
   UsersIcon,
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { cn } from '@/lib/utils';
 import { LanguageSwitch } from '@/components/language-switch';
+import { ThemeToggle } from '@/components/theme-toggle';
 import { SignOutButton } from '@/components/sign-out-button';
 import { IS_MOCK } from '@/lib/api';
 import { useAuth } from '@/lib/auth/auth-context';
+
+/**
+ * One row grammar for the whole rail: 44px tall, a 16px leading icon column, then the label.
+ * The nav links, the language picker, the theme switch and sign-out all sit on it so the rail
+ * reads as a single list rather than four differently-shaped controls.
+ */
+export const RAIL_ROW_CLASS =
+  'flex h-11 w-full shrink-0 items-center gap-2.5 rounded-md border border-transparent px-3 text-sm font-medium text-sidebar-foreground transition-colors justify-start hover:bg-sidebar-accent hover:text-foreground';
 
 /** Section links; `key` is the `nav.*` message key, translated at render. */
 const NAV = [
@@ -34,7 +44,7 @@ function BrandMark() {
   return (
     <span
       aria-hidden
-      className="flex size-7 shrink-0 items-center justify-center rounded-md bg-brand text-primary-foreground shadow-raised"
+      className="flex size-8 shrink-0 items-center justify-center rounded-md bg-brand text-brand-foreground"
     >
       <FlameIcon className="size-4" strokeWidth={2.25} />
     </span>
@@ -58,18 +68,19 @@ function NavLinks({ layout }: { layout: 'rail' | 'bar' }) {
             href={href}
             aria-current={active ? 'page' : undefined}
             className={cn(
-              'group flex h-9 shrink-0 items-center gap-2.5 rounded-lg px-2.5 text-sm font-medium text-sidebar-foreground transition-colors',
-              'hover:bg-sidebar-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+              'group',
+              RAIL_ROW_CLASS,
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
               active &&
-                'bg-sidebar-primary font-semibold text-sidebar-primary-foreground shadow-nav-active hover:bg-sidebar-primary',
-              layout === 'bar' && 'h-8 gap-2 px-2',
+                'border-primary-border bg-sidebar-primary font-semibold text-sidebar-primary-foreground hover:bg-sidebar-primary',
+              layout === 'bar' && 'h-9 gap-2 px-2.5',
             )}
           >
             <Icon
               aria-hidden
               className={cn(
                 'size-4 shrink-0 text-muted-foreground transition-colors group-hover:text-foreground',
-                active && 'text-brand',
+                active && 'text-sidebar-primary-foreground',
               )}
               strokeWidth={active ? 2.25 : 2}
             />
@@ -87,34 +98,30 @@ export function AppSidebar() {
   const t = useTranslations('nav');
 
   return (
-    <aside className="sticky top-0 hidden h-dvh w-[232px] shrink-0 flex-col border-r border-sidebar-border bg-sidebar px-3 py-4 md:flex">
+    <aside className="sticky top-0 hidden h-dvh w-[248px] shrink-0 flex-col border-r border-sidebar-border bg-sidebar px-3 py-4 md:flex">
       <div className="mb-6 flex items-center gap-2.5 px-2">
         <BrandMark />
         <div className="min-w-0">
-          <p className="truncate text-sm font-semibold leading-5">Skinny Legend</p>
-          <p className="text-xs leading-4 text-muted-foreground">{t('subtitle')}</p>
+          <p className="truncate text-sm font-bold leading-5">Skinny Legend</p>
+          <p className="type-label text-foreground-secondary">{t('subtitle')}</p>
         </div>
       </div>
       {IS_MOCK ? (
-        <p className="mx-2 mb-4 inline-flex h-6 w-fit items-center rounded-full bg-warning-soft px-2.5 text-xs font-medium text-warning-fg">
+        <p className="type-label mx-2 mb-4 inline-flex h-6 w-fit items-center rounded-full bg-warning-soft px-2.5 text-warning">
           {t('mock')}
         </p>
       ) : null}
 
       <NavLinks layout="rail" />
 
-      <div className="mt-auto border-t border-sidebar-border pt-3">
-        <div className="flex items-center gap-2.5 px-2 py-1.5">
-          <span
-            aria-hidden
-            className="flex size-7 shrink-0 items-center justify-center rounded-full bg-secondary text-xs font-semibold text-secondary-foreground"
-          >
-            {(user?.displayName ?? '?').charAt(0).toUpperCase()}
-          </span>
-          <p className="truncate text-sm font-medium">{user?.displayName ?? ''}</p>
+      <div className="mt-auto flex flex-col gap-0.5 border-t border-sidebar-border pt-3">
+        <div className="flex h-11 items-center gap-2.5 px-3">
+          <UserRoundIcon aria-hidden className="size-4 shrink-0 text-muted-foreground" />
+          <p className="truncate text-sm font-semibold text-foreground">{user?.displayName ?? ''}</p>
         </div>
-        <LanguageSwitch />
-        <SignOutButton variant="ghost" size="sm" className="mt-1 w-full justify-start text-secondary-foreground" />
+        <LanguageSwitch className={RAIL_ROW_CLASS} />
+        <ThemeToggle className={RAIL_ROW_CLASS} />
+        <SignOutButton variant="ghost" size="sm" className={RAIL_ROW_CLASS} />
       </div>
     </aside>
   );
@@ -130,9 +137,9 @@ export function MobileTopBar() {
     <header className="sticky top-0 z-20 border-b border-sidebar-border bg-sidebar md:hidden">
       <div className="flex h-12 items-center gap-2.5 px-3">
         <BrandMark />
-        <p className="truncate text-sm font-semibold">Skinny Legend</p>
+        <p className="truncate text-sm font-bold">Skinny Legend</p>
         {IS_MOCK ? (
-          <span className="inline-flex h-6 shrink-0 items-center rounded-full bg-warning-soft px-2.5 text-xs font-medium text-warning-fg">
+          <span className="type-label inline-flex h-6 shrink-0 items-center rounded-full bg-warning-soft px-2.5 text-warning">
             {t('mock')}
           </span>
         ) : null}

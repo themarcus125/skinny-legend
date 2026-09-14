@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useLocale, useTranslations } from 'next-intl';
 import { GlobeIcon } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { cn } from '@/lib/utils';
 import { LOCALE_COOKIE, LOCALES, parseLocale, type Locale } from '@/i18n/locale';
 import { useAdminApi } from '@/lib/auth/auth-context';
 
@@ -13,7 +14,7 @@ import { useAdminApi } from '@/lib/auth/auth-context';
  * picks it up), tells the API (so the member's iOS app and push copy agree) and refreshes the
  * server tree so every `t()` re-renders in the new language.
  */
-export function LanguageSwitch() {
+export function LanguageSwitch({ className }: { className?: string }) {
   const t = useTranslations('nav');
   const active = parseLocale(useLocale());
   const router = useRouter();
@@ -34,25 +35,23 @@ export function LanguageSwitch() {
   const items = Object.fromEntries(LOCALES.map((locale) => [locale, t(locale)])) as Record<Locale, string>;
 
   return (
-    <div className="px-2 py-1.5">
-      <Select items={items} value={active} onValueChange={(value: string | null) => choose(parseLocale(value ?? undefined))}>
-        <SelectTrigger
-          size="sm"
-          aria-label={t('language')}
-          disabled={isPending}
-          className="w-full gap-2.5 border-transparent bg-transparent shadow-none text-secondary-foreground hover:bg-sidebar-accent"
-        >
-          <GlobeIcon aria-hidden className="size-4 shrink-0 text-muted-foreground" />
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          {LOCALES.map((locale) => (
-            <SelectItem key={locale} value={locale}>
-              {items[locale]}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    </div>
+    <Select items={items} value={active} onValueChange={(value: string | null) => choose(parseLocale(value ?? undefined))}>
+      <SelectTrigger
+        size="sm"
+        aria-label={t('language')}
+        disabled={isPending}
+        className={cn('border-transparent bg-transparent shadow-none', className, 'justify-between')}
+      >
+        <GlobeIcon aria-hidden className="size-4 shrink-0 text-muted-foreground" />
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        {LOCALES.map((locale) => (
+          <SelectItem key={locale} value={locale}>
+            {items[locale]}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }

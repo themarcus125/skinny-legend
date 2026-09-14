@@ -5,11 +5,13 @@ struct RootView: View {
 
     var body: some View {
         ZStack {
-            WarmBackground()
+            AppBackground()
             switch env.session {
             case .loading:
                 ProgressView("Đang tải…")
-                    .font(.roundedLabel(15))
+                    .typeStyle(.bodyMedium)
+                    .tint(Theme.primary)
+                    .foregroundStyle(Theme.fgMuted)
             case .signedOut:
                 SignInView()
             case .pending(let user):
@@ -25,14 +27,18 @@ struct RootView: View {
                     Text(message)
                 } actions: {
                     Button("Thử lại") { Task { await env.bootstrap() } }
-                        .buttonStyle(.glassProminent)
+                        .buttonStyle(.ds(.primary, size: .md))
                 }
+                .emptyStateStyle()
             }
         }
         // The in-app language: every `Text`/`LocalizedStringKey` below re-resolves against this
         // the moment the Account picker changes it — no relaunch (spec §D).
         .environment(\.locale, env.resolvedLocale)
         .animation(.smooth(duration: 0.3), value: env.session)
-        .task { await env.bootstrap() }
+        // Keyed on the environment's identity, not just on appearance: leaving or entering the
+        // DEBUG sample-data mode swaps the whole `AppEnvironment` under this view, and the new
+        // one starts at `.loading` with nothing having bootstrapped it.
+        .task(id: ObjectIdentifier(env)) { await env.bootstrap() }
     }
 }

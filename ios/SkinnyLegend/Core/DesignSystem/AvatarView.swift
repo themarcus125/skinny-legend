@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Circular avatar; falls back to the member's initials on a category-free flame tint.
+/// Circular avatar; falls back to the member's initials on the accent soft tint.
 struct AvatarView: View {
     let url: String?
     let displayName: String
@@ -9,14 +9,17 @@ struct AvatarView: View {
     var body: some View {
         RemoteImage(url: url) {
             ZStack {
-                Circle().fill(Theme.flame.opacity(0.22))
+                Circle().fill(Theme.primarySoft)
                 Text(initials)
-                    .font(.roundedLabel(size * 0.4, weight: .bold))
-                    .foregroundStyle(Theme.flame)
+                    .font(.brand(size * 0.4, weight: .bold))
+                    .foregroundStyle(Theme.fg)
             }
         }
         .frame(width: size, height: size)
         .clipShape(Circle())
+        // Hairline ring: the initials fallback is `primary-soft`, which would otherwise vanish
+        // on the leaderboard's own accent-soft "you" row.
+        .overlay { Circle().strokeBorder(Theme.primaryBorder, lineWidth: 1) }
     }
 
     private var initials: String {

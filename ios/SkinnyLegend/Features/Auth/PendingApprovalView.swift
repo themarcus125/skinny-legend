@@ -9,18 +9,19 @@ struct PendingApprovalView: View {
     var body: some View {
         VStack(spacing: 24) {
             Spacer()
-            GlassCard(padding: 26) {
+            SurfaceCard(padding: 26) {
                 VStack(spacing: 16) {
                     Image(systemName: "hourglass")
                         .font(.system(size: 48, weight: .bold))
-                        .foregroundStyle(Theme.ember)
+                        .foregroundStyle(Theme.primary)
                         .symbolEffect(.pulse, options: .repeat(.continuous))
                     Text(greeting)
-                        .font(.roundedLabel(22, weight: .bold))
+                        .typeStyle(.h2)
+                        .foregroundStyle(Theme.fg)
                         .multilineTextAlignment(.center)
                     Text("Tài khoản của bạn đang chờ quản trị viên duyệt. Nhắn nhóm chat để được duyệt nhanh hơn nhé.")
-                        .font(.roundedLabel(15, weight: .medium))
-                        .foregroundStyle(.secondary)
+                        .typeStyle(.bodyMedium)
+                        .foregroundStyle(Theme.fgMuted)
                         .multilineTextAlignment(.center)
                 }
             }
@@ -34,23 +35,20 @@ struct PendingApprovalView: View {
                 }
             } label: {
                 Label("Kiểm tra lại", systemImage: "arrow.clockwise")
-                    .font(.roundedLabel(16))
-                    .padding(.horizontal, 8)
             }
-            .buttonStyle(.glassProminent)
+            .buttonStyle(.ds(.primary, size: .md))
             .disabled(isChecking)
 
             Button {
                 Task { await env.signOut() }
             } label: {
                 if env.isSigningOut {
-                    ProgressView()
+                    ProgressView().tint(Theme.primary)
                 } else {
                     Text("Đăng xuất")
-                        .font(.roundedLabel(15, weight: .medium))
-                        .foregroundStyle(.secondary)
                 }
             }
+            .buttonStyle(.ds(.ghost, size: .md))
             .disabled(env.isSigningOut)
 
             Spacer()
@@ -66,7 +64,7 @@ struct PendingApprovalView: View {
 
 #Preview("Chờ duyệt") {
     ZStack {
-        WarmBackground()
+        AppBackground()
         PendingApprovalView(user: UserDTO(id: "u1", firebaseUid: "f1", displayName: "Khoa", avatarKey: nil, role: .member, status: .pending, locale: .vi, createdAt: Date()))
     }
     .environment(AppEnvironment(api: MockAPIClient(), auth: MockAuthService(startSignedIn: false),

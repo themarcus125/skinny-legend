@@ -37,11 +37,23 @@ enum Category: String, Codable, CaseIterable, Sendable, Identifiable, Hashable {
         }
     }
 
+    /// The strong colour, used for a chip's glyph and label and for chart marks. Derived from
+    /// the design system's semantic set rather than a palette of its own (design system:
+    /// "badge/achievement chip").
     var tint: Color {
         switch self {
-        case .exercise: Theme.exercise
-        case .meal: Theme.meal
-        case .group: Theme.group
+        case .exercise: Theme.info
+        case .meal: Theme.success
+        case .group: Theme.primary
+        }
+    }
+
+    /// The matching soft tint, used as a chip's fill.
+    var softTint: Color {
+        switch self {
+        case .exercise: Theme.infoSoft
+        case .meal: Theme.successSoft
+        case .group: Theme.primarySoft
         }
     }
 }

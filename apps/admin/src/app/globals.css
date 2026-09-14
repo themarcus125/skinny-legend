@@ -3,45 +3,48 @@
 @import "shadcn/tailwind.css";
 @import "leaflet/dist/leaflet.css";
 
-/* KEEP: ui/* still carries dark: utilities and shadcn/tailwind.css uses `@variant dark`
-   inside @utility shimmer. Nothing ever applies .dark, so these compile to no-ops. */
-@custom-variant dark (&:is(.dark *));
+/* `.dark` is put on <html> by next-themes (attribute="class", enableSystem), so the variant has to
+   match the element itself as well as its descendants. */
+@custom-variant dark (&:where(.dark, .dark *));
 
-/* ── Static scale. Overriding Tailwind's named sizes means every text-sm / text-base already
-   in ui/* inherits the new scale. Plain @theme (not inline) so the px values become the
-   --text-* custom properties Tailwind's utilities read. ── */
+/* ── Static scale (Operation Skinny Legend design system). Overriding Tailwind's named sizes means
+   every text-sm / text-base already in ui/* inherits the design system's scale. Plain @theme (not
+   inline) so the px values become the --text-* custom properties Tailwind's utilities read. ── */
 @theme {
+  --spacing: 4px;                                         /* the 4 / 8 grid: 1=4 2=8 3=12 4=16 6=24 8=32 12=48 */
+
   --text-xs: 12px;     --text-xs--line-height: 16px;
-  --text-label: 13px;  --text-label--line-height: 18px;   /* new utility: text-label */
+  --text-label: 13px;  --text-label--line-height: 18px;   /* caption 13/500 */
   --text-sm: 14px;     --text-sm--line-height: 20px;      /* tables, controls, descriptions */
-  --text-base: 15px;   --text-base--line-height: 22px;    /* body */
-  --text-lg: 17px;     --text-lg--line-height: 24px;      /* dialog titles */
-  --text-xl: 20px;     --text-xl--line-height: 26px;      /* sign-in title */
-  --text-2xl: 24px;    --text-2xl--line-height: 30px;     /* page h1 */
-  --text-3xl: 28px;    --text-3xl--line-height: 32px;     /* KPI numerals */
+  --text-base: 16px;   --text-base--line-height: 24px;    /* body 16/1.5 */
+  --text-lg: 17px;     --text-lg--line-height: 22px;      /* h3 17/1.3 */
+  --text-xl: 22px;     --text-xl--line-height: 26px;      /* h2 22/1.2 */
+  --text-2xl: 30px;    --text-2xl--line-height: 34px;     /* h1 30/1.12 */
+  --text-3xl: 36px;    --text-3xl--line-height: 40px;
+  --text-display: 44px; --text-display--line-height: 44px;/* display 44/1.0 */
 
+  /* radius: sm 6 / md 12 / lg 18 / full */
   --radius-sm: 6px;
-  --radius-md: 8px;
-  --radius-lg: 8px;     /* buttons, inputs, selects */
-  --radius-xl: 12px;    /* cards, dialogs */
-  --radius-2xl: 16px;
-  --radius-3xl: 20px;
-  --radius-4xl: 24px;
-
-  --shadow-card: 0 1px 2px 0 rgb(20 20 24 / 0.04);
-  --shadow-raised: 0 1px 3px 0 rgb(20 20 24 / 0.08), 0 1px 2px -1px rgb(20 20 24 / 0.06);
-  --shadow-nav-active: 0 1px 2px 0 rgb(20 20 24 / 0.06), 0 0 0 1px rgb(20 20 24 / 0.04);
-  --shadow-popover: 0 8px 24px -8px rgb(20 20 24 / 0.16), 0 2px 6px 0 rgb(20 20 24 / 0.06);
-  --shadow-dialog: 0 24px 48px -12px rgb(20 20 24 / 0.22), 0 0 0 1px rgb(20 20 24 / 0.04);
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --radius-xl: 18px;    /* cards, dialogs — the design system's lg */
+  --radius-2xl: 24px;
+  --radius-3xl: 24px;
+  --radius-4xl: 28px;
 }
 
 @theme inline {
   /* fonts (runtime var from next/font, hence inline) */
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-sans: var(--font-be-vietnam-pro), -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial, sans-serif;
   --font-heading: var(--font-sans);
-  --font-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
 
-  /* shadcn colour bridge (unchanged keys) */
+  /* elevation e1 card / e2 sheet+popover / e3 modal — theme-aware, hence inline */
+  --shadow-card: var(--shadow-1);
+  --shadow-popover: var(--shadow-2);
+  --shadow-dialog: var(--shadow-3);
+
+  /* shadcn colour bridge (unchanged keys — the components already consume these) */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -59,6 +62,7 @@
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
   --color-destructive-hover: var(--destructive-hover);
+  --color-destructive-foreground: var(--destructive-foreground);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
@@ -76,73 +80,166 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 
-  /* new semantic colours → utilities bg-brand, text-brand-fg, bg-success-soft, … */
-  --color-brand: var(--brand);
-  --color-brand-soft: var(--brand-soft);
-  --color-brand-fg: var(--brand-fg);
-  --color-success-soft: var(--success-soft);
-  --color-success-fg: var(--success-fg);
-  --color-warning-soft: var(--warning-soft);
-  --color-warning-fg: var(--warning-fg);
-  --color-danger-soft: var(--danger-soft);
-  --color-danger-fg: var(--danger-fg);
+  /* design-system surfaces → utilities bg-surface-2, bg-elevated, bg-track, … */
+  --color-surface-2: var(--surface-2);
+  --color-elevated: var(--elevated);
+  --color-track: var(--track);
   --color-border-strong: var(--border-strong);
   --color-foreground-secondary: var(--foreground-secondary);
+  --color-foreground-subtle: var(--foreground-subtle);
+
+  /* accent (Vanilla) — marks, milestone fills, map pins */
+  --color-brand: var(--brand);
+  --color-brand-foreground: var(--brand-foreground);
+  --color-primary-soft: var(--primary-soft);
+  --color-primary-border: var(--primary-border);
+
+  /* semantic pairs: solid ink + soft fill */
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --color-destructive-soft: var(--destructive-soft);
 }
 
+/* ── Light (accent Vanilla) ── */
 :root {
-  --radius: 8px;
+  --radius: 12px;
+
+  /* raw ramp */
+  --vanilla: #EFF0A3;
+  --honeydew: #CFDECA;
+  --alice: #D8DFE9;
+  --eerie: #212121;
+  --ghost: #F6F5FA;
 
   /* canvas & ink */
-  --background: #F7F7F8;
-  --foreground: #1B1B1F;
-  --foreground-secondary: #5C5C68;   /* 6.6:1 on white */
-  --card: #FFFFFF;
-  --card-foreground: #1B1B1F;
-  --popover: #FFFFFF;
-  --popover-foreground: #1B1B1F;
+  --background: #EDECF1;
+  --foreground: var(--eerie);
+  --foreground-secondary: #5C5C63;
+  --foreground-subtle: #85858F;
+  --card: #FBFAFD;                   /* --surface */
+  --card-foreground: var(--eerie);
+  --surface-2: #F3F2F7;
+  --elevated: #FFFFFF;
+  --popover: var(--elevated);
+  --popover-foreground: var(--eerie);
+  --track: #E4E3EB;
 
-  /* interactive neutrals */
-  --primary: #1B1B1F;                /* ink primary button, switch on */
-  --primary-hover: #2C2C33;
-  --primary-foreground: #FFFFFF;
-  --secondary: #F1F1F3;              /* neutral chips, secondary button */
-  --secondary-foreground: #3E3E48;
-  --muted: #F3F3F5;                  /* row hover, skeletons, tab rail */
-  --muted-foreground: #6B6B76;       /* 5.0:1 on white, 4.6:1 on canvas */
-  --accent: #EFEFF2;                 /* menu item hover */
-  --accent-foreground: #1B1B1F;
-  --destructive: #C62828;            /* solid: dialog confirms only */
-  --destructive-hover: #A61E1E;
+  /* interactive neutrals — the primary CTA is ink on ghost-white */
+  --primary: var(--eerie);
+  --primary-hover: #333338;
+  --primary-active: #0E0E0E;
+  --primary-foreground: var(--ghost);
+  --primary-soft: var(--vanilla);
+  --primary-border: #E0E18C;
+  --secondary: var(--surface-2);
+  --secondary-foreground: #3A3A40;
+  --muted: var(--surface-2);
+  --muted-foreground: #5C5C63;
+  --accent: #E9E8EF;
+  --accent-foreground: var(--eerie);
 
   /* lines */
-  --border: #E5E5EA;
-  --border-strong: #D4D4DB;
-  --input: #D4D4DB;                  /* one step darker than card borders */
-  --ring: #E8532B;                   /* the flame — focus rings, always full-strength (3.7:1 on white, 3.3:1 on the rail) */
+  --border: #E4E3EB;
+  --border-strong: #CFCED9;
+  --input: #CFCED9;
+  --ring: var(--primary);
 
-  /* brand: flame coral (icons, marks, bars — never body text) */
-  --brand: #E8532B;
-  --brand-soft: #FFF1EC;
-  --brand-fg: #B23A15;               /* 5.0:1 on white — the only brand text colour */
+  /* accent mark (Vanilla stays Vanilla in both themes so a mark never changes identity) */
+  --brand: var(--vanilla);
+  --brand-foreground: var(--eerie);
 
-  /* status tints (soft pills) */
-  --success-soft: #E6F5EC;  --success-fg: #1B6E3E;   /* 5.4:1 */
-  --warning-soft: #FFF4E0;  --warning-fg: #8A5200;   /* 5.6:1 */
-  --danger-soft:  #FDECEC;  --danger-fg:  #A61E1E;   /* 5.9:1 */
+  /* semantics */
+  /* Darkened from the spec's #4A6B4E / #836417: at 12px/600 on their own soft fills those measured
+     4.27:1 and 4.33:1, just under AA. These read 5.23:1 and 5.58:1. See docs/design-system/tokens.md. */
+  --success: #3F5D43;         --success-soft: var(--honeydew);
+  --warning: #6F5412;         --warning-soft: #F1E4B0;
+  --info: #48607F;            --info-soft: var(--alice);
+  --destructive: #A63B34;     --destructive-soft: #F1DAD8;
+  --destructive-hover: #8E2F29;
+  --destructive-active: #77251F;
+  --destructive-foreground: #FFFFFF;
+
+  /* elevation */
+  --shadow-1: 0 1px 2px rgba(33, 33, 33, 0.06), 0 1px 1px rgba(33, 33, 33, 0.04);
+  --shadow-2: 0 4px 14px rgba(33, 33, 33, 0.08), 0 1px 3px rgba(33, 33, 33, 0.05);
+  --shadow-3: 0 18px 44px rgba(33, 33, 33, 0.14), 0 3px 10px rgba(33, 33, 33, 0.06);
 
   /* charts (unused today) */
-  --chart-1: #E8532B; --chart-2: #F28A6B; --chart-3: #F9BFAD; --chart-4: #8E8E99; --chart-5: #D4D4DB;
+  --chart-1: var(--vanilla); --chart-2: var(--honeydew); --chart-3: var(--alice);
+  --chart-4: #85858F; --chart-5: #D5D4DD;
 
-  /* sidebar rail: one step greyer than the canvas; the active item is a white raised tile */
-  --sidebar: #F3F3F5;
-  --sidebar-foreground: #3E3E48;
-  --sidebar-primary: #FFFFFF;        /* active tile */
-  --sidebar-primary-foreground: #1B1B1F;
-  --sidebar-accent: #E9E9EC;         /* hover */
-  --sidebar-accent-foreground: #1B1B1F;
-  --sidebar-border: #E5E5EA;
-  --sidebar-ring: #E8532B;
+  /* sidebar rail: the canvas tone, one step off the card so the content reads as the lit surface */
+  --sidebar: #E7E6EC;
+  --sidebar-foreground: #52525A;
+  --sidebar-primary: var(--vanilla);          /* active tile */
+  --sidebar-primary-foreground: var(--eerie);
+  --sidebar-accent: #DEDDE5;                  /* hover */
+  --sidebar-accent-foreground: var(--eerie);
+  --sidebar-border: #D9D8E1;
+  --sidebar-ring: var(--primary);
+}
+
+/* ── Dark (accent Vanilla) ── */
+.dark {
+  --background: #171717;
+  --foreground: var(--ghost);
+  --foreground-secondary: #B4B4BB;
+  --foreground-subtle: #8A8A93;
+  --card: #232325;                   /* --surface */
+  --card-foreground: var(--ghost);
+  --surface-2: #2B2B2E;
+  --elevated: #2F2F32;
+  --popover: var(--elevated);
+  --popover-foreground: var(--ghost);
+  --track: #3A3A3E;
+
+  --primary: var(--vanilla);
+  --primary-hover: #F5F6BE;
+  --primary-active: #DEDF90;
+  --primary-foreground: var(--eerie);
+  --primary-soft: #3A3B24;
+  --primary-border: #55562F;
+  --secondary: var(--surface-2);
+  --secondary-foreground: #D3D3D9;
+  --muted: var(--surface-2);
+  --muted-foreground: #B4B4BB;
+  --accent: #35353A;
+  --accent-foreground: var(--ghost);
+
+  --border: #3A3A3E;
+  --border-strong: #4C4C52;
+  --input: #4C4C52;
+  --ring: var(--primary);
+
+  --brand: var(--vanilla);
+  --brand-foreground: var(--eerie);
+
+  --success: #A9C6A4;         --success-soft: #2C3A2B;
+  --warning: #E0C57E;         --warning-soft: #3A3122;
+  --info: #AABCD5;            --info-soft: #262E3A;
+  --destructive: #E4A09A;     --destructive-soft: #3C2725;
+  --destructive-hover: #EDB4AF;
+  --destructive-active: #D28C86;
+  --destructive-foreground: var(--eerie);
+
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --shadow-2: 0 4px 14px rgba(0, 0, 0, 0.55), 0 1px 3px rgba(0, 0, 0, 0.4);
+  --shadow-3: 0 18px 44px rgba(0, 0, 0, 0.65), 0 3px 10px rgba(0, 0, 0, 0.45);
+
+  --chart-4: #6A6A74; --chart-5: #52525A;
+
+  --sidebar: #1D1D1F;
+  --sidebar-foreground: #B4B4BB;
+  --sidebar-primary: var(--primary-soft);
+  --sidebar-primary-foreground: var(--ghost);
+  --sidebar-accent: #2B2B2E;
+  --sidebar-accent-foreground: var(--ghost);
+  --sidebar-border: #2F2F32;
+  --sidebar-ring: var(--primary);
 }
 
 @layer base {
@@ -154,12 +251,77 @@
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
   }
-  body {
-    @apply bg-background text-base text-foreground;   /* 15 / 22 */
-    font-feature-settings: "cv11";                      /* Inter single-storey a */
-  }
+  html.dark { color-scheme: dark; }
+  body { @apply bg-background text-base text-foreground; }
   h1, h2, h3 { @apply font-heading; text-wrap: balance; }
   table, [data-slot="kpi-value"] { font-variant-numeric: tabular-nums; }
   code { @apply rounded-sm bg-muted px-1 py-0.5 font-mono text-[0.92em] text-foreground; }
-  ::selection { background: var(--brand-soft); }
+  ::selection { background: var(--primary-soft); color: var(--foreground); }
 }
+
+/* ── Type scale as classes: one place that owns size + weight + tracking together ── */
+@layer components {
+  .type-display {
+    font-size: 44px; line-height: 1; font-weight: 800; letter-spacing: -0.035em;
+  }
+  .type-h1 {
+    font-size: 30px; line-height: 1.12; font-weight: 700; letter-spacing: -0.02em;
+  }
+  .type-h2 {
+    font-size: 22px; line-height: 1.2; font-weight: 650; letter-spacing: -0.01em;
+  }
+  .type-h3 {
+    font-size: 17px; line-height: 1.3; font-weight: 600;
+  }
+  .type-body {
+    font-size: 16px; line-height: 1.5; font-weight: 400;
+  }
+  .type-body-medium {
+    font-size: 16px; line-height: 1.5; font-weight: 500;
+  }
+  .type-caption {
+    font-size: 13px; line-height: 1.4; font-weight: 500;
+  }
+  /* SF Mono stack, +6% tracking, uppercase — table heads, KPI labels, pills */
+  .type-label {
+    font-family: var(--font-mono);
+    font-size: 11px; line-height: 1.45; font-weight: 600;
+    letter-spacing: 0.06em; text-transform: uppercase;
+  }
+}
+
+/* ── Leaflet: leaflet.css is imported unlayered, so these overrides stay unlayered too and lean on
+   specificity (`.leaflet-container …`) to win — inside @layer they would lose to the plugin. ── */
+.leaflet-container {
+  background: var(--surface-2);
+  font-family: var(--font-sans);
+}
+/* OSM only publishes a light raster style. leaflet.css sets `filter: inherit` on every tile, so the
+   invert has to land on the tiles themselves (a filter on the pane would be inherited and double). */
+.dark .leaflet-container .leaflet-tile {
+  filter: invert(1) hue-rotate(180deg) brightness(0.92) contrast(0.88) saturate(0.7);
+}
+.leaflet-container .leaflet-popup-content-wrapper,
+.leaflet-container .leaflet-popup-tip {
+  background: var(--popover);
+  color: var(--popover-foreground);
+  box-shadow: var(--shadow-2);
+}
+.leaflet-container .leaflet-popup-content-wrapper { border-radius: var(--radius-md); }
+.leaflet-container a.leaflet-popup-close-button { color: var(--foreground-subtle); }
+.leaflet-container .leaflet-bar {
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-1);
+}
+.leaflet-container .leaflet-bar a,
+.leaflet-container .leaflet-bar a:hover {
+  background-color: var(--card);
+  color: var(--foreground);
+  border-bottom-color: var(--border);
+}
+.leaflet-container .leaflet-bar a:hover { background-color: var(--accent); }
+.leaflet-container .leaflet-control-attribution {
+  background: var(--card);
+  color: var(--foreground-subtle);
+}
+.leaflet-container .leaflet-control-attribution a { color: var(--foreground-secondary); }
