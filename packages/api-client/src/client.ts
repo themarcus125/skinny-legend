@@ -68,6 +68,18 @@ export interface ApiClient {
 
   // Entries & uploads
   presign(body: PresignInput): Promise<PresignResponse>;
+  /**
+   * PUTs the file to the presigned URL from `presign()`. Mirrors iOS `APIClient.upload`:
+   * `onProgress` receives a 0…1 fraction and is always called with 1 on success. Rejects with
+   * `ApiError(0, 'upload_failed', …)` on a non-2xx response or a network failure — status 0
+   * because R2 answers the PUT directly and never speaks the API's error envelope.
+   */
+  uploadToPresign(
+    url: string,
+    file: Blob,
+    contentType: string,
+    onProgress?: (fraction: number) => void,
+  ): Promise<void>;
   createEntry(body: CreateEntryInput): Promise<EntryMutationResponse>;
   /** `PATCH /entries/:id` — the member's confirm/correct call (ruling R3). */
   confirmEntry(id: string, body: PatchEntryInput): Promise<EntryMutationResponse>;
@@ -208,6 +220,37 @@ export class LiveApiClient implements ApiClient {
     return this.request<PresignResponse>('/uploads/presign', { method: 'POST', body: JSON.stringify(body) });
   }
 
+  uploadToPresign(
+    url: string,
+    file: Blob,
+    contentType: string,
+    onProgress?: (fraction: number) => void,
+  ): Promise<void> {
+    // XMLHttpRequest, not fetch: it is still the only browser API that reports upload progress.
+    return new Promise<void>((resolve, reject) => {
+      const xhr = new globalThis.XMLHttpRequest();
+      const fail = (message: string) => reject(new ApiError(0, 'upload_failed', message));
+      xhr.open('PUT', url, true);
+      xhr.setRequestHeader('Content-Type', contentType);
+      if (onProgress && xhr.upload) {
+        xhr.upload.onprogress = (event: ProgressEvent) => {
+          if (event.lengthComputable && event.total > 0) onProgress(event.loaded / event.total);
+        };
+      }
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          onProgress?.(1);
+          resolve();
+        } else {
+          fail(`Upload failed (${xhr.status})`);
+        }
+      };
+      xhr.onerror = () => fail('Upload failed');
+      xhr.onabort = () => fail('Upload aborted');
+      xhr.send(file);
+    });
+  }
+
   createEntry(body: CreateEntryInput): Promise<EntryMutationResponse> {
     return this.request<EntryMutationResponse>('/entries', { method: 'POST', body: JSON.stringify(body) });
   }
@@ -289,7 +332,7 @@ export class LiveApiClient implements ApiClient {
 
   async listNotifications(limit = 100): Promise<NotificationLogItem[]> {
     const { notifications } = await this.request<{ notifications: NotificationLogItem[] }>(
-      `/admin/notifications?limit=${limit}`,
+      `/admin/notifications${query({ limit })}`,
     );
     return notifications;
   }

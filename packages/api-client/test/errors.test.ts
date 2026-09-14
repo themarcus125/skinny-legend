@@ -16,6 +16,9 @@ describe('describeError', () => {
     ['no_device_tokens', 'errors.no_device_tokens'],
     ['push_failed', 'errors.push_failed'],
     ['internal', 'errors.internal'],
+    ['no_challenge', 'errors.no_challenge'],
+    // Hono's HTTPException envelope: a protocol-level failure the member sees as a server error.
+    ['http_error', 'errors.internal'],
   ])('maps %s to %s', (code, key) => {
     expect(describeError(new ApiError(400, code, 'x'))).toBe(key);
   });

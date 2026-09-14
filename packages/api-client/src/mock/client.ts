@@ -198,19 +198,25 @@ export class MockApiClient implements ApiClient {
   }
 
   /**
-   * Leaderboard order: points desc, then display name. Rank is positional (1…n) rather than
-   * competition ranking, so a table of tied members still reads 1, 2, 3 — the iOS mock's
-   * `1 + count(greater)` would print 1, 1, 1 for the seeded five.
+   * Line-for-line with `loadScoreboard` in apps/api/src/services/score.ts: active members only,
+   * presented as points desc then display name then id, and ranked by competition ranking —
+   * `1 + the number of members strictly ahead` — so tied members share a rank and the sequence
+   * skips (1, 1, 3). The iOS mock does the same.
    */
   private scoreboard(): Array<{ user: AdminUser; score: ScoreResult; rank: number }> {
-    return this.state.users
-      .map((user) => ({ user, score: this.score(user.id), rank: 0 }))
-      .sort((left, right) =>
-        left.score.total !== right.score.total
-          ? right.score.total - left.score.total
-          : left.user.displayName.localeCompare(right.user.displayName),
-      )
-      .map((row, index) => ({ ...row, rank: index + 1 }));
+    const rows = this.state.users
+      .filter((user) => user.status === 'active')
+      .map((user) => ({ user, score: this.score(user.id) }))
+      .sort(
+        (a, b) =>
+          b.score.total - a.score.total ||
+          a.user.displayName.localeCompare(b.user.displayName) ||
+          a.user.id.localeCompare(b.user.id),
+      );
+    return rows.map((row) => ({
+      ...row,
+      rank: 1 + rows.filter((other) => other.score.total > row.score.total).length,
+    }));
   }
 
   /**
@@ -360,14 +366,16 @@ export class MockApiClient implements ApiClient {
 
   async mapPins(days: number): Promise<MapPin[]> {
     await this.delay();
-    const since = Date.now() - days * 24 * 60 * 60 * 1000;
+    // Anchored to the seed's `today`, like every other read here and like the iOS mock —
+    // never to the wall clock, which would make a pinned seed's map depend on when it ran.
+    const since = addDays(this.state.today, -days);
     return this.state.entries
       .filter(
         (entry) =>
           entry.status === 'confirmed' &&
           entry.lat !== null &&
           entry.lng !== null &&
-          new Date(entry.takenAt).getTime() >= since,
+          entry.localDate >= since,
       )
       .map((entry) => ({
         entryId: entry.id,
@@ -390,6 +398,16 @@ export class MockApiClient implements ApiClient {
     this.counter += 1;
     const key = `${body.kind}s/${this.state.me.id}/mock-${this.counter}.jpg`;
     return { key, url: `mock://upload/${key}`, expiresAt: new Date(Date.now() + 300_000).toISOString() };
+  }
+
+  async uploadToPresign(
+    _url: string,
+    _file: Blob,
+    _contentType: string,
+    onProgress?: (fraction: number) => void,
+  ): Promise<void> {
+    await this.delay();
+    onProgress?.(1);
   }
 
   async createEntry(body: CreateEntryInput): Promise<EntryMutationResponse> {

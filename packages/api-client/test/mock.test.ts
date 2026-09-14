@@ -10,13 +10,45 @@ describe('mock client', () => {
     expect(makeSeed(TODAY)).toEqual(makeSeed(TODAY));
   });
 
-  it('seeds five active members with me first', async () => {
+  it('seeds five active members with me among them', async () => {
     const api = fixed();
     const board = await api.leaderboard();
     expect(board).toHaveLength(5);
     expect(board.filter((row) => row.isMe)).toHaveLength(1);
-    expect(board.map((row) => row.rank)).toEqual([1, 2, 3, 4, 5]);
     expect(api.seed.me.displayName).toBe('Khoa');
+  });
+
+  it('ranks like the server: ties share a rank and the sequence skips', async () => {
+    const api = fixed();
+    const board = await api.leaderboard();
+    // The rotated weekday patterns hand two members 46 points and three of them 43, so the
+    // seed itself produces the tie. Competition ranking (apps/api/src/services/score.ts:71)
+    // is `1 + the number of members strictly ahead`, never a positional index.
+    expect(board.map((row) => [row.user.displayName, row.total, row.rank])).toEqual([
+      ['Linh', 46, 1],
+      ['Tuấn', 46, 1],
+      ['Đức', 43, 3],
+      ['Khoa', 43, 3],
+      ['Mai', 43, 3],
+    ]);
+    // Presentation order stays points desc, then display name.
+    expect(board.map((row) => row.total)).toEqual([...board.map((row) => row.total)].sort((a, b) => b - a));
+    // The dashboard reads the same scoreboard, so `me` gets the same shared rank.
+    const dashboard = await api.dashboard();
+    expect(dashboard.rank).toBe(3);
+    expect(dashboard.total).toBe(43);
+    expect(dashboard.memberCount).toBe(5);
+  });
+
+  it('anchors mapPins to the seed day, not the wall clock', async () => {
+    // A seed day well away from "now": with a Date.now() window these pins would all fall out.
+    const api = createMockApiClient({ seed: makeSeed('2026-09-08'), latencyMs: 0 });
+    const pins = await api.mapPins(1);
+    expect(pins).toHaveLength(8);
+    expect(pins.every((pin) => pin.localDate === '2026-09-08')).toBe(true);
+    expect(pins.every((pin) => pin.lat !== null && pin.lng !== null)).toBe(true);
+    // days=0 is the seed day alone, and nothing is dated before the window opens.
+    expect(await api.mapPins(0)).toHaveLength(8);
   });
 
   it('fails every fifth verdict, leaving the entry pending with no categories', async () => {
@@ -125,6 +157,15 @@ describe('mock client', () => {
       ['meal', 2, 1, 'day'],
       ['group', 3, 2, 'week'],
     ]);
+  });
+
+  it('resolves uploadToPresign and reports completion', async () => {
+    const api = fixed();
+    const seen: number[] = [];
+    await expect(
+      api.uploadToPresign('mock://upload/photos/x.jpg', new Blob(['x']), 'image/jpeg', (f) => seen.push(f)),
+    ).resolves.toBeUndefined();
+    expect(seen).toEqual([1]);
   });
 
   it('registers and unregisters push devices', async () => {
