@@ -1,0 +1,12 @@
+{
+  "$schema": "https://railway.app/railway.schema.json",
+  "build": {
+    "builder": "DOCKERFILE",
+    "dockerfilePath": "apps/api/Dockerfile"
+  },
+  "deploy": {
+    "startCommand": "node dist/jobs/cleanup.js",
+    "cronSchedule": "0 3 * * 1",
+    "restartPolicyType": "NEVER"
+  }
+}

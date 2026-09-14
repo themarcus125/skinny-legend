@@ -1,0 +1,106 @@
+{
+  "schema": "{ file: string, expected: { categories: ('exercise'|'meal'|'group')[], healthy: true|false|null }, note: string }",
+  "description": "Labelled fixture set for the SKI-41 vision model evaluation. Each row is one photo you drop into this folder under the exact `file` name. `expected.categories` is the ground truth from the rulebook (exercise / meal / group, empty array for photos that score nothing); `expected.healthy` is only meaningful when `meal` is one of the categories and must be null otherwise. Rows whose file is not on disk are skipped with a warning, so you can start with a partial set.",
+  "fixtures": [
+    {
+      "file": "exercise-gym.jpg",
+      "expected": { "categories": ["exercise"], "healthy": null },
+      "note": "Solo gym session: weights, machines or a mirror selfie in a gym. Must NOT be tagged group (only one person)."
+    },
+    {
+      "file": "exercise-run.jpg",
+      "expected": { "categories": ["exercise"], "healthy": null },
+      "note": "Outdoor run: road/park, running shoes, sweaty post-run selfie. Tests that a street background alone does not read as 'unrelated'."
+    },
+    {
+      "file": "exercise-swim.jpg",
+      "expected": { "categories": ["exercise"], "healthy": null },
+      "note": "Pool or open-water swim. Water plus swimwear is easily confused with a holiday photo, so this is a real discriminator."
+    },
+    {
+      "file": "exercise-badminton.jpg",
+      "expected": { "categories": ["exercise"], "healthy": null },
+      "note": "Badminton court, racket in hand, playing alone or hitting against a wall. Vietnam-specific sport the model may not recognise."
+    },
+    {
+      "file": "exercise-strava-screenshot.jpg",
+      "expected": { "categories": ["exercise"], "healthy": null },
+      "note": "Edge case from the spec: a screenshot of a Strava / Apple Watch / Garmin workout summary. No human body in frame - the model has to read the UI and still answer exercise."
+    },
+    {
+      "file": "meal-salad.jpg",
+      "expected": { "categories": ["meal"], "healthy": true },
+      "note": "Clearly healthy: leafy salad bowl, visible vegetables, little oil. The easy healthy=true anchor."
+    },
+    {
+      "file": "meal-grilled-chicken-rice.jpg",
+      "expected": { "categories": ["meal"], "healthy": true },
+      "note": "Healthy Vietnamese home plate: grilled/steamed lean protein, greens, a modest portion of white rice. Tests that plain rice is not automatically judged unhealthy."
+    },
+    {
+      "file": "meal-home-cooked-vegetables.jpg",
+      "expected": { "categories": ["meal"], "healthy": true },
+      "note": "Home-cooked com nha: canh, stir-fried greens, a little fish or tofu. Shot on a cluttered table on purpose - tests robustness to messy real-world framing."
+    },
+    {
+      "file": "meal-bubble-tea.jpg",
+      "expected": { "categories": ["meal"], "healthy": false },
+      "note": "Edge case from the spec: tra sua / bubble tea. A drink, not a plate of food - the model must still call it meal, and must call it healthy=false."
+    },
+    {
+      "file": "meal-fried-chicken.jpg",
+      "expected": { "categories": ["meal"], "healthy": false },
+      "note": "Deep-fried food (fried chicken, fries). The easy healthy=false anchor."
+    },
+    {
+      "file": "meal-pizza-beer.jpg",
+      "expected": { "categories": ["meal"], "healthy": false },
+      "note": "Pizza and beer. Tests that alcohol plus refined carbs reads unhealthy, and that a social table setting does not by itself trigger group."
+    },
+    {
+      "file": "group-gym-two-people.jpg",
+      "expected": { "categories": ["exercise", "group"], "healthy": null },
+      "note": "Two people training together in a gym. Core stacking case: must return BOTH exercise and group."
+    },
+    {
+      "file": "group-badminton-doubles.jpg",
+      "expected": { "categories": ["exercise", "group"], "healthy": null },
+      "note": "Doubles badminton, three or more players visible. Stacking plus a sport the model may mislabel as tennis."
+    },
+    {
+      "file": "group-video-call-workout.jpg",
+      "expected": { "categories": ["exercise", "group"], "healthy": null },
+      "note": "Edge case from the rulebook: a video-call screenshot of people working out together remotely. Group counts even though the other person is on a screen."
+    },
+    {
+      "file": "group-team-dinner.jpg",
+      "expected": { "categories": ["meal", "group"], "healthy": false },
+      "note": "Hot pot / BBQ with several friends at the table. Stacking without exercise: meal + group, and healthy=false. Catches models that assume group implies exercise."
+    },
+    {
+      "file": "unrelated-selfie.jpg",
+      "expected": { "categories": [], "healthy": null },
+      "note": "Plain indoor selfie, no gym, no food. The most common false positive - many models will guess exercise from a person in casual clothes."
+    },
+    {
+      "file": "unrelated-pet.jpg",
+      "expected": { "categories": [], "healthy": null },
+      "note": "A dog or cat. Must return an empty category list, not 'group' because of companionship."
+    },
+    {
+      "file": "unrelated-landscape.jpg",
+      "expected": { "categories": [], "healthy": null },
+      "note": "Scenery with no people and no food - beach, street, sunset. Tests that an outdoor scene alone is not read as a walk or a run."
+    },
+    {
+      "file": "ambiguous-protein-shake.jpg",
+      "expected": { "categories": ["meal"], "healthy": true },
+      "note": "Ambiguous: a protein shake or smoothie. Our ruling is meal + healthy=true. Expect disagreement between models here - check the reason text, not just the label."
+    },
+    {
+      "file": "ambiguous-meal-at-gym.jpg",
+      "expected": { "categories": ["meal"], "healthy": true },
+      "note": "Ambiguous: a healthy meal photographed inside a gym or with gym kit in frame. Our ruling is meal only - a photo of food is not evidence that a workout happened. Models that also return exercise are over-tagging."
+    }
+  ]
+}

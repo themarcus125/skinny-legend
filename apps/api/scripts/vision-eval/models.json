@@ -1,0 +1,38 @@
+{
+  "description": "Candidate vision models for SKI-41. Edit this file to add or remove models; run.ts reads the ids from here. Ids below were verified against https://openrouter.ai/api/v1/models on 2026-09-14 (prices are the list prices that day); re-verify against https://openrouter.ai/models before the first paid run - OpenRouter ids change and a wrong id just returns HTTP 404, which the harness records as a 100% failure rate.",
+  "pricing": {
+    "description": "Fallback $/M-token table, used only when OpenRouter does not return a `usage` block for the call. Costs computed from this table are flagged `estimate: true` in the report. assumedPromptTokens/assumedCompletionTokens are the last-resort guess when even the token counts are missing: a ~1024px JPEG is roughly 1000-1600 image tokens plus the ~350-token system prompt, and the JSON verdict is short.",
+    "assumedPromptTokens": 1500,
+    "assumedCompletionTokens": 80
+  },
+  "models": [
+    {
+      "id": "qwen/qwen3.7-flash",
+      "label": "Qwen3.7 Flash",
+      "status": "current VISION_MODEL default; verified 2026-09-14",
+      "inputPerMTokensUsd": 0.03,
+      "outputPerMTokensUsd": 0.13
+    },
+    {
+      "id": "z-ai/glm-4.6v",
+      "label": "GLM-4.6V",
+      "status": "verified 2026-09-14",
+      "inputPerMTokensUsd": 0.6,
+      "outputPerMTokensUsd": 1.8
+    },
+    {
+      "id": "z-ai/glm-5.3-flash",
+      "label": "GLM-5.3 Flash",
+      "status": "verified 2026-09-14",
+      "inputPerMTokensUsd": 0.15,
+      "outputPerMTokensUsd": 0.5
+    },
+    {
+      "id": "google/gemini-3.1-flash-lite",
+      "label": "Gemini 3.1 Flash Lite",
+      "status": "verified 2026-09-14 — non-Chinese control candidate",
+      "inputPerMTokensUsd": 0.25,
+      "outputPerMTokensUsd": 1.5
+    }
+  ]
+}
