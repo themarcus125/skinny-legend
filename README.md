@@ -42,6 +42,10 @@ API tests need the local Postgres running and use `AUTH_MODE=test` (header `x-te
 
 ## Deploy (Railway)
 
+Step-by-step runbooks for the first deploy — Railway, R2, Firebase, Vercel, and the list of
+values to collect — live in [`docs/deploy/`](docs/deploy/README.md). The sections below are the
+reference for what the code expects.
+
 The runtime image (`apps/api/Dockerfile`) contains only the production dependency tree, so
 `drizzle-kit` is **not** available there. Run migrations and the seed from a dev checkout with
 the production connection string exported:
@@ -77,7 +81,10 @@ above also fails the boot with a message naming it.
 
 ### Weekly cleanup cron
 
-Add a second Railway service from the same image with no HTTP port:
+Add a second Railway service from the same image with no HTTP port. Its settings live in
+`railway.cleanup.json` at the repo root, but Railway only reads that file if the service's
+**Settings → Config as code → "Railway config file path"** is set to `railway.cleanup.json`; with
+the default path the service would pick up the API's `railway.json` (HTTP server, no cron) instead.
 
 - Command: `node dist/jobs/cleanup.js`
 - Schedule: `0 3 * * 1` (Mondays, 03:00 UTC)
