@@ -53,7 +53,7 @@
       "admin": "Admin"
     },
     "entryStatus": {
-      "pending": "Awaiting confirmation",
+      "pending": "Uncategorised",
       "confirmed": "Confirmed",
       "rejected": "Rejected"
     }
