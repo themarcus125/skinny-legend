@@ -35,7 +35,7 @@
 
 @theme inline {
   /* fonts (runtime var from next/font, hence inline) */
-  --font-sans: var(--font-urbanist), -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-sans: var(--font-be-vietnam-pro), -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial, sans-serif;
   --font-heading: var(--font-sans);
   --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
 

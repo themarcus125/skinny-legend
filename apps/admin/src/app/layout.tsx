@@ -1,17 +1,17 @@
 import type { Metadata } from 'next';
-import { Urbanist } from 'next/font/google';
+import { Be_Vietnam_Pro } from 'next/font/google';
 import { getMessages, getTranslations } from 'next-intl/server';
 import './globals.css';
 import { Providers } from './providers';
 import { readLocale } from '@/i18n/locale.server';
 
-// Urbanist is a variable font: loading the whole wght axis covers the design system's 400–800
-// (and the h2's 650, which a fixed weight list could not express). Google Fonts ships Urbanist
-// with `latin` and `latin-ext` only — there is no `vietnamese` subset to ask for — so latin-ext
-// carries the Vietnamese diacritics and the system stack below backs up anything it misses.
-const urbanist = Urbanist({
-  subsets: ['latin', 'latin-ext'],
-  variable: '--font-urbanist',
+// Be Vietnam Pro carries the full `vietnamese` subset — Urbanist ships latin/latin-ext only and
+// dropped diacritics. Static weights 400–800 cover the design system's scale; the h2's 650 falls
+// to the nearest available face (700) under CSS font matching.
+const beVietnamPro = Be_Vietnam_Pro({
+  weight: ['400', '500', '600', '700', '800'],
+  subsets: ['latin', 'vietnamese'],
+  variable: '--font-be-vietnam-pro',
   display: 'swap',
 });
 
@@ -25,7 +25,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const messages = await getMessages();
   return (
     // suppressHydrationWarning: next-themes writes the `dark` class on <html> before paint.
-    <html lang={locale} className={urbanist.variable} suppressHydrationWarning>
+    <html lang={locale} className={beVietnamPro.variable} suppressHydrationWarning>
       <body className="min-h-dvh bg-background text-foreground antialiased">
         <Providers locale={locale} messages={messages}>
           {children}
