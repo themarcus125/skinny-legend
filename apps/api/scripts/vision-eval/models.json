@@ -1,0 +1,31 @@
+{
+  "description": "Candidate vision models for SKI-41. Edit this file to add or remove models; run.ts reads the ids from here. Every id below is a CANDIDATE and MUST be verified against https://openrouter.ai/models before the first paid run - OpenRouter ids change and a wrong id just returns HTTP 404, which the harness records as a 100% failure rate.",
+  "pricing": {
+    "description": "Fallback $/M-token table, used only when OpenRouter does not return a `usage` block for the call. Costs computed from this table are flagged `estimate: true` in the report. assumedPromptTokens/assumedCompletionTokens are the last-resort guess when even the token counts are missing: a ~1024px JPEG is roughly 1000-1600 image tokens plus the ~350-token system prompt, and the JSON verdict is short.",
+    "assumedPromptTokens": 1500,
+    "assumedCompletionTokens": 80
+  },
+  "models": [
+    {
+      "id": "qwen/qwen3.7-flash",
+      "label": "Qwen3.7 Flash",
+      "status": "CANDIDATE - current VISION_MODEL default, verify id on openrouter.ai/models",
+      "inputPerMTokensUsd": 0.1,
+      "outputPerMTokensUsd": 0.4
+    },
+    {
+      "id": "z-ai/glm-4.6v",
+      "label": "GLM-4.6V",
+      "status": "CANDIDATE - verify id on openrouter.ai/models",
+      "inputPerMTokensUsd": 0.6,
+      "outputPerMTokensUsd": 1.8
+    },
+    {
+      "id": "moonshotai/kimi-k2.5-vl",
+      "label": "Kimi K2.5 VL",
+      "status": "CANDIDATE - verify id on openrouter.ai/models",
+      "inputPerMTokensUsd": 0.6,
+      "outputPerMTokensUsd": 2.5
+    }
+  ]
+}

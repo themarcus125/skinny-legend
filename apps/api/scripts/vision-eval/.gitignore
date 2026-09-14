@@ -1,0 +1,9 @@
+# Evaluation runs are local artefacts, not source.
+results/
+
+# Fixture photos are personal and large; only the labels (fixtures/manifest.json) are tracked.
+fixtures/*.jpg
+fixtures/*.jpeg
+fixtures/*.png
+fixtures/*.heic
+fixtures/*.webp
