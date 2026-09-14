@@ -1,0 +1,89 @@
+@import "tailwindcss";
+
+/* The shared design system. A CSS `@import` is only valid before other rules, so the whole token
+   layer is pulled in here, at the top, in dependency order: `theme.css` maps `tokens.css` onto
+   Tailwind utilities, and `type.css` reads `--font-mono` from `theme.css`. */
+@import "@skinny/ui/styles/fonts.css";
+@import "@skinny/ui/styles/tokens.css";
+@import "@skinny/ui/styles/theme.css";
+@import "@skinny/ui/styles/type.css";
+@import "leaflet/dist/leaflet.css";
+
+/* Tailwind v4 does not scan node_modules, so @skinny/ui's components would compile to markup with
+   no matching utilities — unstyled, with no error. Path is relative to THIS file:
+   src → apps/web → apps → the repo root. */
+@source "../../../packages/ui/src";
+
+/* `.dark` is put on <html> by `src/app/theme.ts`, so the variant has to match the element itself
+   as well as its descendants — the same shape as the admin's next-themes setup. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+@layer base {
+  * {
+    @apply border-border outline-ring;
+  }
+  html {
+    @apply font-sans;
+    color-scheme: light;
+    font-optical-sizing: auto;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    /* iOS Safari: keep the rubber band from showing the page behind the standalone shell. */
+    overscroll-behavior-y: none;
+  }
+  html.dark {
+    color-scheme: dark;
+  }
+  body {
+    @apply bg-background text-base text-foreground;
+    margin: 0;
+    /* No desktop layout (spec §2): the app is a phone, centred on anything wider. */
+    max-width: 430px;
+    margin-inline: auto;
+    min-height: 100dvh;
+  }
+  h1,
+  h2,
+  h3 {
+    @apply font-heading;
+    text-wrap: balance;
+  }
+  [data-slot="metric-value"] {
+    font-variant-numeric: tabular-nums;
+  }
+  ::selection {
+    background: var(--primary-soft);
+    color: var(--foreground);
+  }
+  /* Touch targets are 44px; never let a tap paint a grey box over one. */
+  button,
+  a {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+/* ── Leaflet: leaflet.css is imported unlayered, so these overrides stay unlayered too and lean on
+   specificity (`.leaflet-container …`) to win — inside @layer they would lose to the plugin. ── */
+.leaflet-container {
+  background: var(--surface-2);
+  font-family: var(--font-sans);
+}
+.dark .leaflet-container .leaflet-tile {
+  filter: invert(1) hue-rotate(180deg) brightness(0.92) contrast(0.88) saturate(0.7);
+}
+.leaflet-container .leaflet-popup-content-wrapper,
+.leaflet-container .leaflet-popup-tip {
+  background: var(--popover);
+  color: var(--popover-foreground);
+  box-shadow: var(--shadow-2);
+}
+.leaflet-container .leaflet-popup-content-wrapper {
+  border-radius: var(--radius-md);
+}
+.leaflet-container .leaflet-control-attribution {
+  background: var(--card);
+  color: var(--foreground-subtle);
+}
+.leaflet-container .leaflet-control-attribution a {
+  color: var(--foreground-secondary);
+}

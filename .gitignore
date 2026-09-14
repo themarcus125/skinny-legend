@@ -14,3 +14,6 @@ ios/.swiftpm/
 .superpowers/
 .claude/launch.json
 ios/SkinnyLegend/GoogleService-Info.plist
+apps/web/dev-dist/
+apps/web/playwright-report/
+apps/web/test-results/

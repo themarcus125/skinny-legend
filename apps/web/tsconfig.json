@@ -1,0 +1,36 @@
+{
+  // Standalone by design (ruling R15): tsconfig.base.json is NodeNext, which is wrong for a
+  // bundled browser app — Vite resolves extensionless specifiers and `import.meta.env`, and the
+  // workspace packages ship TypeScript source rather than `dist/`. Typecheck is `tsc --noEmit`;
+  // Vite alone emits.
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "moduleDetection": "force",
+    "types": ["vite/client", "vite-plugin-pwa/client", "node"],
+
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+
+    "jsx": "react-jsx",
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+
+    // No baseUrl: it is deprecated in TS 6 and gone in 7; "paths" resolves against this file.
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  "include": ["src", "e2e", "*.ts", "*.mts", "vite.config.ts", "vitest.config.ts", "playwright.config.ts"],
+  "exclude": ["node_modules", "dist", "dev-dist"]
+}

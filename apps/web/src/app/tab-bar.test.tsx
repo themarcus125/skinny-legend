@@ -1,0 +1,36 @@
+import { describe, it, expect } from 'vitest';
+import { MemoryRouter } from 'react-router';
+import { render, screen, within } from '@/test/intl';
+import { TabBar } from './tab-bar';
+
+function renderAt(path: string) {
+  return render(<TabBar />, {
+    wrapper: ({ children }) => <MemoryRouter initialEntries={[path]}>{children}</MemoryRouter>,
+  });
+}
+
+describe('TabBar', () => {
+  it('renders the four Vietnamese destinations', () => {
+    renderAt('/');
+    const nav = screen.getByRole('navigation', { name: 'Điều hướng chính' });
+    const labels = within(nav)
+      .getAllByRole('link')
+      .map((link) => link.textContent);
+    expect(labels).toEqual(['Tổng quan', 'Xếp hạng', 'Xu hướng', 'Tài khoản']);
+  });
+
+  it('marks the current destination for assistive tech', () => {
+    renderAt('/trends');
+    expect(screen.getByRole('link', { name: 'Xu hướng' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('link', { name: 'Tổng quan' })).not.toHaveAttribute('aria-current');
+  });
+
+  it('keeps the camera bubble outside the nav, pointing at /track', () => {
+    renderAt('/');
+    const bubble = screen.getByRole('link', { name: 'Ghi nhận' });
+    expect(bubble).toHaveAttribute('href', '/track');
+    // The spec's "separated camera bubble": an action, not a fifth destination.
+    expect(bubble.closest('nav')).toBeNull();
+    expect(screen.getByRole('navigation', { name: 'Điều hướng chính' })).not.toContainElement(bubble);
+  });
+});
