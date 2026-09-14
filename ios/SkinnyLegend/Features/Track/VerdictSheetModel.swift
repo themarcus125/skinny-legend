@@ -1,8 +1,14 @@
 import Foundation
 import Observation
 
-/// Backs the verdict sheet for both a freshly created entry and a retroactive history edit
-/// (spec §7 Track and Account). Confirming always calls `PATCH /entries/:id`.
+/// Backs the verdict sheet for a freshly created entry and for a retroactive history edit
+/// (spec §7 Track and Account).
+///
+/// `POST /entries` confirms the entry from the AI verdict itself, so a `.created` sheet on a
+/// successful verdict opens on an entry that is *already tracked* (`isAlreadyTracked`): nothing
+/// needs saving, and `confirm()` (`PATCH /entries/:id`) is only a correction once the user has
+/// changed something. A failed verdict leaves the entry `pending` with no categories, and a
+/// history edit has no verdict at all — both still confirm through `PATCH`.
 @MainActor
 @Observable
 final class VerdictSheetModel: Identifiable {
@@ -14,9 +20,11 @@ final class VerdictSheetModel: Identifiable {
     }
 
     private let api: any APIClient
-    /// Mutable so a successful `.edit`-mode `confirm()` can replace the constructor's placeholder
-    /// caps/projection with the server's real, post-save numbers (ruling 2).
+    /// Mutable so a successful `confirm()` can replace the constructor's caps/projection with
+    /// the server's real, post-save numbers (ruling 2 for `.edit`; a plain refresh otherwise).
     private var initialSelection: Set<Category>
+    private var initialPlaceName: String?
+    private var initialPlaceSource: PlaceSource
     private var serverProjectedPoints: Int
     private var capsHit: CapsHit
     private var cappedCategories: Set<Category>
@@ -37,6 +45,9 @@ final class VerdictSheetModel: Identifiable {
     private(set) var isSaving = false
     private(set) var errorMessage: String?
     private(set) var confirmedEntry: EntryDTO?
+    /// Set by the sheet once it has played the celebration for an already-tracked entry, so a
+    /// re-appearance (a picker sheet closing over it) never replays it.
+    var didCelebrate = false
 
     init(
         api: any APIClient,
@@ -57,6 +68,8 @@ final class VerdictSheetModel: Identifiable {
         self.serverProjectedPoints = projectedPoints
         self.placeName = placeName
         self.placeSource = placeSource
+        self.initialPlaceName = placeName
+        self.initialPlaceSource = placeSource
 
         let starting: Set<Category>
         switch mode {
@@ -66,7 +79,7 @@ final class VerdictSheetModel: Identifiable {
         self.selected = starting
         self.initialSelection = starting
 
-        // The editor opens straight away when there is nothing useful to confirm: a failed
+        // The editor opens straight away when there is nothing useful to show: a failed
         // verdict, an empty suggestion, or a history edit.
         switch mode {
         case .created(let verdict): self.isEditingCategories = verdict.failed || starting.isEmpty
@@ -77,6 +90,24 @@ final class VerdictSheetModel: Identifiable {
     var verdict: VerdictDTO? {
         if case .created(let verdict) = mode { return verdict }
         return nil
+    }
+
+    /// True when `POST /entries` already confirmed this entry from the AI verdict: it is counted
+    /// the moment the sheet appears, and saving is only needed after a correction.
+    var isAlreadyTracked: Bool {
+        if case .created = mode { return entry.status == .confirmed }
+        return false
+    }
+
+    /// Whether the user has changed the categories or the place since the sheet opened.
+    var hasChanges: Bool {
+        selected != initialSelection || placeName != initialPlaceName || placeSource != initialPlaceSource
+    }
+
+    /// Whether the primary button must `PATCH`: always for a pending entry or a history edit,
+    /// and only after a correction for an already-tracked one.
+    var needsSave: Bool {
+        !isAlreadyTracked || hasChanges
     }
 
     /// Categories that cannot earn points for this entry. While the selection is untouched, this
@@ -131,6 +162,8 @@ final class VerdictSheetModel: Identifiable {
     }
 
     /// `PATCH /entries/:id` → status becomes `confirmed` and the categories become `source = user`.
+    /// The response is adopted as the new baseline, so `hasChanges` clears and the projection
+    /// reflects the server's post-save numbers.
     func confirm() async -> EntryDTO? {
         isSaving = true
         errorMessage = nil
@@ -143,16 +176,16 @@ final class VerdictSheetModel: Identifiable {
             )
             let response = try await api.confirmEntry(id: entry.id, input)
             confirmedEntry = response.entry
-            if case .edit = mode {
-                // The PATCH response is the first real projection this history edit has ever had
-                // (ruling 2) — adopt it as the new baseline so `projectedPoints`/`capWarnings`
-                // immediately reflect it instead of the placeholder caps passed at init.
-                capsHit = response.capsHit
-                cappedCategories = Set(response.cappedCategories)
-                serverProjectedPoints = response.projectedPoints
-                initialSelection = selected
-                hasConfirmedProjection = true
-            }
+            // For a history edit this is the first real projection it has ever had (ruling 2) —
+            // adopt it so `projectedPoints`/`capWarnings` immediately reflect it instead of the
+            // placeholder caps passed at init.
+            capsHit = response.capsHit
+            cappedCategories = Set(response.cappedCategories)
+            serverProjectedPoints = response.projectedPoints
+            initialSelection = selected
+            initialPlaceName = placeName
+            initialPlaceSource = placeSource
+            hasConfirmedProjection = true
             return response.entry
         } catch let error as APIError {
             errorMessage = error.userMessage

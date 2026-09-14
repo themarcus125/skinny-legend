@@ -57,6 +57,11 @@ struct LocalizedTests {
         #expect(Localized.locale.identifier.hasPrefix("en"))
         #expect(Localized.string("Ngôn ngữ") == "Language")
         #expect(Localized.string("Hệ thống") == "System")
+        // The verdict sheet's tracked-entry copy.
+        #expect(Localized.string("Đã ghi nhận") == "Tracked")
+        #expect(Localized.string("Chọn hoạt động") == "Choose activity")
+        #expect(Localized.string("Lưu thay đổi") == "Save changes")
+        #expect(Localized.string("Điểm đã cộng") == "Points earned")
         Localized.setLanguage(.vi)
         #expect(Localized.string("Ngôn ngữ") == "Ngôn ngữ")
     }
