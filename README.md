@@ -220,8 +220,8 @@ XcodeGen (`ios/*.xcodeproj` is gitignored), so project settings are edited there
 
 ### Before TestFlight
 
-1. **Apple Developer team** — set `DEVELOPMENT_TEAM` in `ios/project.yml` (empty today) and
-   regenerate the project; signing fails without it.
+1. **Apple Developer team** — set `DEVELOPMENT_TEAM` under `settings.configs.Release` in
+   `ios/project.yml` (empty today) and regenerate the project; signing fails without it.
 2. **`GoogleService-Info.plist`** — drop the file at `ios/SkinnyLegend/GoogleService-Info.plist`.
    It is gitignored and never committed; every machine and CI runner supplies its own copy. With
    it absent the app falls back to mock services (`AppMode.servicesAreLive`).
@@ -230,5 +230,15 @@ XcodeGen (`ios/*.xcodeproj` is gitignored), so project settings are edited there
    the sandbox APNs and every send fails.
 4. **Firebase project + APNs key** (SKI-40 / SKI-42) — a real Firebase project with the APNs
    auth key uploaded, and the matching service credentials set on the API, so FCM can deliver.
-5. **Production API base URL** — `AppMode.apiBaseURL` still defaults to `http://localhost:3000`;
-   a release build must resolve to the deployed Railway URL.
+5. **Production API base URL** — the `API_BASE_URL` Info.plist key, fed per configuration from
+   `settings.configs` in `ios/project.yml` (Debug `http://localhost:3000`, Release a documented
+   placeholder). Replace the Release value with the deployed Railway URL and regenerate; an
+   `API_BASE_URL` process-environment variable still overrides it for a scheme or a device
+   pointing at a laptop (`AppMode.resolveBaseURL`: env → Info.plist → localhost).
+6. **Code signing** — `ios/project.yml` switches signing off (`CODE_SIGN_STYLE: Manual`,
+   `CODE_SIGNING_ALLOWED: NO`) for **Debug only**, so simulator builds and `xcodebuild test` need
+   no identity. Release uses `CODE_SIGN_STYLE: Automatic`; check it still matches your provisioning
+   once `DEVELOPMENT_TEAM` is set.
+7. **`GOOGLE_REVERSED_CLIENT_ID`** — `ios/project.yml` ships the placeholder
+   `com.googleusercontent.apps.unconfigured`. Replace it with `REVERSED_CLIENT_ID` from your own
+   `GoogleService-Info.plist` and regenerate, or Google Sign-In cannot call back into the app.

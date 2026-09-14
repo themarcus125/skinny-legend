@@ -272,4 +272,51 @@ struct AppModeTests {
     func noFlagNoPlistFallsBackToMock() {
         #expect(AppMode.servicesAreLive(isMock: false, hasFirebasePlist: false) == false)
     }
+
+    // MARK: - API base URL resolution: env → Info.plist → localhost
+
+    @Test("The environment override wins over the bundled value")
+    func environmentWinsOverPlist() {
+        let url = AppMode.resolveBaseURL(
+            environment: ["API_BASE_URL": "http://192.168.1.10:3000"],
+            infoPlist: ["API_BASE_URL": "https://api.example.com"]
+        )
+        #expect(url.absoluteString == "http://192.168.1.10:3000")
+    }
+
+    @Test("With no override, the bundled value is used — this is what keeps a Release build off localhost")
+    func plistValueIsUsedWithoutOverride() {
+        let url = AppMode.resolveBaseURL(environment: [:], infoPlist: ["API_BASE_URL": "https://api.example.com"])
+        #expect(url.absoluteString == "https://api.example.com")
+    }
+
+    @Test("With neither, it falls back to the local dev server")
+    func fallsBackToLocalhost() {
+        let url = AppMode.resolveBaseURL(environment: [:], infoPlist: [:])
+        #expect(url.absoluteString == "http://localhost:3000")
+    }
+
+    @Test("Empty or unparseable values fall through to the next source instead of failing the launch")
+    func blankValuesFallThrough() {
+        #expect(AppMode.resolveBaseURL(
+            environment: ["API_BASE_URL": "   "],
+            infoPlist: ["API_BASE_URL": "https://api.example.com"]
+        ).absoluteString == "https://api.example.com")
+        // An unsubstituted build setting: a Release bundle missing the key must not become a
+        // schemeless, unusable URL.
+        #expect(AppMode.resolveBaseURL(
+            environment: [:],
+            infoPlist: ["API_BASE_URL": "$(API_BASE_URL)"]
+        ).absoluteString == "http://localhost:3000")
+    }
+
+    /// Guards the wiring itself: the key has to survive `project.yml` → generated `Info.plist` →
+    /// build-setting substitution, or the resolution above would silently keep using localhost.
+    @MainActor @Test("The built app bundle carries a substituted API_BASE_URL")
+    func bundleCarriesTheKey() {
+        // `MemberDetailModel` lives in the app module, so this is the app bundle under a hosted
+        // test run, not the test bundle.
+        let bundled = Bundle(for: MemberDetailModel.self).infoDictionary?["API_BASE_URL"] as? String
+        #expect(bundled == "http://localhost:3000")   // tests build the Debug configuration
+    }
 }

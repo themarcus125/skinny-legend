@@ -116,9 +116,14 @@ struct TrackView: View {
     private func verdictSheetDismissed() {
         guard let sheetModel = presentedVerdict else { return }
         presentedVerdict = nil
-        let confirmedByHand = !sheetModel.isAlreadyTracked && sheetModel.confirmedEntry != nil
-        guard sheetModel.isAlreadyTracked || confirmedByHand else { return }
-        if confirmedByHand { celebrationPoints = sheetModel.projectedPoints }
+        switch sheetModel.outcome {
+        case .abandoned:
+            return
+        case .tracked:
+            break   // the sheet already celebrated, on its first appearance
+        case .confirmedByHand:
+            celebrationPoints = sheetModel.projectedPoints
+        }
         model.reset()
         places.clear()
         // Spec §E: ask for notification permission after the first confirmed entry, never at

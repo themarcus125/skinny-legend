@@ -59,11 +59,13 @@ struct MockAPIClientTests {
         #expect(created.entry.status == .confirmed)
         #expect(!created.verdict.categories.isEmpty)
         #expect(created.entry.categories == created.verdict.categories)
-        // Already visible everywhere a confirmed entry is (the seed may have this day's meal cap
-        // filled already, so the total is only guaranteed not to drop).
-        #expect(try await client.dashboard().total >= before)
+        // Already visible everywhere a confirmed entry is, and scored with exactly the points the
+        // create response projected — an exact assertion rather than "the total did not drop",
+        // which a seeded day with a filled cap would satisfy even if the entry scored nothing.
         #expect(try await client.feed(cursor: nil).entries.contains { $0.id == created.entry.id })
-        #expect(try await client.myEntries(cursor: nil).entries.first { $0.id == created.entry.id }?.status == .confirmed)
+        let row = try await client.myEntries(cursor: nil).entries.first { $0.id == created.entry.id }
+        #expect(row?.status == .confirmed)
+        #expect(row?.points == created.projectedPoints)
 
         let confirmed = try await client.confirmEntry(
             id: created.entry.id,
@@ -71,7 +73,8 @@ struct MockAPIClientTests {
         )
         #expect(confirmed.entry.status == .confirmed)
         #expect(confirmed.entry.categories == [.group])
-        #expect(try await client.dashboard().total >= before)
+        let corrected = try await client.myEntries(cursor: nil).entries.first { $0.id == created.entry.id }
+        #expect(corrected?.points == confirmed.projectedPoints)
 
         try await client.deleteEntry(id: created.entry.id)
         let history = try await client.myEntries(cursor: nil)

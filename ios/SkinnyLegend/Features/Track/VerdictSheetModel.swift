@@ -19,6 +19,19 @@ final class VerdictSheetModel: Identifiable {
         case edit
     }
 
+    /// How the sheet ended, for the presenter to act on after dismissal. Derived from the model's
+    /// own state rather than recomputed at the call site, so "did this entry count?" has exactly
+    /// one definition.
+    enum Outcome: Equatable {
+        /// `POST /entries` already confirmed the entry from the AI verdict; it counted the moment
+        /// the sheet appeared, whether or not the user then corrected it.
+        case tracked
+        /// A pending entry (failed verdict) or a history edit the user confirmed with a `PATCH`.
+        case confirmedByHand
+        /// Left unconfirmed — nothing counted, the photo stays in place.
+        case abandoned
+    }
+
     private let api: any APIClient
     /// Mutable so a successful `confirm()` can replace the constructor's caps/projection with
     /// the server's real, post-save numbers (ruling 2 for `.edit`; a plain refresh otherwise).
@@ -45,9 +58,8 @@ final class VerdictSheetModel: Identifiable {
     private(set) var isSaving = false
     private(set) var errorMessage: String?
     private(set) var confirmedEntry: EntryDTO?
-    /// Set by the sheet once it has played the celebration for an already-tracked entry, so a
-    /// re-appearance (a picker sheet closing over it) never replays it.
-    var didCelebrate = false
+    /// Whether the sheet has already played its celebration; see `markCelebrated()`.
+    private var didCelebrate = false
 
     init(
         api: any APIClient,
@@ -93,10 +105,32 @@ final class VerdictSheetModel: Identifiable {
     }
 
     /// True when `POST /entries` already confirmed this entry from the AI verdict: it is counted
-    /// the moment the sheet appears, and saving is only needed after a correction.
+    /// the moment the sheet appears, and saving is only needed after a correction. A failed
+    /// verdict leaves the entry `pending`, so both halves of the condition are checked rather
+    /// than trusting the status alone.
     var isAlreadyTracked: Bool {
-        if case .created = mode { return entry.status == .confirmed }
-        return false
+        guard case .created(let verdict) = mode else { return false }
+        return entry.status == .confirmed && !verdict.failed
+    }
+
+    /// What the presenter should do once the sheet goes away.
+    var outcome: Outcome {
+        if isAlreadyTracked { return .tracked }
+        return confirmedEntry != nil ? .confirmedByHand : .abandoned
+    }
+
+    /// Claims the one celebration this sheet owes, returning `true` exactly once: a re-appearance
+    /// (a picker sheet closing back over it) must never replay it.
+    func markCelebrated() -> Bool {
+        guard !didCelebrate else { return false }
+        didCelebrate = true
+        return true
+    }
+
+    /// Whether the primary button can act. An already-tracked entry corrected down to no
+    /// categories would silently zero a scored entry, so that one save is refused.
+    var canSave: Bool {
+        !isSaving && !(needsSave && selected.isEmpty && isAlreadyTracked)
     }
 
     /// Whether the user has changed the categories or the place since the sheet opened.

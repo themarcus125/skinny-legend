@@ -81,7 +81,7 @@ struct VerdictSheet: View {
                 }
                 .buttonStyle(.glassProminent)
                 .tint(Theme.flame)
-                .disabled(model.isSaving)
+                .disabled(!model.canSave)
                 .padding(.horizontal, 20)
                 .padding(.bottom, 12)
             }
@@ -93,8 +93,7 @@ struct VerdictSheet: View {
         // Spec §14: the celebration plays when the entry is counted — for an AI-confirmed entry
         // that is the moment the sheet first appears, not a later button press.
         .onAppear {
-            guard model.isAlreadyTracked, !model.didCelebrate else { return }
-            model.didCelebrate = true
+            guard model.isAlreadyTracked, model.markCelebrated() else { return }
             isCelebrating = true
         }
         .overlay {

@@ -33,7 +33,15 @@ struct MemberDetailView: View {
                     } else {
                         entriesCard
                         if model.hasMore {
-                            ProgressView().padding(.vertical, 12)
+                            // The one pagination trigger: a footer in the *outer* lazy stack, so
+                            // it is built only when the reader reaches the end of what is loaded.
+                            // `.id(count)` re-identifies it after each page, which re-fires the
+                            // task while it is still on screen (a short history keeps filling)
+                            // and stops as soon as it scrolls away or `hasMore` turns false.
+                            ProgressView()
+                                .padding(.vertical, 12)
+                                .id(model.entries.count)
+                                .task { await model.loadNextPage() }
                         }
                     }
                 }
@@ -50,8 +58,8 @@ struct MemberDetailView: View {
 
     /// One grouped section rather than a card per entry, borrowing the grammar of the Account
     /// history list: a single glass surface whose rows are separated by hairline dividers.
-    /// The stack stays lazy so each row's `.task` — and therefore pagination — still fires only
-    /// as that row comes into view.
+    /// The rows carry no pagination of their own — a nested lazy stack inside a card can lay out
+    /// more than it shows, so the trigger lives on the footer of the outer stack instead.
     private var entriesCard: some View {
         GlassCard(padding: 0) {
             LazyVStack(spacing: 0) {
@@ -60,7 +68,6 @@ struct MemberDetailView: View {
                         Divider().padding(.leading, 16)
                     }
                     MemberEntryRow(entry: entry)
-                        .task { await model.loadNextPageIfNeeded(after: entry) }
                 }
             }
             // The rows have no background of their own, so clip them to the card's shape

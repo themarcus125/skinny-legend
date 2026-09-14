@@ -12,12 +12,25 @@ settings:
   base:
     SWIFT_VERSION: "6.0"
     SWIFT_STRICT_CONCURRENCY: complete
-    CODE_SIGN_STYLE: Manual
-    CODE_SIGN_IDENTITY: ""
-    CODE_SIGNING_REQUIRED: NO
-    CODE_SIGNING_ALLOWED: NO
-    DEVELOPMENT_TEAM: ""
+    # Replace with REVERSED_CLIENT_ID from your own `GoogleService-Info.plist` (gitignored, see
+    # the README's "Before TestFlight"); Google Sign-In cannot call back without the real value.
     GOOGLE_REVERSED_CLIENT_ID: com.googleusercontent.apps.unconfigured
+  configs:
+    Debug:
+      # Signing off, on purpose: simulator builds and `xcodebuild test` need no identity, and no
+      # Apple Developer team is configured yet. Scoped to Debug so a Release archive signs
+      # normally once DEVELOPMENT_TEAM is set below.
+      CODE_SIGN_STYLE: Manual
+      CODE_SIGN_IDENTITY: ""
+      CODE_SIGNING_REQUIRED: NO
+      CODE_SIGNING_ALLOWED: NO
+      API_BASE_URL: http://localhost:3000
+    Release:
+      CODE_SIGN_STYLE: Automatic
+      # Set to your Apple Developer team id before archiving for TestFlight.
+      DEVELOPMENT_TEAM: ""
+      # Placeholder: replace with the deployed API's URL before shipping a build.
+      API_BASE_URL: https://skinny-legend-api.up.railway.app
 
 packages:
   Firebase:
@@ -67,6 +80,9 @@ targets:
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
         ITSAppUsesNonExemptEncryption: false
+        # Per-configuration (see `settings.configs`), so a Release build never points at
+        # localhost. `AppMode.resolveBaseURL` reads env first, then this key.
+        API_BASE_URL: $(API_BASE_URL)
         NSCameraUsageDescription: Chụp ảnh buổi tập hoặc bữa ăn để ghi nhận điểm.
         NSPhotoLibraryUsageDescription: Chọn ảnh buổi tập hoặc bữa ăn từ thư viện để ghi nhận điểm.
         NSLocationWhenInUseUsageDescription: Ghi lại địa điểm bạn tập luyện để hiển thị trong nhật ký nhóm.

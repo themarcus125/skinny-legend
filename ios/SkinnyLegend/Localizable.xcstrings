@@ -1637,17 +1637,6 @@
         }
       }
     },
-    "Xác nhận hoạt động" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Confirm activity"
-          }
-        }
-      }
-    },
     "Xếp hạng" : {
       "extractionState" : "manual",
       "localizations" : {
