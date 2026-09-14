@@ -67,11 +67,18 @@ interface EntryPattern {
   reason: string;
 }
 
+/**
+ * Entries are confirmed straight from the AI verdict, so the only pending entry is the one whose
+ * verdict failed and that the member never categorised by hand. Index 26 avoids the no-verdict slots.
+ */
+const FAILED_VERDICT_INDEX = 26;
+
 const ENTRY_PATTERNS: EntryPattern[] = [
   { categories: ['exercise'], status: 'confirmed', healthy: null, confidence: 0.91, reason: 'Ảnh chụp trong phòng gym với tạ đòn.' },
   { categories: ['meal'], status: 'confirmed', healthy: true, confidence: 0.78, reason: 'Đĩa salad và ức gà nướng.' },
   { categories: ['exercise', 'group'], status: 'confirmed', healthy: null, confidence: 0.84, reason: 'Hai người chạy bộ cùng nhau ngoài công viên.' },
-  { categories: [], status: 'pending', healthy: false, confidence: 0.42, reason: 'Ảnh mì cay nhiều dầu mỡ, không tính bữa lành mạnh.' },
+  // An unhealthy meal is auto-confirmed with no categories (the AI drops `meal`); it scores nothing unless the member opts in.
+  { categories: [], status: 'confirmed', healthy: false, confidence: 0.42, reason: 'Ảnh mì cay nhiều dầu mỡ, không tính bữa lành mạnh.' },
   { categories: ['group'], status: 'rejected', healthy: null, confidence: 0.31, reason: 'Không rõ hoạt động trong ảnh.' },
 ];
 
@@ -80,7 +87,10 @@ function seedEntries(): AdminEntry[] {
   const entries: AdminEntry[] = [];
   for (let i = 0; i < 30; i += 1) {
     const member = members[i % members.length]!;
-    const pattern = ENTRY_PATTERNS[i % ENTRY_PATTERNS.length]!;
+    const pattern: EntryPattern =
+      i === FAILED_VERDICT_INDEX
+        ? { categories: [], status: 'pending', healthy: null, confidence: 0, reason: '' }
+        : ENTRY_PATTERNS[i % ENTRY_PATTERNS.length]!;
     const localDate = addDays(CHALLENGE_START, Math.floor(i / members.length));
     const takenAt = `${localDate}T${String(6 + (i % 12)).padStart(2, '0')}:30:00+07:00`;
     const hue = (i * 37) % 360;
@@ -112,7 +122,7 @@ function seedEntries(): AdminEntry[] {
               confidence: pattern.confidence,
               reason: pattern.reason,
               model: 'qwen/qwen3.7-flash',
-              failed: false,
+              failed: i === FAILED_VERDICT_INDEX,
             },
     });
   }

@@ -15,6 +15,11 @@ struct TrackView: View {
     /// discard can cancel a stale one before it can overwrite state for the new photo.
     @State private var loadTask: Task<Void, Never>?
     @State private var verdictModel: VerdictSheetModel?
+    /// The sheet model kept past dismissal, since `verdictModel` may already be nil by the time
+    /// `onDismiss` runs and the outcome (tracked, corrected, or abandoned) lives on the model.
+    @State private var presentedVerdict: VerdictSheetModel?
+    /// Celebration for an entry confirmed by hand from a failed verdict; an AI-confirmed entry
+    /// celebrates inside the sheet itself, on first appearance.
     @State private var celebrationPoints: Int?
     private let apiClient: any APIClient
 
@@ -64,21 +69,8 @@ struct TrackView: View {
             }
             .ignoresSafeArea()
         }
-        .sheet(item: $verdictModel) { sheetModel in
-            VerdictSheet(model: sheetModel, placeResolver: places) { _ in
-                celebrationPoints = sheetModel.projectedPoints
-                model.reset()
-                places.clear()
-                // Spec §E: ask for notification permission after the first confirmed entry,
-                // never at launch. Wait out the celebration overlay (1.8 s) so the system
-                // alert does not land on top of it. No-ops on every later entry.
-                guard let userID = env.currentUser?.id else { return }
-                let push = env.push
-                Task {
-                    try? await Task.sleep(for: .seconds(2))
-                    await push.requestAfterFirstConfirmedEntry(userID: userID)
-                }
-            }
+        .sheet(item: $verdictModel, onDismiss: verdictSheetDismissed) { sheetModel in
+            VerdictSheet(model: sheetModel, placeResolver: places)
         }
         .overlay {
             if let celebrationPoints {
@@ -103,7 +95,7 @@ struct TrackView: View {
         guard model.phase == .uploaded else { return }
         await model.createEntry(placeName: places.placeName, placeSource: places.placeSource, point: places.selected?.point ?? places.fix)
         guard model.phase == .ready, let result = model.createResult else { return }
-        verdictModel = VerdictSheetModel(
+        let sheetModel = VerdictSheetModel(
             api: apiClient,
             entry: result.entry,
             mode: .created(result.verdict),
@@ -113,6 +105,36 @@ struct TrackView: View {
             placeName: places.placeName,
             placeSource: places.placeSource
         )
+        presentedVerdict = sheetModel
+        verdictModel = sheetModel
+    }
+
+    /// Runs on every way out of the verdict sheet — "Xong", "Lưu thay đổi", "Xác nhận", "Huỷ"
+    /// or a swipe. The entry counts once it is confirmed, whether `POST /entries` did that from
+    /// the AI verdict or the user did it with a `PATCH`; a pending entry abandoned unconfirmed
+    /// leaves the photo in place, as before.
+    private func verdictSheetDismissed() {
+        guard let sheetModel = presentedVerdict else { return }
+        presentedVerdict = nil
+        switch sheetModel.outcome {
+        case .abandoned:
+            return
+        case .tracked:
+            break   // the sheet already celebrated, on its first appearance
+        case .confirmedByHand:
+            celebrationPoints = sheetModel.projectedPoints
+        }
+        model.reset()
+        places.clear()
+        // Spec §E: ask for notification permission after the first confirmed entry, never at
+        // launch. Wait out the celebration overlay (1.8 s) and the sheet's dismissal so the
+        // system alert does not land on top of either. No-ops on every later entry.
+        guard let userID = env.currentUser?.id else { return }
+        let push = env.push
+        Task {
+            try? await Task.sleep(for: .seconds(2))
+            await push.requestAfterFirstConfirmedEntry(userID: userID)
+        }
     }
 
     private var header: some View {

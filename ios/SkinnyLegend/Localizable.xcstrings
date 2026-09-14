@@ -332,6 +332,17 @@
         }
       }
     },
+    "Chọn hoạt động" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose activity"
+          }
+        }
+      }
+    },
     "Chọn ảnh" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -948,6 +959,17 @@
         }
       }
     },
+    "Lưu thay đổi" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Save changes"
+          }
+        }
+      }
+    },
     "Máy chủ trả về phản hồi không hợp lệ." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1248,6 +1270,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Sat"
+          }
+        }
+      }
+    },
+    "Thu gọn" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Collapse"
           }
         }
       }
@@ -1604,17 +1637,6 @@
         }
       }
     },
-    "Xác nhận hoạt động" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Confirm activity"
-          }
-        }
-      }
-    },
     "Xếp hạng" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1857,6 +1879,17 @@
         }
       }
     },
+    "Điểm đã cộng" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Points earned"
+          }
+        }
+      }
+    },
     "Đã có lỗi xảy ra." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1908,6 +1941,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Analysis done"
+          }
+        }
+      }
+    },
+    "Đã tính vào tổng điểm của bạn." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Already counted toward your total."
           }
         }
       }

@@ -86,15 +86,19 @@ actor MockAPIClient: APIClient {
         try? await Task.sleep(for: .milliseconds(700))   // stands in for the vision call
         nextID += 1
         let day = LocalDay.string(from: input.takenAt)
-        // A deterministic pretend verdict so the sheet always has categories and a reason to show.
-        let suggested: [Category] = nextID % 3 == 0 ? [.meal] : [.exercise, .group]
+        // A deterministic pretend verdict: every fifth id is the one failing fixture (the vision
+        // call came back unusable), the rest alternate between a meal and a group workout.
+        // Mirrors the API: a usable verdict confirms the entry outright with the suggested
+        // categories; a failed one leaves it pending with none, for the user to pick by hand.
+        let failed = nextID % 5 == 0
+        let suggested: [Category] = failed ? [] : (nextID % 3 == 0 ? [.meal] : [.exercise, .group])
         let stored = StoredEntry(
             id: String(format: "bbbbbbbb-0000-4000-8000-%012d", nextID),
             userId: profile.id,
             localDate: day,
             takenAt: input.takenAt,
             categories: suggested,
-            status: .pending,
+            status: failed ? .pending : .confirmed,
             placeName: input.placeName,
             placeSource: input.placeSource ?? (input.placeName == nil ? PlaceSource.none : .manual),
             photoKey: input.photoKey,
@@ -104,10 +108,10 @@ actor MockAPIClient: APIClient {
         let verdict = VerdictDTO(
             categories: suggested,
             healthy: suggested.contains(.meal) ? true : nil,
-            confidence: 0.84,
-            reason: suggested.contains(.meal) ? "Bữa ăn nhiều rau và protein nạc." : "Ảnh chụp tại nơi tập luyện với hai người.",
+            confidence: failed ? 0 : 0.84,
+            reason: failed ? "" : suggested.contains(.meal) ? "Bữa ăn nhiều rau và protein nạc." : "Ảnh chụp tại nơi tập luyện với hai người.",
             model: "mock/offline",
-            failed: false
+            failed: failed
         )
         let projection = project(entryID: stored.id, categories: Set(suggested), on: day)
         return CreateEntryResponse(

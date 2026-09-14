@@ -146,7 +146,7 @@ export default function OverviewPage() {
           <KpiTile
             label={t('pendingEntries')}
             value={pendingEntries}
-            sub={t('pendingEntriesSub', { total: entries.length })}
+            sub={t('pendingEntriesSub')}
             attention={pendingEntries > 0}
             error={entriesQuery.error}
             isPending={entriesQuery.isPending}

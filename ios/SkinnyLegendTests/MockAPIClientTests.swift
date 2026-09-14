@@ -54,8 +54,18 @@ struct MockAPIClientTests {
         let created = try await client.createEntry(
             CreateEntryInput(photoKey: presign.key, takenAt: takenAt, lat: 10.7769, lng: 106.7009, placeName: "Sân cầu lông Tân Bình", placeSource: .poi)
         )
-        #expect(created.entry.status == .pending)
+        // A usable verdict confirms the entry outright, so it already scores before any PATCH.
+        #expect(created.verdict.failed == false)
+        #expect(created.entry.status == .confirmed)
         #expect(!created.verdict.categories.isEmpty)
+        #expect(created.entry.categories == created.verdict.categories)
+        // Already visible everywhere a confirmed entry is, and scored with exactly the points the
+        // create response projected — an exact assertion rather than "the total did not drop",
+        // which a seeded day with a filled cap would satisfy even if the entry scored nothing.
+        #expect(try await client.feed(cursor: nil).entries.contains { $0.id == created.entry.id })
+        let row = try await client.myEntries(cursor: nil).entries.first { $0.id == created.entry.id }
+        #expect(row?.status == .confirmed)
+        #expect(row?.points == created.projectedPoints)
 
         let confirmed = try await client.confirmEntry(
             id: created.entry.id,
@@ -63,12 +73,40 @@ struct MockAPIClientTests {
         )
         #expect(confirmed.entry.status == .confirmed)
         #expect(confirmed.entry.categories == [.group])
-        #expect(try await client.dashboard().total >= before)
+        let corrected = try await client.myEntries(cursor: nil).entries.first { $0.id == created.entry.id }
+        #expect(corrected?.points == confirmed.projectedPoints)
 
         try await client.deleteEntry(id: created.entry.id)
         let history = try await client.myEntries(cursor: nil)
         #expect(!history.entries.contains { $0.id == created.entry.id })
         #expect(try await client.dashboard().total == before)
+    }
+
+    @Test("A failed verdict leaves the entry pending with no categories until it is confirmed by hand")
+    func failedVerdictStaysPending() async throws {
+        let client = MockAPIClient(today: frozenToday)
+        let takenAt = LocalDay.date(from: frozenToday)!
+        var failed: CreateEntryResponse?
+        for _ in 0..<8 {
+            let created = try await client.createEntry(
+                CreateEntryInput(photoKey: "photos/x.jpg", takenAt: takenAt, lat: nil, lng: nil, placeName: nil, placeSource: nil)
+            )
+            if created.verdict.failed { failed = created; break }
+            #expect(created.entry.status == .confirmed)
+        }
+        let created = try #require(failed)
+        #expect(created.entry.status == .pending)
+        #expect(created.entry.categories.isEmpty)
+        #expect(created.verdict.categories.isEmpty)
+        #expect(created.projectedPoints == 0)
+        #expect(try await client.feed(cursor: nil).entries.contains { $0.id == created.entry.id } == false)
+
+        let confirmed = try await client.confirmEntry(
+            id: created.entry.id, ConfirmEntryInput(categories: [.meal], placeName: nil, placeSource: PlaceSource.none)
+        )
+        #expect(confirmed.entry.status == .confirmed)
+        #expect(confirmed.entry.categories == [.meal])
+        #expect(try await client.feed(cursor: nil).entries.contains { $0.id == created.entry.id })
     }
 
     @Test("Paginates history with a cursor")

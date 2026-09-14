@@ -13,3 +13,4 @@ ios/build/
 ios/.swiftpm/
 .superpowers/
 .claude/launch.json
+ios/SkinnyLegend/GoogleService-Info.plist

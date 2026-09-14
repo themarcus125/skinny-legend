@@ -18,7 +18,26 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         UNUserNotificationCenter.current().delegate = self
         // Messaging touches FirebaseApp, which only exists on a live-backend launch.
         if AppMode.useLiveBackend { Messaging.messaging().delegate = self }
+        // Cold launch from a Home Screen quick action. A scene-based app normally receives it
+        // through `connectionOptions` in `SceneDelegate`; both paths call the same idempotent
+        // router, so whichever the system uses, the app opens on the right screen once.
+        if let shortcut = launchOptions?[.shortcutItem] as? UIApplicationShortcutItem {
+            PushRouter.shared.handle(shortcutType: shortcut.type)
+        }
         return true
+    }
+
+    /// SwiftUI's `App` still owns the window; this only attaches `SceneDelegate` so the two
+    /// scene callbacks quick actions arrive on are delivered (Apple's documented hook for
+    /// scene events under `UIApplicationDelegateAdaptor`).
+    func application(
+        _ application: UIApplication,
+        configurationForConnecting connectingSceneSession: UISceneSession,
+        options: UIScene.ConnectionOptions
+    ) -> UISceneConfiguration {
+        let configuration = UISceneConfiguration(name: nil, sessionRole: connectingSceneSession.role)
+        configuration.delegateClass = SceneDelegate.self
+        return configuration
     }
 
     func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {

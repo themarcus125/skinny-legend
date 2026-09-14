@@ -24,7 +24,7 @@ describe('EntriesFilters', () => {
     const onChange = vi.fn();
     render(<EntriesFilters value={EMPTY_FILTER_FORM} onChange={onChange} members={[]} />);
 
-    fireEvent.click(screen.getByRole('tab', { name: 'Chờ xác nhận' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Chưa phân loại' }));
 
     expect(onChange).toHaveBeenCalledWith({ ...EMPTY_FILTER_FORM, status: 'pending' });
   });

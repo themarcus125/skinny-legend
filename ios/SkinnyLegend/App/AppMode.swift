@@ -25,12 +25,29 @@ enum AppMode {
         !isMock && hasFirebasePlist
     }
 
-    /// Overridable so a device on the same Wi-Fi can point at a laptop running the Hono API.
+    /// Environment first (a scheme, or a device on the same Wi-Fi pointing at a laptop running
+    /// the Hono API), then the bundle's `API_BASE_URL` — fed per configuration from
+    /// `project.yml`, so a Release/TestFlight build resolves to the deployed API instead of
+    /// `localhost`. The literal remains only as a last resort for a bundle without the key.
     static var apiBaseURL: URL {
-        if let raw = ProcessInfo.processInfo.environment["API_BASE_URL"], let url = URL(string: raw) {
-            return url
-        }
+        resolveBaseURL(
+            environment: ProcessInfo.processInfo.environment,
+            infoPlist: Bundle.main.infoDictionary ?? [:]
+        )
+    }
+
+    /// Pure resolution order behind `apiBaseURL`, injectable for tests: a set but unparseable or
+    /// empty value at one level falls through to the next rather than crashing the launch.
+    static func resolveBaseURL(environment: [String: String], infoPlist: [String: Any]) -> URL {
+        if let url = url(from: environment["API_BASE_URL"]) { return url }
+        if let url = url(from: infoPlist["API_BASE_URL"] as? String) { return url }
         return URL(string: "http://localhost:3000")!
+    }
+
+    private static func url(from raw: String?) -> URL? {
+        guard let trimmed = raw?.trimmingCharacters(in: .whitespacesAndNewlines), !trimmed.isEmpty,
+              let url = URL(string: trimmed), url.scheme != nil else { return nil }
+        return url
     }
 
     static var appVersion: String {

@@ -21,6 +21,15 @@ describe('MockAdminApi fixtures', () => {
     expect(entries[0]!.localDate >= entries[29]!.localDate).toBe(true);
   });
 
+  it('seeds exactly one pending entry: the one whose AI verdict failed, with no categories', async () => {
+    const entries = await new MockAdminApi().listEntries({});
+    const pending = entries.filter((entry) => entry.status === 'pending');
+    expect(pending).toHaveLength(1);
+    expect(pending[0]).toMatchObject({ categories: [], verdict: { failed: true } });
+    expect(entries.filter((entry) => entry.verdict?.failed).map((entry) => entry.status)).toEqual(['pending']);
+    expect(entries.filter((entry) => entry.status === 'confirmed').length).toBeGreaterThan(20);
+  });
+
   it('filters entries by status and date range', async () => {
     const api = new MockAdminApi();
     const pending = await api.listEntries({ status: 'pending' });

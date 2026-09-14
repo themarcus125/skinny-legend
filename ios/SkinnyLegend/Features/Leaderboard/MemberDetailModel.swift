@@ -26,8 +26,15 @@ final class MemberDetailModel {
         await load(cursor: nil)
     }
 
-    func loadNextPageIfNeeded(after entry: EntryDTO) async {
-        guard let cursor = nextCursor, !isLoading, entry.id == entries.last?.id else { return }
+    /// Fetches the page after the one already loaded, if there is one.
+    ///
+    /// Driven by the list's footer rather than by the last row's `.task`: a row-triggered load
+    /// appends rows whose own `.task` can fire immediately, so a stack that lays out more than
+    /// it shows would walk the whole history on open. The footer is a single view in the outer
+    /// lazy stack — it is built only while `hasMore`, and only when it is actually reached.
+    /// `isLoading` still guards a burst of calls, so the same cursor is never fetched twice.
+    func loadNextPage() async {
+        guard let cursor = nextCursor, !isLoading else { return }
         await load(cursor: cursor)
     }
 

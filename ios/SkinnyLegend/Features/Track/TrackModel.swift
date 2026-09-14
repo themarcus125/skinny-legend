@@ -98,7 +98,8 @@ final class TrackModel {
     }
 
     /// `POST /entries` — the server fetches the photo, calls the vision model, and returns the
-    /// pending entry plus its verdict and projection (spec §6).
+    /// entry plus its verdict and projection (spec §6). A usable verdict confirms the entry
+    /// outright with the suggested categories; a failed one leaves it pending with none.
     func createEntry(placeName: String?, placeSource: PlaceSource, point: GeoPoint?) async {
         guard let photoKey, let photo = prepared else { return }
         phase = .analyzing

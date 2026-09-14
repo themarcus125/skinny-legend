@@ -2,6 +2,12 @@ import SwiftUI
 
 /// Spec §7: photo, AI reason, detected categories as toggleable chips, projected points,
 /// cap warnings, and the location chip. "Không đúng?" expands the chips for editing.
+///
+/// On a successful verdict the entry is already tracked when the sheet appears: the title reads
+/// "Đã ghi nhận", the celebration plays on first appearance, and the primary button is a plain
+/// "Xong" that only dismisses. It turns into "Lưu thay đổi" (a `PATCH`) once the user corrects
+/// the categories or the place. A failed verdict (pending entry) and a history edit keep the
+/// "Xác nhận" → `PATCH` flow.
 struct VerdictSheet: View {
     /// Declared so this body re-runs when the Account picker changes the language: it renders
     /// `String`s from `Localized` (labels, `LocalDay.display`), and `Text(String)` carries no
@@ -9,8 +15,11 @@ struct VerdictSheet: View {
     @Environment(\.locale) private var locale
     @Bindable var model: VerdictSheetModel
     var placeResolver: PlaceResolver?
-    let onConfirmed: (EntryDTO) -> Void
+    /// Called after a successful `PATCH`, before the sheet dismisses. A plain "Xong" dismissal
+    /// of an already-tracked entry does not call it — the presenter observes the dismissal.
+    var onConfirmed: (EntryDTO) -> Void = { _ in }
     @Environment(\.dismiss) private var dismiss
+    @State private var isCelebrating = false
 
     var body: some View {
         NavigationStack {
@@ -45,7 +54,7 @@ struct VerdictSheet: View {
                 .padding(.bottom, 120)
             }
             .background { WarmBackground() }
-            .navigationTitle(model.verdict == nil ? "Sửa hoạt động" : "Xác nhận hoạt động")
+            .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -54,6 +63,10 @@ struct VerdictSheet: View {
             }
             .safeAreaInset(edge: .bottom) {
                 Button {
+                    guard model.needsSave else {
+                        dismiss()
+                        return
+                    }
                     Task {
                         if let entry = await model.confirm() {
                             onConfirmed(entry)
@@ -61,14 +74,14 @@ struct VerdictSheet: View {
                         }
                     }
                 } label: {
-                    Text(model.isSaving ? "Đang lưu…" : "Xác nhận")
+                    Text(primaryLabel)
                         .font(.roundedLabel(18))
                         .frame(maxWidth: .infinity)
                         .frame(height: 54)
                 }
                 .buttonStyle(.glassProminent)
                 .tint(Theme.flame)
-                .disabled(model.isSaving)
+                .disabled(!model.canSave)
                 .padding(.horizontal, 20)
                 .padding(.bottom, 12)
             }
@@ -77,6 +90,33 @@ struct VerdictSheet: View {
             guard let placeResolver else { return }
             model.applyPlace(name: placeResolver.placeName, source: placeResolver.placeSource)
         }
+        // Spec §14: the celebration plays when the entry is counted — for an AI-confirmed entry
+        // that is the moment the sheet first appears, not a later button press.
+        .onAppear {
+            guard model.isAlreadyTracked, model.markCelebrated() else { return }
+            isCelebrating = true
+        }
+        .overlay {
+            if isCelebrating {
+                CelebrationOverlay(points: model.projectedPoints)
+                    .transition(.opacity)
+                    .task {
+                        try? await Task.sleep(for: .seconds(1.8))
+                        withAnimation(.smooth(duration: 0.3)) { isCelebrating = false }
+                    }
+            }
+        }
+    }
+
+    private var title: LocalizedStringKey {
+        if model.verdict == nil { return "Sửa hoạt động" }
+        return model.isAlreadyTracked ? "Đã ghi nhận" : "Chọn hoạt động"
+    }
+
+    private var primaryLabel: LocalizedStringKey {
+        if model.isSaving { return "Đang lưu…" }
+        if !model.needsSave { return "Xong" }
+        return model.isAlreadyTracked ? "Lưu thay đổi" : "Xác nhận"
     }
 
     private var photo: some View {
@@ -115,7 +155,9 @@ struct VerdictSheet: View {
                         .foregroundStyle(.secondary)
                     Spacer()
                     if model.verdict != nil {
-                        Button(model.isEditingCategories ? "Xong" : "Không đúng?") {
+                        // "Thu gọn" rather than "Xong" so it cannot be mistaken for the primary
+                        // "Xong" that dismisses an already-tracked sheet.
+                        Button(model.isEditingCategories ? "Thu gọn" : "Không đúng?") {
                             withAnimation(.smooth(duration: 0.25)) { model.isEditingCategories.toggle() }
                         }
                         .font(.roundedLabel(14))
@@ -162,16 +204,27 @@ struct VerdictSheet: View {
         }
     }
 
+    /// An already-tracked entry with no pending correction shows its points as earned; every
+    /// other state shows a projection the server will settle on save.
     private var pointsCard: some View {
         GlassCard {
             HStack(alignment: .firstTextBaseline) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Điểm dự kiến")
-                        .font(.roundedLabel(13, weight: .bold))
-                        .foregroundStyle(.secondary)
-                    Text("Điểm chính thức do máy chủ tính khi xác nhận.")
-                        .font(.roundedLabel(12, weight: .medium))
-                        .foregroundStyle(.secondary)
+                    if model.isAlreadyTracked && !model.hasChanges {
+                        Text("Điểm đã cộng")
+                            .font(.roundedLabel(13, weight: .bold))
+                            .foregroundStyle(.secondary)
+                        Text("Đã tính vào tổng điểm của bạn.")
+                            .font(.roundedLabel(12, weight: .medium))
+                            .foregroundStyle(.secondary)
+                    } else {
+                        Text("Điểm dự kiến")
+                            .font(.roundedLabel(13, weight: .bold))
+                            .foregroundStyle(.secondary)
+                        Text("Điểm chính thức do máy chủ tính khi xác nhận.")
+                            .font(.roundedLabel(12, weight: .medium))
+                            .foregroundStyle(.secondary)
+                    }
                 }
                 Spacer()
                 BigNumber(value: model.projectedPoints, size: 44)

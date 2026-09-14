@@ -110,6 +110,7 @@ struct VerdictSheetModelTests {
         #expect(model.selected.isEmpty)
         #expect(model.isEditingCategories)
         #expect(model.projectedPoints == 0)
+        #expect(model.isAlreadyTracked == false)
     }
 
     @Test("Edit mode starts from the stored entry with no verdict")
@@ -125,8 +126,54 @@ struct VerdictSheetModelTests {
         #expect(model.placeName == "Cơm tấm Ba Ghiền")
     }
 
-    @Test("Confirming PATCHes the entry and reports the confirmed row")
-    func confirms() async throws {
+    // MARK: - Auto-confirmed entries: tracked on appearance, PATCH only for corrections
+
+    @Test("A successful verdict opens on an already-tracked entry with nothing to save")
+    func successfulVerdictIsAlreadyTracked() {
+        let model = VerdictSheetModel(
+            api: MockAPIClient(), entry: entry([.exercise, .group], status: .confirmed),
+            mode: .created(verdict([.exercise, .group])),
+            capsHit: CapsHit.none, cappedCategories: [], projectedPoints: 6,
+            placeName: "Phòng gym California", placeSource: .poi
+        )
+        #expect(model.isAlreadyTracked)
+        #expect(model.hasChanges == false)
+        #expect(model.needsSave == false)
+        #expect(model.isEditingCategories == false)
+        #expect(model.selected == [.exercise, .group])
+        #expect(model.projectedPoints == 6)
+    }
+
+    @Test("Correcting a tracked entry's chips then saving PATCHes and clears the pending change")
+    func correctingTrackedEntrySaves() async throws {
+        let client = MockAPIClient(today: "2026-01-01")
+        let created = try await client.createEntry(
+            CreateEntryInput(photoKey: "photos/x.jpg", takenAt: Date(), lat: nil, lng: nil, placeName: nil, placeSource: nil)
+        )
+        #expect(created.entry.status == .confirmed)
+        let model = VerdictSheetModel(
+            api: client, entry: created.entry, mode: .created(created.verdict),
+            capsHit: created.capsHit, cappedCategories: created.cappedCategories,
+            projectedPoints: created.projectedPoints, placeName: nil, placeSource: PlaceSource.none
+        )
+        #expect(model.isAlreadyTracked)
+        #expect(model.needsSave == false)
+
+        model.toggle(.meal)
+        #expect(model.hasChanges)
+        #expect(model.needsSave)
+
+        let saved = try #require(await model.confirm())
+        #expect(saved.status == .confirmed)
+        #expect(saved.categories.contains(.meal))
+        #expect(model.confirmedEntry?.id == saved.id)
+        #expect(model.errorMessage == nil)
+        #expect(model.hasChanges == false)
+        #expect(model.needsSave == false)
+    }
+
+    @Test("Changing only the place of a tracked entry is a correction that needs saving")
+    func changingPlaceOfTrackedEntryNeedsSave() async throws {
         let client = MockAPIClient()
         let created = try await client.createEntry(
             CreateEntryInput(photoKey: "photos/x.jpg", takenAt: Date(), lat: nil, lng: nil, placeName: nil, placeSource: nil)
@@ -136,14 +183,61 @@ struct VerdictSheetModelTests {
             capsHit: created.capsHit, cappedCategories: created.cappedCategories,
             projectedPoints: created.projectedPoints, placeName: nil, placeSource: PlaceSource.none
         )
+        #expect(model.needsSave == false)
         model.applyPlace(name: "Hồ bơi Lam Sơn", source: .manual)
-        let confirmed = await model.confirm()
-        let entry = try #require(confirmed)
+        #expect(model.hasChanges)
+        #expect(model.needsSave)
+
+        let entry = try #require(await model.confirm())
         #expect(entry.status == .confirmed)
         #expect(entry.placeName == "Hồ bơi Lam Sơn")
         #expect(entry.placeSource == .manual)
         #expect(model.errorMessage == nil)
         #expect(model.confirmedEntry?.id == entry.id)
+        #expect(model.needsSave == false)
+    }
+
+    @Test("A failed verdict opens in pick mode and confirming PATCHes the pending entry")
+    func failedVerdictConfirmsByHand() async throws {
+        let client = MockAPIClient()
+        var created: CreateEntryResponse?
+        for _ in 0..<8 {
+            let response = try await client.createEntry(
+                CreateEntryInput(photoKey: "photos/x.jpg", takenAt: Date(), lat: nil, lng: nil, placeName: nil, placeSource: nil)
+            )
+            if response.verdict.failed { created = response; break }
+        }
+        let failed = try #require(created)
+        #expect(failed.entry.status == .pending)
+        #expect(failed.entry.categories.isEmpty)
+
+        let model = VerdictSheetModel(
+            api: client, entry: failed.entry, mode: .created(failed.verdict),
+            capsHit: failed.capsHit, cappedCategories: failed.cappedCategories,
+            projectedPoints: failed.projectedPoints, placeName: nil, placeSource: PlaceSource.none
+        )
+        #expect(model.isAlreadyTracked == false)
+        #expect(model.isEditingCategories)
+        #expect(model.needsSave)
+        #expect(model.selected.isEmpty)
+
+        model.toggle(.exercise)
+        let confirmed = try #require(await model.confirm())
+        #expect(confirmed.status == .confirmed)
+        #expect(confirmed.categories == [.exercise])
+        #expect(model.confirmedEntry?.id == confirmed.id)
+    }
+
+    @Test("A history edit always needs saving")
+    func editModeAlwaysNeedsSave() {
+        let model = VerdictSheetModel(
+            api: MockAPIClient(), entry: entry([.meal], status: .confirmed), mode: .edit,
+            capsHit: CapsHit.none, cappedCategories: [], projectedPoints: 2,
+            placeName: nil, placeSource: PlaceSource.none
+        )
+        #expect(model.isAlreadyTracked == false)
+        #expect(model.hasChanges == false)
+        #expect(model.needsSave)
     }
 
     @Test("A failed PATCH surfaces the error and leaves the sheet open")
@@ -158,6 +252,116 @@ struct VerdictSheetModelTests {
         #expect(confirmed == nil)
         #expect(model.errorMessage == Localized.string("Không tìm thấy dữ liệu."))
         #expect(model.confirmedEntry == nil)
+    }
+
+    // MARK: - Dismissal outcome and the one-shot celebration
+
+    @Test("An AI-confirmed entry's outcome is tracked, and stays tracked after a correction")
+    func outcomeTracked() async throws {
+        let client = MockAPIClient(today: "2026-01-01")
+        let created = try await client.createEntry(
+            CreateEntryInput(photoKey: "photos/x.jpg", takenAt: Date(), lat: nil, lng: nil, placeName: nil, placeSource: nil)
+        )
+        let model = VerdictSheetModel(
+            api: client, entry: created.entry, mode: .created(created.verdict),
+            capsHit: created.capsHit, cappedCategories: created.cappedCategories,
+            projectedPoints: created.projectedPoints, placeName: nil, placeSource: PlaceSource.none
+        )
+        #expect(model.outcome == .tracked)
+        model.applyPlace(name: "Hồ bơi Lam Sơn", source: .manual)
+        _ = try #require(await model.confirm())
+        // Still `.tracked`: the entry counted when it was created, so the presenter must not
+        // celebrate a second time for the correction.
+        #expect(model.outcome == .tracked)
+    }
+
+    @Test("A pending entry confirmed by hand reports confirmedByHand, and abandoned otherwise")
+    func outcomeConfirmedByHandAndAbandoned() async throws {
+        let client = MockAPIClient()
+        var created: CreateEntryResponse?
+        for _ in 0..<8 {
+            let response = try await client.createEntry(
+                CreateEntryInput(photoKey: "photos/x.jpg", takenAt: Date(), lat: nil, lng: nil, placeName: nil, placeSource: nil)
+            )
+            if response.verdict.failed { created = response; break }
+        }
+        let failed = try #require(created)
+        let model = VerdictSheetModel(
+            api: client, entry: failed.entry, mode: .created(failed.verdict),
+            capsHit: failed.capsHit, cappedCategories: failed.cappedCategories,
+            projectedPoints: failed.projectedPoints, placeName: nil, placeSource: PlaceSource.none
+        )
+        #expect(model.outcome == .abandoned)   // walking away now counts nothing
+        model.toggle(.exercise)
+        #expect(model.outcome == .abandoned)   // a selection alone does not confirm it
+        _ = try #require(await model.confirm())
+        #expect(model.outcome == .confirmedByHand)
+    }
+
+    @Test("A confirmed-status entry with a failed verdict is not treated as tracked")
+    func failedVerdictNeverTracksOnStatusAlone() {
+        let model = VerdictSheetModel(
+            api: MockAPIClient(), entry: entry([], status: .confirmed),
+            mode: .created(verdict([], failed: true)),
+            capsHit: CapsHit.none, cappedCategories: [], projectedPoints: 0,
+            placeName: nil, placeSource: PlaceSource.none
+        )
+        #expect(model.isAlreadyTracked == false)
+        #expect(model.outcome == .abandoned)
+        #expect(model.needsSave)
+    }
+
+    @Test("The celebration is claimed exactly once")
+    func celebratesOnce() {
+        let model = VerdictSheetModel(
+            api: MockAPIClient(), entry: entry([.exercise], status: .confirmed),
+            mode: .created(verdict([.exercise])),
+            capsHit: CapsHit.none, cappedCategories: [], projectedPoints: 3,
+            placeName: nil, placeSource: PlaceSource.none
+        )
+        #expect(model.markCelebrated())
+        #expect(model.markCelebrated() == false)
+        #expect(model.markCelebrated() == false)
+    }
+
+    @Test("A tracked entry cannot be corrected down to no categories")
+    func cannotZeroATrackedEntry() {
+        let model = VerdictSheetModel(
+            api: MockAPIClient(), entry: entry([.exercise], status: .confirmed),
+            mode: .created(verdict([.exercise])),
+            capsHit: CapsHit.none, cappedCategories: [], projectedPoints: 3,
+            placeName: nil, placeSource: PlaceSource.none
+        )
+        #expect(model.canSave)          // "Xong" just dismisses
+        model.toggle(.exercise)         // corrected down to nothing
+        #expect(model.selected.isEmpty)
+        #expect(model.needsSave)
+        #expect(model.canSave == false)
+        model.toggle(.meal)             // any non-empty correction is saveable again
+        #expect(model.canSave)
+    }
+
+    @Test("An empty selection is never saveable — the server requires at least one category")
+    func emptySelectionIsNeverSaveable() {
+        let pending = VerdictSheetModel(
+            api: MockAPIClient(), entry: entry([]), mode: .created(verdict([], failed: true)),
+            capsHit: CapsHit.none, cappedCategories: [], projectedPoints: 0,
+            placeName: nil, placeSource: PlaceSource.none
+        )
+        #expect(pending.selected.isEmpty)
+        #expect(pending.canSave == false)
+        pending.toggle(.exercise)
+        #expect(pending.canSave)
+
+        // History edit of an already-scored entry: emptying it must be refused too.
+        let edit = VerdictSheetModel(
+            api: MockAPIClient(), entry: entry([.meal], status: .confirmed), mode: .edit,
+            capsHit: CapsHit.none, cappedCategories: [], projectedPoints: 2,
+            placeName: nil, placeSource: PlaceSource.none
+        )
+        edit.toggle(.meal)
+        #expect(edit.selected.isEmpty)
+        #expect(edit.canSave == false)
     }
 
     // MARK: - Ruling 2: history edits have no fresh server projection until save

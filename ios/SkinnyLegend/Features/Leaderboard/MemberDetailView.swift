@@ -31,12 +31,17 @@ struct MemberDetailView: View {
                             .foregroundStyle(.secondary)
                             .padding(.vertical, 24)
                     } else {
-                        ForEach(model.entries) { entry in
-                            MemberEntryRow(entry: entry)
-                                .task { await model.loadNextPageIfNeeded(after: entry) }
-                        }
+                        entriesCard
                         if model.hasMore {
-                            ProgressView().padding(.vertical, 12)
+                            // The one pagination trigger: a footer in the *outer* lazy stack, so
+                            // it is built only when the reader reaches the end of what is loaded.
+                            // `.id(count)` re-identifies it after each page, which re-fires the
+                            // task while it is still on screen (a short history keeps filling)
+                            // and stops as soon as it scrolls away or `hasMore` turns false.
+                            ProgressView()
+                                .padding(.vertical, 12)
+                                .id(model.entries.count)
+                                .task { await model.loadNextPage() }
                         }
                     }
                 }
@@ -49,6 +54,26 @@ struct MemberDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .task { if model.entries.isEmpty { await model.loadFirstPage() } }
         .refreshable { await model.loadFirstPage() }
+    }
+
+    /// One grouped section rather than a card per entry, borrowing the grammar of the Account
+    /// history list: a single glass surface whose rows are separated by hairline dividers.
+    /// The rows carry no pagination of their own — a nested lazy stack inside a card can lay out
+    /// more than it shows, so the trigger lives on the footer of the outer stack instead.
+    private var entriesCard: some View {
+        GlassCard(padding: 0) {
+            LazyVStack(spacing: 0) {
+                ForEach(Array(model.entries.enumerated()), id: \.element.id) { index, entry in
+                    if index > 0 {
+                        Divider().padding(.leading, 16)
+                    }
+                    MemberEntryRow(entry: entry)
+                }
+            }
+            // The rows have no background of their own, so clip them to the card's shape
+            // rather than letting a thumbnail cross a rounded corner.
+            .clipShape(RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous))
+        }
     }
 
     private var headerCard: some View {
@@ -101,7 +126,8 @@ private struct MemberEntryRow: View {
             }
             Spacer()
         }
-        .padding(14)
-        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous))
+        // No glass of its own: the enclosing `GlassCard` is the single surface for every row.
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
     }
 }
