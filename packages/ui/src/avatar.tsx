@@ -1,3 +1,6 @@
+'use client';
+
+import { useState } from 'react';
 import { cn } from './cn';
 
 export interface AvatarProps {
@@ -25,6 +28,12 @@ export function initials(name: string): string {
  * fill is `primary-soft`, which would otherwise vanish on the leaderboard's own "you" row.
  */
 export function Avatar({ name, src, size = 40, className }: AvatarProps) {
+  // A broken or expired photo URL must degrade to the initials rather than to the browser's
+  // alt-text box — avatar URLs are signed and outlive their signature. Remembering *which* URL
+  // failed rather than a bare `broken` flag means a later, different URL gets a fresh chance
+  // without an effect resetting the flag on every `src` change.
+  const [failedSrc, setFailedSrc] = useState<string | null>(null);
+  const showPhoto = Boolean(src) && src !== failedSrc;
   return (
     <span
       data-testid="avatar"
@@ -35,9 +44,16 @@ export function Avatar({ name, src, size = 40, className }: AvatarProps) {
       )}
       style={{ width: size, height: size }}
     >
-      {src ? (
+      {showPhoto ? (
         // A plain <img>, not next/image: this package is consumed by Vite as well as Next.
-        <img src={src} alt={name} width={size} height={size} className="size-full object-cover" />
+        <img
+          src={src ?? undefined}
+          alt={name}
+          width={size}
+          height={size}
+          onError={() => setFailedSrc(src ?? null)}
+          className="size-full object-cover"
+        />
       ) : (
         <span
           aria-hidden="true"

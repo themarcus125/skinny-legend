@@ -12,7 +12,8 @@ export interface AlertBannerProps {
   className?: string;
 }
 
-const TONE_CLASS: Record<AlertTone, string> = {
+/** Soft fill + the matching strong ink. Exported so a swap here fails a test, not a screen. */
+export const TONE_CLASS: Record<AlertTone, string> = {
   success: 'bg-success-soft text-success',
   info: 'bg-info-soft text-info',
   warning: 'bg-warning-soft text-warning',

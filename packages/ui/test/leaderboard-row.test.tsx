@@ -17,6 +17,51 @@ describe('<LeaderboardRow>', () => {
     expect(screen.getByTestId('leaderboard-week-delta')).toHaveTextContent('+5');
   });
 
+  it('negates a losing week', () => {
+    render(<LeaderboardRow rank={1} name="An" total={10} weekDelta={-2} pointsLabel="điểm" />);
+    expect(screen.getByTestId('leaderboard-week-delta')).toHaveTextContent('-2');
+  });
+
+  it('composes the weekLabel with the signed delta', () => {
+    render(
+      <LeaderboardRow
+        rank={1}
+        name="An"
+        total={10}
+        weekDelta={5}
+        weekLabel="Tuần này"
+        pointsLabel="điểm"
+      />,
+    );
+    expect(screen.getByTestId('leaderboard-week-delta')).toHaveTextContent('Tuần này +5');
+  });
+
+  it('names the row with the caller-composed sentence', async () => {
+    render(
+      <LeaderboardRow
+        rank={2}
+        name="Ngô Hà Khoa"
+        total={48}
+        weekDelta={5}
+        pointsLabel="điểm"
+        ariaLabel="Hạng 2, Ngô Hà Khoa, 48 điểm, tuần này 5 điểm"
+        onClick={() => {}}
+      />,
+    );
+    expect(
+      screen.getByRole('button', { name: 'Hạng 2, Ngô Hà Khoa, 48 điểm, tuần này 5 điểm' }),
+    ).toBeInTheDocument();
+  });
+
+  it('falls back to the row text when no ariaLabel is given', () => {
+    render(
+      <LeaderboardRow rank={2} name="Ngô Hà Khoa" total={48} weekDelta={5} pointsLabel="điểm" onClick={() => {}} />,
+    );
+    const button = screen.getByRole('button');
+    expect(button).not.toHaveAttribute('aria-label');
+    expect(button).toHaveAccessibleName(/Ngô Hà Khoa/);
+  });
+
   it('shows the you pill only when isMe', () => {
     const { rerender } = render(
       <LeaderboardRow rank={3} name="An" total={10} weekDelta={0} pointsLabel="điểm" youLabel="BẠN" isMe />,

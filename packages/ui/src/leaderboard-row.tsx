@@ -10,11 +10,26 @@ export interface LeaderboardRowProps {
   total: number;
   /** This week's points — `LeaderboardRowDto.weekPoints`. Rendered signed. */
   weekDelta: number;
+  /**
+   * The lead-in for the weekly delta, e.g. "Tuần này" — rendered immediately before the signed
+   * number so the caller composes "Tuần này +5" without this package owning the word order's
+   * copy. Omit for the bare delta.
+   */
+  weekLabel?: string;
   isMe?: boolean;
   /** e.g. "BẠN" — the pill shown only when `isMe`. */
   youLabel?: string;
   /** The unit word for the total, e.g. "điểm". */
   pointsLabel: string;
+  /**
+   * The whole-sentence accessible name for the row, e.g.
+   * "Hạng 2, Ngô Hà Khoa, 48 điểm, tuần này 5 điểm". Port of
+   * `LeaderboardRowView.accessibilityLabel(for:)` — iOS combines the row's children into one
+   * element and names it from two whole-sentence catalog keys rather than a spliced fragment,
+   * so each language reads as one sentence. Applied to the button; without `onClick` there is
+   * no element that can carry a name, and the row's own text is what a reader gets.
+   */
+  ariaLabel?: string;
   onClick?: () => void;
   className?: string;
 }
@@ -33,9 +48,11 @@ export function LeaderboardRow({
   avatarUrl,
   total,
   weekDelta,
+  weekLabel,
   isMe = false,
   youLabel,
   pointsLabel,
+  ariaLabel,
   onClick,
   className,
 }: LeaderboardRowProps) {
@@ -76,6 +93,7 @@ export function LeaderboardRow({
           data-testid="leaderboard-week-delta"
           className="type-caption text-foreground-secondary tabular-nums"
         >
+          {weekLabel ? `${weekLabel} ` : ''}
           {weekDelta >= 0 ? `+${weekDelta}` : `${weekDelta}`}
         </span>
       </span>
@@ -92,7 +110,7 @@ export function LeaderboardRow({
   if (!onClick) return <div {...shared}>{body}</div>;
 
   return (
-    <button type="button" onClick={onClick} {...shared}>
+    <button type="button" aria-label={ariaLabel} onClick={onClick} {...shared}>
       {body}
     </button>
   );

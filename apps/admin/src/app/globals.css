@@ -11,6 +11,12 @@
 @import "shadcn/tailwind.css";
 @import "leaflet/dist/leaflet.css";
 
+/* Tailwind v4 does not scan node_modules, so @skinny/ui's components would compile to markup with
+   no matching utilities — unstyled, with no error. Path is relative to this file: src/app → src →
+   apps/admin → apps → the repo root. Landing it now means the first `import … from '@skinny/ui'`
+   just works; today it generates only the handful of classes the admin does not already use. */
+@source "../../../../packages/ui/src";
+
 /* `.dark` is put on <html> by next-themes (attribute="class", enableSystem), so the variant has to
    match the element itself as well as its descendants. */
 @custom-variant dark (&:where(.dark, .dark *));

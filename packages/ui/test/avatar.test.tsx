@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { Avatar, AvatarStack } from '../src/index';
 
 describe('<Avatar>', () => {
@@ -22,6 +22,22 @@ describe('<Avatar>', () => {
   it('renders the photo with the name as its alt text', () => {
     render(<Avatar name="Khoa" src="https://example.test/a.jpg" />);
     expect(screen.getByRole('img', { name: 'Khoa' })).toHaveAttribute('src', 'https://example.test/a.jpg');
+  });
+
+  /** Avatar URLs are signed and outlive their signature; a dead one must not show a broken image. */
+  it('falls back to the initials when the photo fails to load', () => {
+    render(<Avatar name="Ngô Hà Khoa" src="https://example.test/gone.jpg" />);
+    fireEvent.error(screen.getByRole('img', { name: 'Ngô Hà Khoa' }));
+    expect(screen.queryByRole('img')).not.toBeInTheDocument();
+    expect(screen.getByText('HK')).toBeInTheDocument();
+  });
+
+  it('gives a new src a fresh chance after an earlier one broke', () => {
+    const { rerender } = render(<Avatar name="Khoa" src="https://example.test/gone.jpg" />);
+    fireEvent.error(screen.getByRole('img'));
+    expect(screen.queryByRole('img')).not.toBeInTheDocument();
+    rerender(<Avatar name="Khoa" src="https://example.test/fresh.jpg" />);
+    expect(screen.getByRole('img')).toHaveAttribute('src', 'https://example.test/fresh.jpg');
   });
 });
 

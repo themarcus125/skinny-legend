@@ -34,6 +34,13 @@ describe('<ProgressRing>', () => {
     expect(dashFraction(screen.getByTestId('progress-ring-arc'))).toBeCloseTo(0, 5);
   });
 
+  it('animates the arc over the same 400ms as ProgressBar and iOS .smooth(0.4)', () => {
+    render(<ProgressRing value={1} max={2} />);
+    const classes = screen.getByTestId('progress-ring-arc').getAttribute('class')?.split(' ') ?? [];
+    expect(classes).toContain('transition-[stroke-dasharray]');
+    expect(classes).toContain('duration-[400ms]');
+  });
+
   it('honours the size and stroke width', () => {
     render(<ProgressRing value={1} max={2} size={96} strokeWidth={12} />);
     const svg = screen.getByTestId('progress-ring-svg');

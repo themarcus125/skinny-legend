@@ -73,6 +73,8 @@ export function ProgressRing({
           strokeWidth={strokeWidth}
           strokeLinecap="round"
           strokeDasharray={`${filled} ${circumference - filled}`}
+          // Same 400ms as ProgressBar, and as iOS's `.animation(.smooth(duration: 0.4))`.
+          className="transition-[stroke-dasharray] duration-[400ms] ease-out"
         />
       </svg>
       {children ? <div className="absolute inset-0 flex items-center justify-center">{children}</div> : null}
