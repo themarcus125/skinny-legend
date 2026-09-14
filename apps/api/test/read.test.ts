@@ -6,9 +6,17 @@ import type { Verdict } from '../src/services/vision.js';
 
 const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64');
 const verdict: Verdict = { categories: [], healthy: null, confidence: 0, reason: '', model: 'fake', latencyMs: 1, raw: '', failed: false };
-const app = createApp({ classify: vi.fn(async () => verdict) });
+const classify = vi.fn(async () => verdict);
+const app = createApp({ classify });
 
-beforeEach(resetDb);
+beforeEach(async () => { await resetDb(); classify.mockResolvedValue(verdict); });
+
+async function postEntry(headers: Record<string, string>, body: Record<string, unknown>) {
+  const h = { ...headers, 'content-type': 'application/json' };
+  const presign = await (await app.request('/uploads/presign', { method: 'POST', headers: h, body: JSON.stringify({ kind: 'photo', contentType: 'image/png' }) })).json();
+  await storage.putObject(presign.key, png, 'image/png');
+  return (await app.request('/entries', { method: 'POST', headers: h, body: JSON.stringify({ photoKey: presign.key, ...body }) })).json();
+}
 
 async function confirmed(headers: Record<string, string>, takenAt: string, categories: string[]) {
   const h = { ...headers, 'content-type': 'application/json' };
@@ -149,12 +157,20 @@ describe('GET /feed and GET /users/:id/entries', () => {
     expect(page.entries.map((e: { localDate: string }) => e.localDate)).toEqual(['2026-09-08']);
   });
 
-  it('feed omits pending entries', async () => {
+  it('feed shows a freshly posted entry immediately (auto-confirmed from the verdict)', async () => {
+    classify.mockResolvedValue({ ...verdict, categories: ['exercise'] });
     const a = await asUser('a', { activate: true });
-    const h = { ...a.headers, 'content-type': 'application/json' };
-    const presign = await (await app.request('/uploads/presign', { method: 'POST', headers: h, body: JSON.stringify({ kind: 'photo', contentType: 'image/png' }) })).json();
-    await storage.putObject(presign.key, png, 'image/png');
-    await app.request('/entries', { method: 'POST', headers: h, body: JSON.stringify({ photoKey: presign.key, takenAt: '2026-09-09T01:00:00Z' }) });
+    const created = await postEntry(a.headers, { takenAt: '2026-09-09T01:00:00Z' });
+    const feed = await (await app.request('/feed', { headers: a.headers })).json();
+    expect(feed.entries.map((e: { id: string; categories: string[] }) => [e.id, e.categories])).toEqual([[created.entry.id, ['exercise']]]);
+    const board = await (await app.request('/leaderboard', { headers: a.headers })).json();
+    expect(board.leaderboard[0].total).toBe(3);
+  });
+
+  it('feed omits an entry whose verdict failed until the member categorises it', async () => {
+    classify.mockResolvedValue({ ...verdict, failed: true });
+    const a = await asUser('a', { activate: true });
+    await postEntry(a.headers, { takenAt: '2026-09-09T01:00:00Z' });
     const feed = await (await app.request('/feed', { headers: a.headers })).json();
     expect(feed.entries).toEqual([]);
   });
@@ -171,17 +187,22 @@ describe('GET /entries/map', () => {
     expect(body.pins.map((p: { user: { displayName: string } }) => p.user.displayName)).toEqual(['B', 'A']);
     expect(body.pins[1]).toMatchObject({ lat: 10.77, lng: 106.7, placeName: 'Gym X', categories: ['exercise'] });
   });
-  it('excludes pending entries and entries outside the window', async () => {
+  it('excludes failed-verdict (pending) entries and entries outside the window', async () => {
     const a = await asUser('a', { activate: true });
     // Out-of-window confirmed entry
     await confirmedAt(a.headers, '2026-08-01T01:00:00Z', ['exercise'], { lat: 1, lng: 1 });
-    // Pending entry inside the window
-    const h = { ...a.headers, 'content-type': 'application/json' };
-    const presign = await (await app.request('/uploads/presign', { method: 'POST', headers: h, body: JSON.stringify({ kind: 'photo', contentType: 'image/png' }) })).json();
-    await storage.putObject(presign.key, png, 'image/png');
-    await app.request('/entries', { method: 'POST', headers: h, body: JSON.stringify({ photoKey: presign.key, takenAt: '2026-09-09T01:00:00Z', lat: 10.77, lng: 106.70 }) });
+    // Pending (verdict failed) entry inside the window
+    classify.mockResolvedValue({ ...verdict, failed: true });
+    await postEntry(a.headers, { takenAt: '2026-09-09T01:00:00Z', lat: 10.77, lng: 106.70 });
     const body = await (await app.request('/entries/map?days=30', { headers: a.headers })).json();
     expect(body.pins).toEqual([]);
+  });
+
+  it('shows a freshly posted entry with coordinates immediately', async () => {
+    const a = await asUser('a', { activate: true });
+    await postEntry(a.headers, { takenAt: '2026-09-09T01:00:00Z', lat: 10.77, lng: 106.70 });
+    const body = await (await app.request('/entries/map?days=30', { headers: a.headers })).json();
+    expect(body.pins).toHaveLength(1);
   });
   it('rejects days outside 1–90', async () => {
     const a = await asUser('a', { activate: true });

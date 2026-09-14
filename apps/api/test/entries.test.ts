@@ -25,17 +25,23 @@ async function post(headers: Record<string, string>, body: unknown) {
 }
 
 describe('POST /entries', () => {
-  it('creates a pending entry with AI categories and a thumbnail', async () => {
+  it('auto-confirms the entry with the AI categories and a thumbnail', async () => {
     const { headers } = await asUser('u1', { activate: true });
     const key = await uploadPhoto(headers);
     const res = await post(headers, { photoKey: key, takenAt: '2026-09-10T01:00:00Z' });
     expect(res.status).toBe(201);
     const body = await res.json();
-    expect(body.entry).toMatchObject({ status: 'pending', categories: ['exercise'], localDate: '2026-09-10' });
+    expect(body.entry).toMatchObject({ status: 'confirmed', categories: ['exercise'], localDate: '2026-09-10' });
     expect(body.verdict).toMatchObject({ categories: ['exercise'], reason: 'Gym.', failed: false });
+    // The projection counts the entry exactly once: it earns its points and is not capped by itself.
     expect(body.projectedPoints).toBe(3);
+    expect(body.cappedCategories).toEqual([]);
+    expect(body.capsHit.exercise).toBe(true);
     const [row] = await db.select().from(schema.entries);
+    expect(row?.status).toBe('confirmed');
     expect(row?.thumbKey).toMatch(/^thumbs\//);
+    const cats = await db.select().from(schema.entryCategories);
+    expect(cats).toEqual([expect.objectContaining({ category: 'exercise', source: 'ai' })]);
     expect(classify).toHaveBeenCalledOnce();
     expect(classify).toHaveBeenCalledWith(expect.any(Buffer), { locale: 'vi' });
   });
@@ -55,13 +61,32 @@ describe('POST /entries', () => {
     expect(body.entry).toMatchObject({ placeName: 'California Fitness', placeSource: 'poi' });
   });
 
-  it('still creates the entry when the classifier fails', async () => {
+  it('keeps the entry pending with no categories when the classifier fails', async () => {
     classify.mockResolvedValue({ ...okVerdict, categories: [], failed: true });
     const { headers } = await asUser('u1', { activate: true });
     const key = await uploadPhoto(headers);
-    const body = await (await post(headers, { photoKey: key, takenAt: '2026-09-10T01:00:00Z' })).json();
-    expect(body.entry.categories).toEqual([]);
+    const res = await post(headers, { photoKey: key, takenAt: '2026-09-10T01:00:00Z' });
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    expect(body.entry).toMatchObject({ status: 'pending', categories: [] });
     expect(body.verdict.failed).toBe(true);
+    expect(body.projectedPoints).toBe(0);
+    const [row] = await db.select().from(schema.entries);
+    expect(row?.status).toBe('pending');
+    expect(await db.select().from(schema.entryCategories)).toEqual([]);
+  });
+
+  it('a failed-verdict entry does not score until the member picks categories', async () => {
+    classify.mockResolvedValue({ ...okVerdict, categories: [], failed: true });
+    const { headers } = await asUser('u1', { activate: true });
+    const key = await uploadPhoto(headers);
+    const created = await (await post(headers, { photoKey: key, takenAt: '2026-09-10T01:00:00Z' })).json();
+    const before = await (await app.request('/entries/mine', { headers })).json();
+    expect(before.entries[0].points).toBe(0);
+    const res = await app.request(`/entries/${created.entry.id}`, { method: 'PATCH', headers: { ...headers, 'content-type': 'application/json' }, body: JSON.stringify({ categories: ['exercise'] }) });
+    const body = await res.json();
+    expect(body.entry).toMatchObject({ status: 'confirmed', categories: ['exercise'] });
+    expect(body.projectedPoints).toBe(3);
   });
 
   it('rejects a photoKey belonging to another user', async () => {
@@ -75,8 +100,7 @@ describe('POST /entries', () => {
   it('projectedPoints reflects a hit day cap', async () => {
     const { headers } = await asUser('u1', { activate: true });
     const k1 = await uploadPhoto(headers);
-    const first = await (await post(headers, { photoKey: k1, takenAt: '2026-09-10T01:00:00Z' })).json();
-    await app.request(`/entries/${first.entry.id}`, { method: 'PATCH', headers: { ...headers, 'content-type': 'application/json' }, body: JSON.stringify({ categories: ['exercise'] }) });
+    expect((await post(headers, { photoKey: k1, takenAt: '2026-09-10T01:00:00Z' })).status).toBe(201);
     const k2 = await uploadPhoto(headers);
     const second = await (await post(headers, { photoKey: k2, takenAt: '2026-09-10T05:00:00Z' })).json();
     expect(second.projectedPoints).toBe(0);
@@ -185,6 +209,23 @@ describe('PATCH /entries/:id', () => {
     expect(cats.every((c) => c.source === 'user')).toBe(true);
   });
 
+  it('replaces the AI categories of an auto-confirmed entry and stays confirmed', async () => {
+    classify.mockResolvedValue({ ...okVerdict, categories: ['exercise', 'group'] });
+    const { headers } = await asUser('u1', { activate: true });
+    const key = await uploadPhoto(headers);
+    const created = await (await post(headers, { photoKey: key, takenAt: '2026-09-10T01:00:00Z' })).json();
+    expect(created.entry).toMatchObject({ status: 'confirmed', categories: ['exercise', 'group'] });
+    const res = await app.request(`/entries/${created.entry.id}`, { method: 'PATCH', headers: { ...headers, 'content-type': 'application/json' }, body: JSON.stringify({ categories: ['meal'] }) });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.entry).toMatchObject({ status: 'confirmed', categories: ['meal'] });
+    expect(body.projectedPoints).toBe(2);
+    const cats = await db.select().from(schema.entryCategories);
+    expect(cats).toEqual([expect.objectContaining({ category: 'meal', source: 'user' })]);
+    const [row] = await db.select().from(schema.entries);
+    expect(row?.status).toBe('confirmed');
+  });
+
   it('can re-edit an already confirmed entry (history edit)', async () => {
     const { headers } = await asUser('u1', { activate: true });
     const key = await uploadPhoto(headers);
@@ -234,6 +275,19 @@ describe('DELETE /entries/:id and GET /entries/mine', () => {
     expect(mine.entries).toEqual([]);
     const [row] = await db.select().from(schema.entries);
     expect(row?.status).toBe('rejected');
+  });
+
+  it('rejects an auto-confirmed entry without a prior edit', async () => {
+    const { headers } = await asUser('u1', { activate: true });
+    const key = await uploadPhoto(headers);
+    const created = await (await post(headers, { photoKey: key, takenAt: '2026-09-10T01:00:00Z' })).json();
+    expect(created.entry.status).toBe('confirmed');
+    expect((await app.request(`/entries/${created.entry.id}`, { method: 'DELETE', headers })).status).toBe(204);
+    const [row] = await db.select().from(schema.entries);
+    expect(row?.status).toBe('rejected');
+    const mine = await (await app.request('/entries/mine', { headers })).json();
+    expect(mine.entries).toEqual([]);
+    expect((await app.request(`/entries/${created.entry.id}`, { method: 'PATCH', headers: { ...headers, 'content-type': 'application/json' }, body: JSON.stringify({ categories: ['exercise'] }) })).status).toBe(404);
   });
 
   it('history lists newest first with points', async () => {
@@ -287,6 +341,6 @@ describe('DELETE /entries/:id and GET /entries/mine', () => {
     const res = await app.request(`/entries/${created.entry.id}`, { method: 'DELETE', headers: b.headers });
     expect(res.status).toBe(404);
     const [row] = await db.select().from(schema.entries);
-    expect(row?.status).toBe('pending');
+    expect(row?.status).toBe('confirmed');
   });
 });

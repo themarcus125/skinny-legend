@@ -110,7 +110,8 @@ describe('admin entries', () => {
     const admin = await asUser('adm', { admin: true });
     const u = await asUser('u', { activate: true });
     await createEntry(u.headers);
-    const list = await (await app.request(`/admin/entries?user=${u.user.id}&status=pending`, { headers: admin.headers })).json();
+    const list = await (await app.request(`/admin/entries?user=${u.user.id}&status=confirmed`, { headers: admin.headers })).json();
+    expect((await (await app.request(`/admin/entries?user=${u.user.id}&status=pending`, { headers: admin.headers })).json()).entries).toHaveLength(0);
     expect(list.entries).toHaveLength(1);
     expect(list.entries[0].verdict).toMatchObject({ confidence: 1 });
   });

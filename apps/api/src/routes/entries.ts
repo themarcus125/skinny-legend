@@ -122,10 +122,13 @@ export function entryRoutes(deps: EntryDeps) {
     const thumbKey = newKey('thumb', user.id);
     await storage.putObject(thumbKey, thumb, 'image/jpeg');
 
-    // The stored verdict keeps what the model actually saw; the pre-suggestion drops an
-    // unhealthy meal so the user has to opt in rather than opt out of claiming the points.
+    // The entry is confirmed straight from the verdict: the stored verdict keeps what the model
+    // actually saw, while the confirmed categories drop an unhealthy meal so the member has to
+    // opt in (via PATCH) rather than opt out of claiming the points. A failed verdict leaves the
+    // entry pending with no categories — it scores nothing until the member picks them manually.
     const suggested = verdict.healthy === false ? verdict.categories.filter((cat) => cat !== 'meal') : verdict.categories;
-    const categories = [...new Set(suggested)];
+    const categories = verdict.failed ? [] : [...new Set(suggested)];
+    const status = verdict.failed ? ('pending' as const) : ('confirmed' as const);
     const entry = await db.transaction(async (tx) => {
       const [row] = await tx.insert(schema.entries).values({
         userId: user.id,
@@ -133,6 +136,7 @@ export function entryRoutes(deps: EntryDeps) {
         photoKey: body.photoKey,
         thumbKey,
         takenAt,
+        status,
         localDate: toLocalDate(takenAt, challenge.config.timezone),
         lat: body.lat,
         lng: body.lng,
@@ -150,6 +154,8 @@ export function entryRoutes(deps: EntryDeps) {
       return row!;
     });
 
+    // `projection` drops the entry's own confirmed row before re-adding it as the candidate,
+    // so an auto-confirmed entry is not counted twice against its own caps.
     const others = (await loadConfirmedEntries([user.id])).get(user.id) ?? [];
     const proj = await projection(challenge, entry, categories, others);
     return c.json({ entry: await toEntryDto(entry, categories), verdict: toVerdictDto(verdict), ...proj }, 201);
