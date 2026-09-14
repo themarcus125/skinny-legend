@@ -2,6 +2,12 @@
 
 Photo-based points tracker for the group challenge. See `docs/superpowers/specs/2026-09-11-skinny-legend-design.md`.
 
+## Entry flow
+A member's photo is classified by the AI and the entry is confirmed from that verdict
+automatically (it scores and appears in the feed, leaderboard and map at once); the member's
+"Không đúng?" edit and the admin's override/reject adjust it afterwards. Only an entry whose
+verdict failed stays `pending`, with no categories, until the member picks them by hand.
+
 ## Layout
 - `packages/shared` — Drizzle schema, scoring engine, date helpers
 - `apps/api` — Hono REST API (Railway)
