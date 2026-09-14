@@ -245,6 +245,15 @@ describe('PATCH /entries/:id', () => {
     expect(res.status).toBe(404);
   });
 
+  it('rejects an empty category list on PATCH so a scored entry cannot be zeroed', async () => {
+    const { headers } = await asUser('u1', { activate: true });
+    const key = await uploadPhoto(headers);
+    const created = await (await post(headers, { photoKey: key, takenAt: '2026-09-10T01:00:00Z' })).json();
+    const res = await app.request(`/entries/${created.entry.id}`, { method: 'PATCH', headers: { ...headers, 'content-type': 'application/json' }, body: JSON.stringify({ categories: [] }) });
+    expect(res.status).toBe(400);
+    expect((await res.json()).error.code).toBe('invalid_body');
+  });
+
   it('rejects a non-uuid id with 400', async () => {
     const { headers } = await asUser('u1', { activate: true });
     const res = await app.request('/entries/garbage', { method: 'PATCH', headers: { ...headers, 'content-type': 'application/json' }, body: JSON.stringify({ categories: ['meal'] }) });

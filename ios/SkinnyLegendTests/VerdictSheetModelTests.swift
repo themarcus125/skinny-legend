@@ -341,17 +341,27 @@ struct VerdictSheetModelTests {
         #expect(model.canSave)
     }
 
-    @Test("An empty selection on a pending entry stays saveable")
-    func emptySelectionStaysSaveableWhenNothingIsScoredYet() {
-        let model = VerdictSheetModel(
+    @Test("An empty selection is never saveable — the server requires at least one category")
+    func emptySelectionIsNeverSaveable() {
+        let pending = VerdictSheetModel(
             api: MockAPIClient(), entry: entry([]), mode: .created(verdict([], failed: true)),
             capsHit: CapsHit.none, cappedCategories: [], projectedPoints: 0,
             placeName: nil, placeSource: PlaceSource.none
         )
-        // Nothing has been scored, so confirming an empty pick zeroes nothing; the server
-        // decides. Only an already-tracked entry is protected.
-        #expect(model.selected.isEmpty)
-        #expect(model.canSave)
+        #expect(pending.selected.isEmpty)
+        #expect(pending.canSave == false)
+        pending.toggle(.exercise)
+        #expect(pending.canSave)
+
+        // History edit of an already-scored entry: emptying it must be refused too.
+        let edit = VerdictSheetModel(
+            api: MockAPIClient(), entry: entry([.meal], status: .confirmed), mode: .edit,
+            capsHit: CapsHit.none, cappedCategories: [], projectedPoints: 2,
+            placeName: nil, placeSource: PlaceSource.none
+        )
+        edit.toggle(.meal)
+        #expect(edit.selected.isEmpty)
+        #expect(edit.canSave == false)
     }
 
     // MARK: - Ruling 2: history edits have no fresh server projection until save

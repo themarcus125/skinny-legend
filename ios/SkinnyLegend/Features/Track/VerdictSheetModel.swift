@@ -130,7 +130,9 @@ final class VerdictSheetModel: Identifiable {
     /// Whether the primary button can act. An already-tracked entry corrected down to no
     /// categories would silently zero a scored entry, so that one save is refused.
     var canSave: Bool {
-        !isSaving && !(needsSave && selected.isEmpty && isAlreadyTracked)
+        // The server rejects an empty category list (PATCH requires ≥ 1), so never offer a save
+        // that would be refused — and never let a scored entry (tracked or history edit) be zeroed.
+        !isSaving && !(needsSave && selected.isEmpty)
     }
 
     /// Whether the user has changed the categories or the place since the sheet opened.

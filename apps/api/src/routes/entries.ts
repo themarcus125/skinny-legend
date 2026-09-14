@@ -34,7 +34,7 @@ export const HISTORY_PAGE_SIZE = 50;
 const TAKEN_AT_FUTURE_TOLERANCE_MS = 10 * 60 * 1000;
 
 const patchBody = z.object({
-  categories: z.array(categorySchema).max(3),
+  categories: z.array(categorySchema).min(1).max(3),
   placeName: z.string().max(120).nullable().optional(),
   placeSource: placeSourceSchema.optional(),
 });
