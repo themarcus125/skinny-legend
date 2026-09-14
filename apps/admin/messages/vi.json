@@ -53,7 +53,7 @@
       "admin": "Quản trị"
     },
     "entryStatus": {
-      "pending": "Chờ xác nhận",
+      "pending": "Chưa phân loại",
       "confirmed": "Đã xác nhận",
       "rejected": "Đã từ chối"
     }
