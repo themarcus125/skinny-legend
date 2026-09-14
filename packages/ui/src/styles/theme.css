@@ -1,0 +1,105 @@
+/* ──────────────────────────────────────────────────────────────────────────────────────────────
+   The Tailwind v4 bridge for the Operation Skinny Legend design system.
+
+   `tokens.css` ships raw custom properties; this file maps them onto the Tailwind *utilities*
+   `@skinny/ui`'s components are written in. Without it the components still render — they render
+   on Tailwind's stock scale, which is the wrong shape, silently (see the geometry contract in
+   `packages/ui/src/index.ts`). Both web clients import it, so there is exactly one copy:
+
+     @import "tailwindcss";
+     @import "@skinny/ui/styles/fonts.css";
+     @import "@skinny/ui/styles/tokens.css";
+     @import "@skinny/ui/styles/theme.css";
+     @import "@skinny/ui/styles/type.css";
+
+   It must be imported AFTER `tailwindcss` (it overrides Tailwind's defaults) and after
+   `tokens.css` (every `@theme inline` entry below dereferences a token defined there).
+
+   App-specific keys stay in the app: `apps/admin` keeps its shadcn sidebar and chart bridge,
+   because no component in this package consumes them.
+   ────────────────────────────────────────────────────────────────────────────────────────────── */
+
+/* ── Static scale. Overriding Tailwind's named sizes means every text-sm / text-base already in
+   the component sources inherits the design system's scale. Plain @theme (not inline) so the px
+   values become the --text-* custom properties Tailwind's utilities read. ── */
+@theme {
+  --spacing: 4px;                                         /* the 4 / 8 grid: 1=4 2=8 3=12 4=16 6=24 8=32 12=48 */
+
+  --text-xs: 12px;     --text-xs--line-height: 16px;
+  --text-label: 13px;  --text-label--line-height: 18px;   /* caption 13/500 */
+  --text-sm: 14px;     --text-sm--line-height: 20px;      /* tables, controls, descriptions */
+  --text-base: 16px;   --text-base--line-height: 24px;    /* body 16/1.5 */
+  --text-lg: 17px;     --text-lg--line-height: 22px;      /* h3 17/1.3 */
+  --text-xl: 22px;     --text-xl--line-height: 26px;      /* h2 22/1.2 — the leaderboard rank numeral */
+  --text-2xl: 30px;    --text-2xl--line-height: 34px;     /* h1 30/1.12 — the leaderboard total */
+  --text-3xl: 36px;    --text-3xl--line-height: 40px;
+  --text-display: 44px; --text-display--line-height: 44px;/* display 44/1.0 */
+
+  /* radius: sm 6 / md 12 / lg 18 / full */
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --radius-xl: 18px;    /* cards, dialogs — the design system's lg */
+  --radius-2xl: 24px;
+  --radius-3xl: 24px;
+  --radius-4xl: 28px;
+}
+
+@theme inline {
+  /* fonts — the family is self-hosted by `fonts.css`, so this is a literal name rather than
+     next/font's generated variable; both web clients resolve the same faces. */
+  --font-sans: "Be Vietnam Pro", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-heading: var(--font-sans);
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+
+  /* elevation e1 card / e2 sheet+popover / e3 modal — theme-aware, hence inline */
+  --shadow-card: var(--shadow-1);
+  --shadow-popover: var(--shadow-2);
+  --shadow-dialog: var(--shadow-3);
+
+  /* colour bridge (the shadcn key names — the admin's components already consume these) */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-hover: var(--primary-hover);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-hover: var(--destructive-hover);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* design-system surfaces → utilities bg-surface-2, bg-elevated, bg-track, … */
+  --color-surface-2: var(--surface-2);
+  --color-elevated: var(--elevated);
+  --color-track: var(--track);
+  --color-border-strong: var(--border-strong);
+  --color-foreground-secondary: var(--foreground-secondary);
+  --color-foreground-subtle: var(--foreground-subtle);
+
+  /* accent (Vanilla) — marks, milestone fills, map pins */
+  --color-brand: var(--brand);
+  --color-brand-foreground: var(--brand-foreground);
+  --color-primary-soft: var(--primary-soft);
+  --color-primary-border: var(--primary-border);
+
+  /* semantic pairs: solid ink + soft fill */
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --color-destructive-soft: var(--destructive-soft);
+}

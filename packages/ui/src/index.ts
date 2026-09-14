@@ -25,8 +25,8 @@
  * Tailwind *utilities*, and those utilities only carry the design system's geometry if the
  * consuming app's `@theme` bridge defines them. A host that skips the bridge still renders — it
  * renders with Tailwind's stock scale, which is the wrong shape, silently. What every consumer
- * must define (today: `apps/admin/src/app/globals.css`; Task 5 extracts these into
- * `@skinny/ui/styles/theme.css` so there is one copy):
+ * must define — all of it lives in `@skinny/ui/styles/theme.css`, so a consumer satisfies the
+ * contract by importing that file (both `apps/admin` and `apps/web` do):
  *
  * | Utility | Required value | Used by |
  * |---|---|---|
