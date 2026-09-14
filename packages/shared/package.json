@@ -8,7 +8,8 @@
   "exports": {
     ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" },
     "./wire": { "types": "./dist/wire/index.d.ts", "import": "./dist/wire/index.js" },
-    "./scoring": { "types": "./dist/scoring/index.d.ts", "import": "./dist/scoring/index.js" }
+    "./scoring": { "types": "./dist/scoring/index.d.ts", "import": "./dist/scoring/index.js" },
+    "./dates": { "types": "./dist/dates.d.ts", "import": "./dist/dates.js" }
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",

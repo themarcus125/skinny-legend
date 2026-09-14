@@ -138,6 +138,7 @@ describe('browser safety', () => {
     expect(pkg.sideEffects).toBe(false);
     expect(pkg.exports['./wire']).toEqual({ types: './dist/wire/index.d.ts', import: './dist/wire/index.js' });
     expect(pkg.exports['./scoring']).toEqual({ types: './dist/scoring/index.d.ts', import: './dist/scoring/index.js' });
+    expect(pkg.exports['./dates']).toEqual({ types: './dist/dates.d.ts', import: './dist/dates.js' });
     expect(pkg.exports['.']).toEqual({ types: './dist/index.d.ts', import: './dist/index.js' });
   });
 });

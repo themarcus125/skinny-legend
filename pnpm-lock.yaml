@@ -26,6 +26,9 @@ importers:
       '@hookform/resolvers':
         specifier: ^5.9.1
         version: 5.9.1(ajv-formats@2.1.1(ajv@8.20.0))(ajv@8.20.0)(react-hook-form@7.87.0(react@19.3.0))(zod@4.6.2)
+      '@skinny/api-client':
+        specifier: workspace:*
+        version: link:../../packages/api-client
       '@tanstack/react-query':
         specifier: ^5.102.8
         version: 5.102.8(react@19.3.0)
@@ -181,6 +184,28 @@ importers:
       drizzle-kit:
         specifier: ^0.31.0
         version: 0.31.10
+
+  packages/api-client:
+    dependencies:
+      '@skinny/shared':
+        specifier: workspace:*
+        version: link:../shared
+    devDependencies:
+      '@eslint/js':
+        specifier: ^9.39.5
+        version: 9.39.5
+      '@typescript-eslint/parser':
+        specifier: ^8.70.0
+        version: 8.70.0(eslint@9.39.5(jiti@2.7.0))(typescript@6.0.3)
+      eslint:
+        specifier: ^9.39.5
+        version: 9.39.5(jiti@2.7.0)
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+      vitest:
+        specifier: ^5.0.0
+        version: 5.0.0(@opentelemetry/api@1.9.1)(@types/node@22.20.2)(jsdom@30.0.1)(vite@8.3.0(@types/node@22.20.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.13))
 
   packages/shared:
     dependencies:
