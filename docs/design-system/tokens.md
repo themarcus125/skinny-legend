@@ -1,7 +1,7 @@
 # Operation Skinny Legend — design tokens (v0.1)
 
 Source of truth: [design-system.html](./design-system.html) (design's bundled page; serve it locally to browse — it is JS-rendered).
-Decisions (2026-09-14): accent **Vanilla** is the default; both **light and dark** ship; iOS keeps native iOS 26 glass for system chrome only (tab bar, nav bar, sheets) and uses these flat surfaces for cards, buttons, chips; **Urbanist** (variable, OFL) is bundled at `ios/SkinnyLegend/Resources/Fonts/` and loaded via `next/font/google` in the admin.
+Decisions (2026-09-14): accent **Vanilla** is the default; both **light and dark** ship; iOS keeps native iOS 26 glass for system chrome only (tab bar, nav bar, sheets) and uses these flat surfaces for cards, buttons, chips; **Be Vietnam Pro** (OFL, full Vietnamese coverage — Urbanist was dropped on 2026-09-14 because it has no Vietnamese glyphs) is bundled at `ios/SkinnyLegend/Resources/Fonts/` (400–800) and loaded via `next/font/google` with the `vietnamese` subset in the admin.
 
 ## Principles (from the page)
 - "Momentum, not measurement": progress is framed as personal bests, streaks and team camaraderie — never before/after or size.
