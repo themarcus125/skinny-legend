@@ -3,3 +3,4 @@ export * from './dates.js';
 export * from './scoring/index.js';
 export * from './notifications/index.js';
 export * as schema from './db/schema.js';
+export * from './wire/index.js';

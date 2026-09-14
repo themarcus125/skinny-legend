@@ -7,6 +7,7 @@ import { isoWeekKey } from '../dates.js';
 export * from './types.js';
 export { applyCaps } from './caps.js';
 export { computeStreak } from './streak.js';
+export { RULEBOOK, projectedPoints } from './rulebook.js';
 
 const STREAK_CATEGORIES: readonly Category[] = ['exercise', 'meal'];
 
