@@ -1,3 +1,4 @@
+import type { NearbyPlace } from '../wire/places.js';
 import { pgTable, pgEnum, uuid, text, timestamp, date, integer, boolean, doublePrecision, jsonb, primaryKey, index, uniqueIndex } from 'drizzle-orm/pg-core';
 
 export const roleEnum = pgEnum('role', ['member', 'admin']);
@@ -6,7 +7,7 @@ export const categoryEnum = pgEnum('category', ['exercise', 'meal', 'group']);
 export const capPeriodEnum = pgEnum('cap_period', ['day', 'week']);
 export const entryStatusEnum = pgEnum('entry_status', ['pending', 'confirmed', 'rejected']);
 export const categorySourceEnum = pgEnum('category_source', ['ai', 'user', 'admin']);
-export const placeSourceEnum = pgEnum('place_source', ['poi', 'geocode', 'manual', 'none']);
+export const placeSourceEnum = pgEnum('place_source', ['poi', 'geocode', 'osm', 'manual', 'none']);
 /**
  * The user's UI language (spec §D). Deliberately NOT named `locale`: the push feature adds a
  * separate `device_locale` enum for `device_tokens.locale`, and the two must not collide.
@@ -94,7 +95,7 @@ export const feedback = pgTable('feedback', {
  * `users.locale` enum of its own and the two must not collide.
  */
 export const deviceLocaleEnum = pgEnum('device_locale', ['vi', 'en']);
-export const devicePlatformEnum = pgEnum('device_platform', ['ios']);
+export const devicePlatformEnum = pgEnum('device_platform', ['ios', 'web']);
 export const notificationKindEnum = pgEnum('notification_kind', ['inactive_1d', 'inactive_3d', 'inactive_7d', 'rank_nudge']);
 
 export const deviceTokens = pgTable('device_tokens', {
@@ -126,4 +127,15 @@ export const auditLog = pgTable('audit_log', {
   targetId: text('target_id').notNull(),
   diffJson: jsonb('diff_json'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+/**
+ * Nominatim responses keyed by a ~110 m cell (lat/lng to 3 decimals), spec §3.1. The payload is the
+ * whole `{ places, attribution }` body so a hit needs no re-derivation; `fetched_at` drives the
+ * 30-day TTL. Degraded (failed/timed-out) lookups are never written here, so the next call retries.
+ */
+export const placeCache = pgTable('place_cache', {
+  cell: text('cell').primaryKey(),
+  payloadJson: jsonb('payload_json').$type<{ places: NearbyPlace[]; attribution: string }>().notNull(),
+  fetchedAt: timestamp('fetched_at', { withTimezone: true }).notNull().defaultNow(),
 });

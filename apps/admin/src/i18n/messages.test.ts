@@ -36,6 +36,8 @@ describe('message catalogues', () => {
       'Tiếng Việt',
       'English',
       'AI',
+      'iOS',
+      'Web',
     ]);
     const echoes = paths(vi).filter((path) => {
       const viValue = read(vi, path);

@@ -14,6 +14,7 @@ export function NotificationLog({ items }: { items: NotificationLogItem[] }) {
         <TableRow>
           <TableHead>{t('columns.member')}</TableHead>
           <TableHead>{t('columns.kind')}</TableHead>
+          <TableHead>{t('columns.platform')}</TableHead>
           <TableHead>{t('columns.content')}</TableHead>
           <TableHead>{t('columns.sentAt')}</TableHead>
         </TableRow>
@@ -24,6 +25,10 @@ export function NotificationLog({ items }: { items: NotificationLogItem[] }) {
             <TableCell className="text-base font-semibold text-foreground">{item.user.displayName}</TableCell>
             <TableCell>
               <Badge variant="info">{t(`kinds.${item.kind}`)}</Badge>
+            </TableCell>
+            {/* Neutral on purpose: the platform is context, not a state the admin must react to. */}
+            <TableCell>
+              <Badge variant="secondary">{t(`platform.${item.platform}`)}</Badge>
             </TableCell>
             <TableCell className="max-w-[28rem]">
               <p className="font-semibold text-foreground">{item.payload.title}</p>

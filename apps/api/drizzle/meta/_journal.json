@@ -22,6 +22,13 @@
       "when": 1789193761508,
       "tag": "0002_square_angel",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1789404203482,
+      "tag": "0003_colossal_iron_man",
+      "breakpoints": true
     }
   ]
 }

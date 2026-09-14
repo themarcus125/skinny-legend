@@ -136,6 +136,7 @@ function seedNotifications(): NotificationLogItem[] {
   return [
     {
       id: 'n-1',
+      platform: 'ios',
       kind: 'rank_nudge',
       payload: { title: 'Bạn đang bám sát Khoa', body: 'Còn 6 điểm là vượt Khoa.', locale: 'vi', vars: { gap: 6, name: 'Khoa' } },
       sentAt: `${addDays(CHALLENGE_START, 11)}T13:00:00.000Z`,
@@ -143,6 +144,7 @@ function seedNotifications(): NotificationLogItem[] {
     },
     {
       id: 'n-2',
+      platform: 'web',
       kind: 'inactive_3d',
       payload: { title: 'Ba ngày rồi đó!', body: 'Ghi nhận hôm nay để bắt đầu lại chuỗi ngày của bạn.', locale: 'vi', vars: { days: 3 } },
       sentAt: `${addDays(CHALLENGE_START, 10)}T13:00:00.000Z`,
@@ -150,6 +152,7 @@ function seedNotifications(): NotificationLogItem[] {
     },
     {
       id: 'n-3',
+      platform: 'ios',
       kind: 'inactive_7d',
       payload: { title: 'Một tuần chưa thấy bạn đâu', body: 'Quay lại ghi nhận một hoạt động hôm nay nhé.', locale: 'vi', vars: { days: 7 } },
       sentAt: `${addDays(CHALLENGE_START, 9)}T13:00:00.000Z`,

@@ -11,9 +11,9 @@ import { CATEGORIES, type Category } from '../scoring/types.js';
  */
 export { CATEGORIES, type Category };
 
-export const PLACE_SOURCES = ['poi', 'geocode', 'manual', 'none'] as const;
+export const PLACE_SOURCES = ['poi', 'geocode', 'osm', 'manual', 'none'] as const;
 export const USER_LOCALES = ['vi', 'en'] as const;
-export const DEVICE_PLATFORMS = ['ios'] as const;
+export const DEVICE_PLATFORMS = ['ios', 'web'] as const;
 export const ENTRY_STATUSES = ['pending', 'confirmed', 'rejected'] as const;
 export const USER_STATUSES = ['pending', 'active', 'disabled'] as const;
 export const ROLES = ['member', 'admin'] as const;

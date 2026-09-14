@@ -208,6 +208,25 @@ describe('GET /admin/notifications', () => {
     expect(typeof notifications[0].id).toBe('string');
   });
 
+  it('reports the platform of the most recently seen device, defaulting to ios', async () => {
+    const admin = await asUser('adm', { admin: true });
+    const phoneOnly = await asUser('m', { activate: true, name: 'Minh' });
+    const onWeb = await asUser('w', { activate: true, name: 'Lan' });
+    const tokenless = await asUser('t', { activate: true, name: 'An' });
+    await db.insert(schema.deviceTokens).values([
+      { userId: phoneOnly.user.id, token: 'tok-ios', platform: 'ios', locale: 'vi' },
+      { userId: onWeb.user.id, token: 'tok-old-ios', platform: 'ios', locale: 'vi', lastSeenAt: new Date('2026-09-01T00:00:00Z') },
+      { userId: onWeb.user.id, token: 'tok-web', platform: 'web', locale: 'vi', lastSeenAt: new Date('2026-09-19T00:00:00Z') },
+    ]);
+    await seedLog(phoneOnly.user.id, 'inactive_1d', new Date('2026-09-19T13:00:00Z'));
+    await seedLog(onWeb.user.id, 'inactive_1d', new Date('2026-09-19T12:00:00Z'));
+    await seedLog(tokenless.user.id, 'inactive_1d', new Date('2026-09-19T11:00:00Z'));
+
+    const res = await app.request('/admin/notifications', { headers: admin.headers });
+    const { notifications } = await res.json();
+    expect(notifications.map((n: { platform: string }) => n.platform)).toEqual(['ios', 'web', 'ios']);
+  });
+
   it('honours the limit', async () => {
     const admin = await asUser('adm', { admin: true });
     const member = await asUser('m', { activate: true });

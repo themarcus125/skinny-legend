@@ -7,6 +7,7 @@ const items: NotificationLogItem[] = [
   {
     id: 'n-1',
     kind: 'rank_nudge',
+    platform: 'ios',
     payload: { title: 'Bạn đang bám sát Khoa', body: 'Còn 6 điểm là vượt Khoa.', locale: 'vi', vars: { gap: 6, name: 'Khoa' } },
     sentAt: '2026-09-19T13:00:00.000Z',
     user: { id: 'u-2', displayName: 'Minh' },
@@ -14,6 +15,7 @@ const items: NotificationLogItem[] = [
   {
     id: 'n-2',
     kind: 'inactive_3d',
+    platform: 'web',
     payload: { title: 'Ba ngày rồi đó!', body: 'Ghi nhận hôm nay để bắt đầu lại chuỗi ngày của bạn.', locale: 'vi', vars: { days: 3 } },
     sentAt: '2026-09-18T13:00:00.000Z',
     user: { id: 'u-3', displayName: 'Lan' },
@@ -37,14 +39,22 @@ describe('NotificationLog', () => {
 
   it('renders a table header row for every column', () => {
     render(<NotificationLog items={items} />);
-    for (const header of ['Thành viên', 'Loại', 'Nội dung', 'Thời điểm']) {
+    for (const header of ['Thành viên', 'Loại', 'Nền tảng', 'Nội dung', 'Thời điểm']) {
       expect(screen.getByRole('columnheader', { name: header })).toBeInTheDocument();
     }
+  });
+
+  it('badges the platform of every row', () => {
+    render(<NotificationLog items={items} />);
+    expect(screen.getByText('iOS')).toBeInTheDocument();
+    expect(screen.getByText('Web')).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'Nền tảng' })).toBeInTheDocument();
   });
 
   it('translates the kind labels and headers in English', () => {
     render(<NotificationLog items={items} />, { locale: 'en' });
     expect(screen.getByText('Rank nudge')).toBeInTheDocument();
     expect(screen.getByRole('columnheader', { name: 'Member' })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'Platform' })).toBeInTheDocument();
   });
 });

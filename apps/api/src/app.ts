@@ -9,10 +9,11 @@ import { entryRoutes, type EntryDeps } from './routes/entries.js';
 import { readRoutes } from './routes/read.js';
 import { feedbackRoutes } from './routes/feedback.js';
 import { adminRoutes } from './routes/admin.js';
+import { placeRoutes, type PlaceDeps } from './routes/places.js';
 import { classifyPhoto } from './services/vision.js';
 import { type AuthEnv } from './middleware/auth.js';
 
-export function createApp(deps: Partial<EntryDeps> = {}) {
+export function createApp(deps: Partial<EntryDeps & PlaceDeps> = {}) {
   const app = new Hono<AuthEnv>();
   app.onError(errorHandler);
 
@@ -40,6 +41,7 @@ export function createApp(deps: Partial<EntryDeps> = {}) {
   app.route('/entries', entryRoutes({ classify: deps.classify ?? classifyPhoto }));
   app.route('/feedback', feedbackRoutes);
   app.route('/admin', adminRoutes);
+  app.route('/places', placeRoutes({ nearby: deps.nearby }));
   app.route('/', readRoutes);
   return app;
 }

@@ -204,6 +204,7 @@
     "columns": {
       "member": "Thành viên",
       "kind": "Loại",
+      "platform": "Nền tảng",
       "content": "Nội dung",
       "sentAt": "Thời điểm"
     },
@@ -212,6 +213,10 @@
       "inactive_3d": "Vắng 3 ngày",
       "inactive_7d": "Vắng 7 ngày",
       "rank_nudge": "Bám sát thứ hạng"
+    },
+    "platform": {
+      "ios": "iOS",
+      "web": "Web"
     },
     "form": {
       "member": "Thành viên",

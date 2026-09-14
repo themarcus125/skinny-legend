@@ -137,9 +137,24 @@ adminRoutes.get('/notifications', validate('query', notificationsQuery), async (
   const { limit } = c.req.valid('query');
   const rows = await db.select({ n: schema.notificationLog, user: schema.users }).from(schema.notificationLog)
     .innerJoin(schema.users, eq(schema.users.id, schema.notificationLog.userId)).orderBy(desc(schema.notificationLog.sentAt)).limit(limit);
+
+  // `platform` is a property of the member, not of the log row: notification_log records what was
+  // sent, not which of a member's devices received it. The column therefore shows the platform of
+  // that member's MOST RECENTLY SEEN device (device_tokens.last_seen_at desc), which is the surface
+  // they are actually using, and falls back to 'ios' when every token has since been unregistered.
+  const userIds = [...new Set(rows.map(({ user }) => user.id))];
+  const devices = userIds.length === 0 ? [] : await db
+    .select({ userId: schema.deviceTokens.userId, platform: schema.deviceTokens.platform })
+    .from(schema.deviceTokens)
+    .where(inArray(schema.deviceTokens.userId, userIds))
+    .orderBy(desc(schema.deviceTokens.lastSeenAt));
+  const platformByUser = new Map<string, (typeof devices)[number]['platform']>();
+  for (const device of devices) if (!platformByUser.has(device.userId)) platformByUser.set(device.userId, device.platform);
+
   return c.json({
     notifications: rows.map(({ n, user }) => ({
       id: n.id, kind: n.kind, payload: n.payloadJson, sentAt: n.sentAt.toISOString(),
+      platform: platformByUser.get(user.id) ?? 'ios',
       user: { id: user.id, displayName: user.displayName },
     })),
   });

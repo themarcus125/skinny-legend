@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   createEntryBody, patchEntryBody, patchMeBody, registerDeviceBody, presignBody,
   mapQuery, historyQuery, feedQuery, nearbyQuery,
-  PLACE_SOURCES, DEVICE_PLATFORMS, CATEGORIES, USER_LOCALES, ENTRY_STATUSES,
+  PLACE_SOURCES, DEVICE_PLATFORMS, CATEGORIES, USER_LOCALES, ENTRY_STATUSES, UPLOAD_CONTENT_TYPES,
   type EntryDto,
 } from '../src/index.js';
 
@@ -64,6 +64,13 @@ describe('presignBody and mapQuery', () => {
       expect(presignBody.parse({ kind, contentType: 'image/jpeg' }).kind).toBe(kind);
     }
   });
+  it('accepts every upload content type, webp and heic included', () => {
+    expect(UPLOAD_CONTENT_TYPES).toEqual(['image/jpeg', 'image/png', 'image/webp', 'image/heic']);
+    for (const contentType of UPLOAD_CONTENT_TYPES) {
+      expect(presignBody.parse({ kind: 'photo', contentType }).contentType).toBe(contentType);
+    }
+    expect(presignBody.safeParse({ kind: 'photo', contentType: 'image/gif' }).success).toBe(false);
+  });
   it('coerces and defaults days', () => {
     expect(mapQuery.parse({}).days).toBe(30);
     expect(mapQuery.parse({ days: '7' }).days).toBe(7);
@@ -93,9 +100,9 @@ describe('nearbyQuery', () => {
 describe('literal tuples', () => {
   it('lists every enum value the DB knows today', () => {
     expect(CATEGORIES).toEqual(['exercise', 'meal', 'group']);
-    // `web`/`osm` arrive with migration 0003 in a later task; today these must match db/schema.ts.
-    expect(PLACE_SOURCES).toEqual(['poi', 'geocode', 'manual', 'none']);
-    expect(DEVICE_PLATFORMS).toEqual(['ios']);
+    // `osm`/`web` landed with migration 0003; these must match db/schema.ts value for value.
+    expect(PLACE_SOURCES).toEqual(['poi', 'geocode', 'osm', 'manual', 'none']);
+    expect(DEVICE_PLATFORMS).toEqual(['ios', 'web']);
     expect(USER_LOCALES).toEqual(['vi', 'en']);
     expect(ENTRY_STATUSES).toEqual(['pending', 'confirmed', 'rejected']);
   });

@@ -204,6 +204,7 @@
     "columns": {
       "member": "Member",
       "kind": "Type",
+      "platform": "Platform",
       "content": "Content",
       "sentAt": "Sent at"
     },
@@ -212,6 +213,10 @@
       "inactive_3d": "Inactive 3 days",
       "inactive_7d": "Inactive 7 days",
       "rank_nudge": "Rank nudge"
+    },
+    "platform": {
+      "ios": "iOS",
+      "web": "Web"
     },
     "form": {
       "member": "Member",

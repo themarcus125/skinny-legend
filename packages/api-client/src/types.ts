@@ -70,6 +70,7 @@ export type {
 
 import type {
   Category,
+  DevicePlatform,
   EntryDto,
   EntryStatus,
   MapPinDto,
@@ -219,6 +220,8 @@ export interface NotificationLogItem {
   kind: NotificationKind;
   payload: NotificationPayload;
   sentAt: string;
+  /** The member's most recently seen device platform, `ios` when they have no live token. */
+  platform: DevicePlatform;
   user: { id: string; displayName: string };
 }
 
