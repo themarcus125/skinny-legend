@@ -1,0 +1,146 @@
+/* ──────────────────────────────────────────────────────────────────────────────────────────────
+   Operation Skinny Legend design tokens — accent Vanilla, light and dark. The single source for
+   both web clients (apps/admin, apps/web); iOS transcribes the same table in
+   ios/SkinnyLegend/Core/DesignSystem/Theme.swift. Authority: docs/design-system/tokens.md.
+
+   These are raw custom properties only. Each app maps them onto Tailwind utilities with its own
+   `@theme` / `@theme inline` bridge.
+   ────────────────────────────────────────────────────────────────────────────────────────────── */
+
+/* ── Light (accent Vanilla) ── */
+:root {
+  --radius: 12px;
+
+  /* raw ramp */
+  --vanilla: #EFF0A3;
+  --honeydew: #CFDECA;
+  --alice: #D8DFE9;
+  --eerie: #212121;
+  --ghost: #F6F5FA;
+
+  /* canvas & ink */
+  --background: #EDECF1;
+  --foreground: var(--eerie);
+  --foreground-secondary: #5C5C63;
+  --foreground-subtle: #85858F;
+  --card: #FBFAFD;                   /* --surface */
+  --card-foreground: var(--eerie);
+  --surface-2: #F3F2F7;
+  --elevated: #FFFFFF;
+  --popover: var(--elevated);
+  --popover-foreground: var(--eerie);
+  --track: #E4E3EB;
+
+  /* interactive neutrals — the primary CTA is ink on ghost-white */
+  --primary: var(--eerie);
+  --primary-hover: #333338;
+  --primary-active: #0E0E0E;
+  --primary-foreground: var(--ghost);
+  --primary-soft: var(--vanilla);
+  --primary-border: #E0E18C;
+  --secondary: var(--surface-2);
+  --secondary-foreground: #3A3A40;
+  --muted: var(--surface-2);
+  --muted-foreground: #5C5C63;
+  --accent: #E9E8EF;
+  --accent-foreground: var(--eerie);
+
+  /* lines */
+  --border: #E4E3EB;
+  --border-strong: #CFCED9;
+  --input: #CFCED9;
+  --ring: var(--primary);
+
+  /* accent mark (Vanilla stays Vanilla in both themes so a mark never changes identity) */
+  --brand: var(--vanilla);
+  --brand-foreground: var(--eerie);
+
+  /* semantics */
+  /* Darkened from the spec's #4A6B4E / #836417: at 12px/600 on their own soft fills those measured
+     4.27:1 and 4.33:1, just under AA. These read 5.23:1 and 5.58:1. See docs/design-system/tokens.md. */
+  --success: #3F5D43;         --success-soft: var(--honeydew);
+  --warning: #6F5412;         --warning-soft: #F1E4B0;
+  --info: #48607F;            --info-soft: var(--alice);
+  --destructive: #A63B34;     --destructive-soft: #F1DAD8;
+  --destructive-hover: #8E2F29;
+  --destructive-active: #77251F;
+  --destructive-foreground: #FFFFFF;
+
+  /* elevation */
+  --shadow-1: 0 1px 2px rgba(33, 33, 33, 0.06), 0 1px 1px rgba(33, 33, 33, 0.04);
+  --shadow-2: 0 4px 14px rgba(33, 33, 33, 0.08), 0 1px 3px rgba(33, 33, 33, 0.05);
+  --shadow-3: 0 18px 44px rgba(33, 33, 33, 0.14), 0 3px 10px rgba(33, 33, 33, 0.06);
+
+  /* charts (unused today) */
+  --chart-1: var(--vanilla); --chart-2: var(--honeydew); --chart-3: var(--alice);
+  --chart-4: #85858F; --chart-5: #D5D4DD;
+
+  /* sidebar rail: the canvas tone, one step off the card so the content reads as the lit surface */
+  --sidebar: #E7E6EC;
+  --sidebar-foreground: #52525A;
+  --sidebar-primary: var(--vanilla);          /* active tile */
+  --sidebar-primary-foreground: var(--eerie);
+  --sidebar-accent: #DEDDE5;                  /* hover */
+  --sidebar-accent-foreground: var(--eerie);
+  --sidebar-border: #D9D8E1;
+  --sidebar-ring: var(--primary);
+}
+
+/* ── Dark (accent Vanilla) ── */
+.dark {
+  --background: #171717;
+  --foreground: var(--ghost);
+  --foreground-secondary: #B4B4BB;
+  --foreground-subtle: #8A8A93;
+  --card: #232325;                   /* --surface */
+  --card-foreground: var(--ghost);
+  --surface-2: #2B2B2E;
+  --elevated: #2F2F32;
+  --popover: var(--elevated);
+  --popover-foreground: var(--ghost);
+  --track: #3A3A3E;
+
+  --primary: var(--vanilla);
+  --primary-hover: #F5F6BE;
+  --primary-active: #DEDF90;
+  --primary-foreground: var(--eerie);
+  --primary-soft: #3A3B24;
+  --primary-border: #55562F;
+  --secondary: var(--surface-2);
+  --secondary-foreground: #D3D3D9;
+  --muted: var(--surface-2);
+  --muted-foreground: #B4B4BB;
+  --accent: #35353A;
+  --accent-foreground: var(--ghost);
+
+  --border: #3A3A3E;
+  --border-strong: #4C4C52;
+  --input: #4C4C52;
+  --ring: var(--primary);
+
+  --brand: var(--vanilla);
+  --brand-foreground: var(--eerie);
+
+  --success: #A9C6A4;         --success-soft: #2C3A2B;
+  --warning: #E0C57E;         --warning-soft: #3A3122;
+  --info: #AABCD5;            --info-soft: #262E3A;
+  --destructive: #E4A09A;     --destructive-soft: #3C2725;
+  --destructive-hover: #EDB4AF;
+  --destructive-active: #D28C86;
+  --destructive-foreground: var(--eerie);
+
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --shadow-2: 0 4px 14px rgba(0, 0, 0, 0.55), 0 1px 3px rgba(0, 0, 0, 0.4);
+  --shadow-3: 0 18px 44px rgba(0, 0, 0, 0.65), 0 3px 10px rgba(0, 0, 0, 0.45);
+
+  --chart-4: #6A6A74; --chart-5: #52525A;
+
+  --sidebar: #1D1D1F;
+  --sidebar-foreground: #B4B4BB;
+  --sidebar-primary: var(--primary-soft);
+  --sidebar-primary-foreground: var(--ghost);
+  --sidebar-accent: #2B2B2E;
+  --sidebar-accent-foreground: var(--ghost);
+  --sidebar-border: #2F2F32;
+  --sidebar-ring: var(--primary);
+}

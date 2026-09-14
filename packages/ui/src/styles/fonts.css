@@ -1,0 +1,9 @@
+/* Be Vietnam Pro 400–800, self-hosted. The `<weight>.css` entries carry every subset the family
+   publishes, `vietnamese` included — Urbanist ships latin/latin-ext only and drops diacritics.
+   Both web clients import this file so they ship byte-identical faces; the design system's h2
+   weight (650) falls to the nearest available face (700) under CSS font matching. */
+@import "@fontsource/be-vietnam-pro/400.css";
+@import "@fontsource/be-vietnam-pro/500.css";
+@import "@fontsource/be-vietnam-pro/600.css";
+@import "@fontsource/be-vietnam-pro/700.css";
+@import "@fontsource/be-vietnam-pro/800.css";
