@@ -1,7 +1,6 @@
 import { Hono } from 'hono';
-import { z } from 'zod';
 import { and, eq } from 'drizzle-orm';
-import { schema } from '@skinny/shared';
+import { schema, patchMeBody as patchMe, registerDeviceBody as registerDevice } from '@skinny/shared';
 import { db } from '../db.js';
 import { authenticate, requireActive, type AuthEnv } from '../middleware/auth.js';
 import { ApiError } from '../errors.js';
@@ -12,11 +11,6 @@ meRoutes.use(authenticate);
 
 meRoutes.get('/', (c) => c.json({ user: c.get('user') }));
 
-const patchMe = z.object({
-  displayName: z.string().min(1).max(40).optional(),
-  avatarKey: z.string().min(1).optional(),
-  locale: z.enum(['vi', 'en']).optional(),
-}).refine((o) => Object.keys(o).length > 0, { message: 'No fields to update' });
 meRoutes.patch('/', validate('json', patchMe), async (c) => {
   const me = c.get('user');
   const patch = c.req.valid('json');
@@ -35,12 +29,6 @@ meRoutes.patch('/', validate('json', patchMe), async (c) => {
 // scoped to themselves. Hono's `/devices/*` does not match `/devices`, hence two lines.
 meRoutes.use('/devices', requireActive);
 meRoutes.use('/devices/*', requireActive);
-
-const registerDevice = z.object({
-  token: z.string().min(1).max(4096),
-  platform: z.enum(['ios']).default('ios'),
-  locale: z.enum(['vi', 'en']).default('vi'),
-});
 
 meRoutes.post('/devices', validate('json', registerDevice), async (c) => {
   const me = c.get('user');

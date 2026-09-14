@@ -1,7 +1,10 @@
 import { Hono } from 'hono';
-import { z } from 'zod';
 import { and, desc, eq, lt, ne } from 'drizzle-orm';
-import { computeScore, isoWeekKey, schema, toLocalDate, type Category, type ConfirmedEntry, type LocalDate } from '@skinny/shared';
+import {
+  computeScore, isoWeekKey, schema, toLocalDate,
+  createEntryBody as createBody, patchEntryBody as patchBody, historyQuery,
+  type Category, type ConfirmedEntry, type LocalDate,
+} from '@skinny/shared';
 import { db } from '../db.js';
 import { ApiError } from '../errors.js';
 import { validate, uuidParam } from '../validate.js';
@@ -13,31 +16,11 @@ import { loadChallenge, loadConfirmedEntries, todayLocal, type Challenge } from 
 
 export type EntryDeps = { classify: typeof classifyPhoto };
 
-const categorySchema = z.enum(['exercise', 'meal', 'group']);
-const placeSourceSchema = z.enum(['poi', 'geocode', 'manual', 'none']);
-
-const createBody = z.object({
-  photoKey: z.string().min(1),
-  takenAt: z.string().datetime({ offset: true }),
-  lat: z.number().optional(),
-  lng: z.number().optional(),
-  placeName: z.string().max(120).optional(),
-  placeSource: placeSourceSchema.optional(),
-});
-
-const historyQuery = z.object({ cursor: z.string().datetime({ offset: true }).optional() });
-
 /** Page size for the cursor-paginated history endpoints. */
 export const HISTORY_PAGE_SIZE = 50;
 
 /** An entry may be logged slightly ahead of the server clock (device drift, timezone rounding). */
 const TAKEN_AT_FUTURE_TOLERANCE_MS = 10 * 60 * 1000;
-
-const patchBody = z.object({
-  categories: z.array(categorySchema).min(1).max(3),
-  placeName: z.string().max(120).nullable().optional(),
-  placeSource: placeSourceSchema.optional(),
-});
 
 type EntryRow = typeof schema.entries.$inferSelect;
 

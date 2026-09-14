@@ -1,11 +1,9 @@
 import { Hono } from 'hono';
-import { z } from 'zod';
+import { presignBody as body } from '@skinny/shared';
 import { validate } from '../validate.js';
 import { authenticate, type AuthEnv } from '../middleware/auth.js';
 import { ApiError } from '../errors.js';
 import { newKey, storage, PRESIGN_TTL_SECONDS } from '../services/storage.js';
-
-const body = z.object({ kind: z.enum(['photo', 'avatar', 'feedback']), contentType: z.enum(['image/jpeg', 'image/png', 'image/heic']) });
 
 export const uploadRoutes = new Hono<AuthEnv>();
 uploadRoutes.post('/presign', authenticate, validate('json', body), async (c) => {

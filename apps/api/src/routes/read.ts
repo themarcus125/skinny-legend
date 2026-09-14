@@ -1,7 +1,6 @@
 import { Hono } from 'hono';
-import { z } from 'zod';
 import { and, desc, eq, gte, isNotNull, lt } from 'drizzle-orm';
-import { isoWeekKey, addDays, schema, type Category, type ScoreResult, CATEGORIES } from '@skinny/shared';
+import { isoWeekKey, addDays, schema, feedQuery, mapQuery, historyQuery, type Category, type ScoreResult, CATEGORIES } from '@skinny/shared';
 import { db } from '../db.js';
 import { validate, uuidParam } from '../validate.js';
 import { authenticate, requireActive, type AuthEnv } from '../middleware/auth.js';
@@ -89,7 +88,7 @@ readRoutes.get('/me/trends', async (c) => {
   return c.json({ weeks, heatmap, byCategory: mine.byCategory, streakBonus: mine.streakBonus });
 });
 
-readRoutes.get('/feed', validate('query', z.object({ cursor: z.string().datetime({ offset: true }).optional() })), async (c) => {
+readRoutes.get('/feed', validate('query', feedQuery), async (c) => {
   const { cursor } = c.req.valid('query');
   const where = cursor
     ? and(eq(schema.entries.status, 'confirmed'), lt(schema.entries.createdAt, new Date(cursor)))
@@ -106,7 +105,7 @@ readRoutes.get('/feed', validate('query', z.object({ cursor: z.string().datetime
   return c.json({ entries, nextCursor });
 });
 
-readRoutes.get('/entries/map', validate('query', z.object({ days: z.coerce.number().int().min(1).max(90).default(30) })), async (c) => {
+readRoutes.get('/entries/map', validate('query', mapQuery), async (c) => {
   const { days } = c.req.valid('query');
   const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
   const rows = await db.select({ entry: schema.entries, user: schema.users })
@@ -120,8 +119,6 @@ readRoutes.get('/entries/map', validate('query', z.object({ days: z.coerce.numbe
   }
   return c.json({ pins });
 });
-
-const historyQuery = z.object({ cursor: z.string().datetime({ offset: true }).optional() });
 
 readRoutes.get('/users/:id/entries', validate('param', uuidParam), validate('query', historyQuery), async (c) => {
   const { id } = c.req.valid('param');
