@@ -14,7 +14,7 @@ settings:
     SWIFT_STRICT_CONCURRENCY: complete
     # Replace with REVERSED_CLIENT_ID from your own `GoogleService-Info.plist` (gitignored, see
     # the README's "Before TestFlight"); Google Sign-In cannot call back without the real value.
-    GOOGLE_REVERSED_CLIENT_ID: com.googleusercontent.apps.unconfigured
+    GOOGLE_REVERSED_CLIENT_ID: com.googleusercontent.apps.909571721802-j9gqoqauf2h1be8b4evhfaqeqa090k4t
   configs:
     Debug:
       # Signing off, on purpose: simulator builds and `xcodebuild test` need no identity, and no
