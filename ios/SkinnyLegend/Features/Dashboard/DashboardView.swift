@@ -92,7 +92,7 @@ struct DashboardView: View {
             VStack(alignment: .leading, spacing: Theme.Space.x2) {
                 Text("Điểm hôm nay")
                     .typeStyle(.label)
-                    .foregroundStyle(Theme.fgSubtle)
+                    .foregroundStyle(Theme.fgMuted)
                 HStack(alignment: .firstTextBaseline, spacing: Theme.Space.x3) {
                     BigNumber(value: dashboard.today.points, size: 44)
                         .accessibilityElement(children: .combine)
@@ -138,7 +138,7 @@ struct DashboardView: View {
             VStack(alignment: .leading, spacing: Theme.Space.x3) {
                 Text("Chuỗi ngày")
                     .typeStyle(.label)
-                    .foregroundStyle(Theme.fgSubtle)
+                    .foregroundStyle(Theme.fgMuted)
                 StreakCounter(days: dashboard.streak.current, longest: dashboard.streak.longest, numberSize: 30)
             }
         }
@@ -149,7 +149,7 @@ struct DashboardView: View {
             VStack(alignment: .leading, spacing: Theme.Space.x3) {
                 Text("Thứ hạng")
                     .typeStyle(.label)
-                    .foregroundStyle(Theme.fgSubtle)
+                    .foregroundStyle(Theme.fgMuted)
                 HStack(alignment: .firstTextBaseline, spacing: Theme.Space.x1) {
                     BigNumber(value: dashboard.rank, size: 30)
                     Text("/ \(dashboard.memberCount)")
@@ -170,7 +170,7 @@ struct DashboardView: View {
             VStack(alignment: .leading, spacing: 0) {
                 Text("Hôm nay còn ghi điểm được")
                     .typeStyle(.label)
-                    .foregroundStyle(Theme.fgSubtle)
+                    .foregroundStyle(Theme.fgMuted)
                     .padding(.bottom, Theme.Space.x2)
                 ForEach(Array(Category.allCases.enumerated()), id: \.element) { index, category in
                     if index > 0 {
@@ -190,7 +190,7 @@ struct DashboardView: View {
                 VStack(alignment: .leading, spacing: Theme.Space.x1) {
                     Text("Tổng điểm thử thách")
                         .typeStyle(.label)
-                        .foregroundStyle(Theme.fgSubtle)
+                        .foregroundStyle(Theme.fgMuted)
                     Text("Thưởng chuỗi: +\(dashboard.streak.bonusPoints)")
                         .typeStyle(.caption)
                         .foregroundStyle(Theme.fgMuted)

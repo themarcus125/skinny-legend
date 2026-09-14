@@ -63,11 +63,65 @@ struct DesignSystemTests {
         #expect(TypeStyle.display.tracking < 0)
     }
 
-    @Test("Buttons never fall below the 44 pt tap target, except the explicitly compact sm")
-    func buttonHeights() {
-        #expect(ButtonSize.md.height == 44)
-        #expect(ButtonSize.lg.height == 54)
-        #expect(ButtonSize.sm.height == 32)
+    /// The token table's three control heights. `sm` (32 pt) is the one that does not clear the
+    /// 44 pt minimum tap target, so it is reserved for non-interactive chrome — every button and
+    /// chip the user actually taps takes `md` or `lg`, or nests its compact visual inside an
+    /// `md`-tall hit frame the way `CategoryChip` does.
+    @Test("Control heights match the token table, and only the non-tappable sm sits under 44 pt")
+    func controlHeights() {
+        #expect(ButtonSize.md.height == Theme.ControlHeight.md)
+        #expect(ButtonSize.lg.height == Theme.ControlHeight.lg)
+        #expect(ButtonSize.sm.height == Theme.ControlHeight.sm)
+        #expect(Theme.ControlHeight.md == 44)
+        #expect(Theme.ControlHeight.lg == 54)
+        #expect(Theme.ControlHeight.sm == 32)
+        #expect(Theme.ControlHeight.sm < 44)
+    }
+
+    /// The `fgSubtle` rule from tokens.md, as a test: it is decoration only, so anything a reader
+    /// reads uses `fgMuted`. Measured in light, where the gap actually matters.
+    @Test("fgMuted clears WCAG AA on every content surface, and fgSubtle does not")
+    func readableForegroundContrast() {
+        let light = UITraitCollection(userInterfaceStyle: .light)
+        for surface in [Theme.surface, Theme.surface2, Theme.bg, Theme.elevated, Theme.primarySoft] {
+            let ratio = contrastRatio(UIColor(Theme.fgMuted).resolvedColor(with: light),
+                                      UIColor(surface).resolvedColor(with: light))
+            #expect(ratio >= 4.5, "fgMuted only reached \(ratio):1")
+        }
+        let subtle = contrastRatio(UIColor(Theme.fgSubtle).resolvedColor(with: light),
+                                   UIColor(Theme.surface).resolvedColor(with: light))
+        #expect(subtle < 4.5)
+    }
+
+    /// The two documented deviations from the spec palette (docs/design-system/tokens.md), which
+    /// the admin already ships: the light semantic inks sit at 11/600 on their own soft fill,
+    /// where the raw spec values land just under AA.
+    @Test("The light success and warning inks clear AA on their soft fills")
+    func semanticInksClearAA() {
+        let light = UITraitCollection(userInterfaceStyle: .light)
+        let pairs = [(Theme.success, Theme.successSoft), (Theme.warning, Theme.warningSoft)]
+        for (ink, fill) in pairs {
+            let ratio = contrastRatio(UIColor(ink).resolvedColor(with: light),
+                                      UIColor(fill).resolvedColor(with: light))
+            #expect(ratio >= 4.5, "only reached \(ratio):1")
+        }
+    }
+
+    /// WCAG 2.1 relative luminance.
+    private func contrastRatio(_ a: UIColor, _ b: UIColor) -> Double {
+        let high = max(luminance(a), luminance(b))
+        let low = min(luminance(a), luminance(b))
+        return (high + 0.05) / (low + 0.05)
+    }
+
+    private func luminance(_ color: UIColor) -> Double {
+        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        color.getRed(&r, green: &g, blue: &b, alpha: &a)
+        func channel(_ c: CGFloat) -> Double {
+            let v = Double(c)
+            return v <= 0.03928 ? v / 12.92 : pow((v + 0.055) / 1.055, 2.4)
+        }
+        return 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b)
     }
 
     @Test("The tokens resolve to different colours in light and dark")

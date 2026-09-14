@@ -20,9 +20,25 @@ enum AppMode {
     }
 
     /// The runtime override, off unless a DEBUG build turned it on.
+    ///
+    /// Compiled out of Release entirely — both halves. The flag lives in `UserDefaults`, which
+    /// survives a Debug-to-Release reinstall on the same device, so a Release build that still
+    /// *read* it could boot straight into the mock with no UI anywhere to turn it off (the
+    /// "Dùng dữ liệu mẫu" control is itself `#if DEBUG`). With the getter gone, `services(...)`
+    /// provably receives `false` for `mockOverride` in Release.
     static var mockOverride: Bool {
-        get { UserDefaults.standard.bool(forKey: mockOverrideKey) }
-        set { UserDefaults.standard.set(newValue, forKey: mockOverrideKey) }
+        get {
+            #if DEBUG
+            UserDefaults.standard.bool(forKey: mockOverrideKey)
+            #else
+            false
+            #endif
+        }
+        set {
+            #if DEBUG
+            UserDefaults.standard.set(newValue, forKey: mockOverrideKey)
+            #endif
+        }
     }
 
     static var isMock: Bool {

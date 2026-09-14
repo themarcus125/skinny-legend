@@ -7,8 +7,10 @@ import SwiftUI
 /// `Rulebook.streakLength` days (7), so `filledDots` is simply where the current streak sits
 /// inside that cycle — a full row means the bonus has just landed.
 struct StreakCounter: View {
-    /// Declared so this body re-runs when the Account picker changes the language: it renders a
-    /// `String` accessibility label built from `Localized`.
+    /// Declared so this body re-runs when the Account picker changes the language. Unlike
+    /// `CategoryChip`, nothing here goes through `Localized` — every string is a
+    /// `LocalizedStringKey` — but the counter is rendered inside cards whose parents SwiftUI can
+    /// skip re-evaluating, so the dependency is declared rather than assumed.
     @Environment(\.locale) private var locale
     let days: Int
     let longest: Int

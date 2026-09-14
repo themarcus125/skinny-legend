@@ -15,6 +15,9 @@ enum AppTab: Hashable, Sendable {
 /// The bar is pinned — it never minimises on scroll.
 struct MainTabView: View {
     @Environment(AppEnvironment.self) private var env
+    /// Declared so the body re-runs on an appearance change: the Track bubble's glyph is a
+    /// pre-tinted `UIImage`, which cannot follow a dynamic colour on its own.
+    @Environment(\.colorScheme) private var colorScheme
     @State private var selection: AppTab = .dashboard
     private let router = PushRouter.shared
 
@@ -38,7 +41,7 @@ struct MainTabView: View {
                 Label {
                     Text("Ghi nhận")
                 } icon: {
-                    Image(uiImage: TrackTabIcon.image)
+                    Image(uiImage: TrackTabIcon.image(for: colorScheme))
                         .renderingMode(.original)
                 }
             }
@@ -56,10 +59,25 @@ struct MainTabView: View {
 
 /// A pre-tinted camera glyph so the Track bubble stays `Theme.primary` regardless of selection
 /// (tab bars template-render plain symbols to grey when unselected).
+///
+/// One rendering per appearance, chosen by the caller. `withTintColor` bakes the colour in, and
+/// `Theme.primary` is a *dynamic* colour (ink in light, vanilla in dark) — so a single baked
+/// image would freeze whichever appearance happened to be active when it was first built, and
+/// the bubble would keep that colour across an appearance change. `MainTabView` reads
+/// `\.colorScheme`, so its body re-runs on every appearance change and asks for the other one.
 enum TrackTabIcon {
-    static let image: UIImage = {
+    static func image(for colorScheme: ColorScheme) -> UIImage {
+        colorScheme == .dark ? dark : light
+    }
+
+    /// Both renderings are built once; only the choice between them is per-render.
+    static let light = render(.light)
+    static let dark = render(.dark)
+
+    private static func render(_ style: UIUserInterfaceStyle) -> UIImage {
         let configuration = UIImage.SymbolConfiguration(pointSize: 20, weight: .semibold)
         let symbol = UIImage(systemName: "camera.fill", withConfiguration: configuration) ?? UIImage()
-        return symbol.withTintColor(UIColor(Theme.primary), renderingMode: .alwaysOriginal)
-    }()
+        let accent = UIColor(Theme.primary).resolvedColor(with: UITraitCollection(userInterfaceStyle: style))
+        return symbol.withTintColor(accent, renderingMode: .alwaysOriginal)
+    }
 }

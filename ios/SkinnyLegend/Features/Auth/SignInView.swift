@@ -86,7 +86,7 @@ struct SignInView: View {
                     // Debug builds only: run the whole app against `MockAPIClient` without a
                     // relaunch, so the UI can be worked on with no backend and no Firebase.
                     Button {
-                        modeStore.enterMockMode()
+                        modeStore.enterMockMode(outgoing: env.push)
                     } label: {
                         // The label carries its own colour: over the video the ghost variant's
                         // ink `primary` would be invisible.

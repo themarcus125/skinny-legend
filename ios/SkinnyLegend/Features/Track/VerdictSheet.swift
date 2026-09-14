@@ -158,7 +158,9 @@ struct VerdictSheet: View {
                         Button(model.isEditingCategories ? "Thu gọn" : "Không đúng?") {
                             withAnimation(.smooth(duration: 0.25)) { model.isEditingCategories.toggle() }
                         }
-                        .buttonStyle(.ds(.ghost, size: .sm))
+                        // `md`, not `sm`: this is an interactive control in content, so it has
+                        // to carry the 44 pt tap target rather than `sm`'s compact 32 pt.
+                        .buttonStyle(.ds(.ghost, size: .md))
                     }
                 }
 

@@ -16,8 +16,15 @@ struct CategoryChip: View {
 
     var body: some View {
         if let action {
-            Button(action: action) { label }
-                .buttonStyle(.plain)
+            // The chip itself is ~30 pt tall, which is below the 44 pt minimum tap target. The
+            // visual stays compact — a taller pill would break the chip rows — and instead sits
+            // centred in a 44 pt hit frame that `contentShape` makes tappable edge to edge.
+            Button(action: action) {
+                label
+                    .frame(minHeight: Theme.ControlHeight.md)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
         } else {
             label
         }
@@ -36,7 +43,9 @@ struct CategoryChip: View {
                     .foregroundStyle(Theme.warning)
             }
         }
-        .foregroundStyle(isOn ? category.tint : Theme.fgSubtle)
+        // `fgMuted`, not `fgSubtle`: the locked chip's label is read, not decoration
+        // (`fgSubtle` is 3.51:1 on `surface2` territory in light; `fgMuted` is 5.96:1).
+        .foregroundStyle(isOn ? category.tint : Theme.fgMuted)
         .padding(.horizontal, Theme.Space.x3 - 2)
         .padding(.vertical, Theme.Space.x2 - 1)
         .background(isOn ? category.softTint : Theme.surface2, in: Capsule())

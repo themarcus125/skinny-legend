@@ -113,8 +113,12 @@ struct AccountView: View {
                 .accessibilityHint("Đổi ngôn ngữ hiển thị của ứng dụng")
 
                 Link(destination: AppMode.momoFundURL) {
+                    // `Link` renders as a tinted system link by default, which in dark mode is
+                    // the vanilla accent on a vanilla-adjacent row — the one control in this
+                    // list that would not read as ink/foreground like its neighbours.
                     Label("Quỹ nhóm", systemImage: "banknote")
                         .typeStyle(.bodyMedium)
+                        .foregroundStyle(Theme.fg)
                 }
                 .accessibilityElement(children: .combine)
                 .accessibilityHint("Mở trang quỹ Momo")
@@ -149,7 +153,7 @@ struct AccountView: View {
                 // Debug builds only: the counterpart to "Dùng dữ liệu mẫu" on the sign-in screen.
                 if modeStore.isMockOverridden {
                     Button {
-                        modeStore.leaveMockMode()
+                        modeStore.leaveMockMode(outgoing: env.push)
                     } label: {
                         Label("Thoát dữ liệu mẫu", systemImage: "testtube.2")
                             .typeStyle(.bodyMedium)
@@ -202,7 +206,7 @@ struct AccountView: View {
                     HStack {
                         Text(LocalDay.display(section.date))
                             .typeStyle(.label)
-                            .foregroundStyle(Theme.fgSubtle)
+                            .foregroundStyle(Theme.fgMuted)
                         Spacer()
                         Text("+\(section.points)")
                             .font(.numerals(13))

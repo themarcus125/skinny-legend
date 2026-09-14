@@ -26,6 +26,9 @@ enum Theme {
 
     static let fg = dynamic(light: 0x212121, dark: 0xF6F5FA)
     static let fgMuted = dynamic(light: 0x5C5C63, dark: 0xB4B4BB)
+    /// Decoration only (dividers, empty-state marks, inert glyphs): 3.51:1 on `surface` in
+    /// light. Anything a reader actually reads — eyebrows, sub-lines, section headers — takes
+    /// `fgMuted` (6.38:1 on `surface`) instead.
     static let fgSubtle = dynamic(light: 0x85858F, dark: 0x8A8A93)
     /// Text and glyphs drawn *on* `primary`.
     static let fgOnAccent = dynamic(light: 0xF6F5FA, dark: 0x212121)
@@ -40,9 +43,13 @@ enum Theme {
 
     // MARK: - Semantic
 
-    static let success = dynamic(light: 0x4A6B4E, dark: 0xA9C6A4)
+    /// Light `success`/`warning` are the *accessibility* values from tokens.md's deviation
+    /// table, not the raw spec ones: at 11/600 on their own soft fill the spec inks land just
+    /// under WCAG AA (4.27:1 and 4.33:1), so both clients shift them one step darker inside the
+    /// same hue (5.23:1 and 5.58:1). The dark counterparts already pass and are unchanged.
+    static let success = dynamic(light: 0x3F5D43, dark: 0xA9C6A4)
     static let successSoft = dynamic(light: 0xCFDECA, dark: 0x2C3A2B)
-    static let warning = dynamic(light: 0x836417, dark: 0xE0C57E)
+    static let warning = dynamic(light: 0x6F5412, dark: 0xE0C57E)
     static let warningSoft = dynamic(light: 0xF1E4B0, dark: 0x3A3122)
     static let destructive = dynamic(light: 0xA63B34, dark: 0xE4A09A)
     static let destructiveHover = dynamic(light: 0x8E2F29, dark: 0xEDB4AF)
@@ -251,6 +258,10 @@ enum BrandFont {
 
 /// The type scale from the token table. Tracking and case are part of the role, so they are
 /// applied together with the font by `typeStyle(_:)`.
+///
+/// The table's line-heights are deliberately not transcribed: SwiftUI has no direct
+/// line-height control (`lineSpacing` adds to leading rather than setting it), and iOS defers
+/// to Be Vietnam Pro's own natural leading, which is what every screen is laid out against.
 enum TypeStyle: Sendable {
     /// 44 / 800 / -3.5%
     case display

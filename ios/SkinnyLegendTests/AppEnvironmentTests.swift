@@ -348,4 +348,114 @@ struct AppModeTests {
         let bundled = Bundle(for: MemberDetailModel.self).infoDictionary?["API_BASE_URL"] as? String
         #expect(bundled == "http://localhost:3000")   // tests build the Debug configuration
     }
+
+    /// The override is persisted in `UserDefaults`, which survives a Debug-to-Release reinstall
+    /// on the same device — and the only UI that can turn it off is itself `#if DEBUG`. So the
+    /// accessor has to be compiled out of Release entirely, not merely left unwritten, or a
+    /// Release build could boot into the mock with no way out. Both halves of the invariant are
+    /// asserted, compile-time gated, so whichever configuration runs the suite checks its own.
+    @Test("The sample-data override is DEBUG-only, so a stale flag cannot boot Release into the mock")
+    func mockOverrideIsCompiledOutOfRelease() {
+        #if DEBUG
+        let previous = AppMode.mockOverride
+        defer { AppMode.mockOverride = previous }
+        AppMode.mockOverride = true
+        #expect(AppMode.mockOverride)
+        #expect(AppMode.services(launchArgumentIsMock: false,
+                                 mockOverride: AppMode.mockOverride,
+                                 hasFirebasePlist: true) == .mock)
+        #else
+        // A Debug run left the flag behind on this install.
+        UserDefaults.standard.set(true, forKey: AppMode.mockOverrideKey)
+        defer { UserDefaults.standard.removeObject(forKey: AppMode.mockOverrideKey) }
+        #expect(AppMode.mockOverride == false)
+        #expect(AppMode.services(launchArgumentIsMock: false,
+                                 mockOverride: AppMode.mockOverride,
+                                 hasFirebasePlist: true) == .live)
+        #endif
+    }
+}
+
+@Suite("AppModeStore")
+@MainActor
+struct AppModeStoreTests {
+    /// A registrar wired to a mock API and its own defaults suite, standing in for the one that
+    /// belongs to the environment a mode flip is about to throw away.
+    private func makeStore() -> (AppModeStore, PushRegistrar, UserDefaults) {
+        let defaults = UserDefaults(suiteName: "mode-store-tests-\(UUID().uuidString)")!
+        let registrar = PushRegistrar(
+            api: MockAPIClient(),
+            authorizer: MockPushAuthorizer(status: .authorized),
+            tokens: MockPushTokenSource(token: "fcm-token-1"),
+            defaults: defaults,
+            locale: .vi
+        )
+        return (AppModeStore(mockOverride: false, defaults: defaults), registrar, defaults)
+    }
+
+    @Test("Entering sample-data mode clears the outgoing registrar's install-scoped push state")
+    func enteringClearsTheOutgoingRegistration() async {
+        let (store, registrar, defaults) = makeStore()
+        #expect(await registrar.enable())
+        #expect(registrar.isEnabled)
+
+        store.enterMockMode(outgoing: registrar)
+
+        #expect(store.isMockOverridden)
+        #expect(store.generation == 1)
+        #expect(!registrar.isEnabled)
+        #expect(!registrar.isRegistrationPending)
+        #expect(registrar.registeredToken == nil)
+        #expect(!defaults.bool(forKey: PushRegistrar.enabledKey))
+    }
+
+    /// The reason this matters: reminders switched ON against the mock account must not come
+    /// back ON for the real one, because the flag lives in `UserDefaults` rather than in the
+    /// registrar that is being discarded.
+    @Test("Leaving sample-data mode does not hand the mock's reminders to the live account")
+    func leavingDoesNotLeakRemindersToLive() async {
+        let (store, mockRegistrar, defaults) = makeStore()
+        store.enterMockMode(outgoing: nil)
+        #expect(await mockRegistrar.enable())
+        #expect(defaults.bool(forKey: PushRegistrar.enabledKey))
+
+        store.leaveMockMode(outgoing: mockRegistrar)
+
+        #expect(!store.isMockOverridden)
+        #expect(!defaults.bool(forKey: PushRegistrar.enabledKey))
+        // What a freshly built live environment's registrar would read.
+        let live = PushRegistrar(
+            api: MockAPIClient(),
+            authorizer: MockPushAuthorizer(),
+            tokens: MockPushTokenSource(token: "fcm-token-2"),
+            defaults: defaults,
+            locale: .vi
+        )
+        #expect(!live.isEnabled)
+        #expect(!live.isRegistrationPending)
+    }
+
+    @Test("A flip in either direction clears the mock user's once-per-install asked flag")
+    func flipsClearTheMockDidAskFlag() async {
+        let (store, registrar, defaults) = makeStore()
+        let key = PushRegistrar.didAskKey(for: MockSeed.me.id)
+
+        await registrar.requestAfterFirstConfirmedEntry(userID: MockSeed.me.id)
+        #expect(defaults.bool(forKey: key))
+        store.enterMockMode(outgoing: registrar)
+        #expect(!defaults.bool(forKey: key))
+
+        await registrar.requestAfterFirstConfirmedEntry(userID: MockSeed.me.id)
+        #expect(defaults.bool(forKey: key))
+        store.leaveMockMode(outgoing: registrar)
+        #expect(!defaults.bool(forKey: key))
+    }
+
+    @Test("Setting the override to what it already is rebuilds nothing")
+    func redundantFlipIsANoOp() {
+        let (store, registrar, _) = makeStore()
+        store.leaveMockMode(outgoing: registrar)
+        #expect(store.generation == 0)
+        #expect(!store.isMockOverridden)
+    }
 }
