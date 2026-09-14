@@ -13,7 +13,8 @@ const VIETNAMESE =
 
 /** Files whose Vietnamese text is fixture data or a developer-facing config error. */
 const ALLOWED = new Set([
-  'lib/api/mock.ts', // seeded entries, feedback and place names — fixtures, never shipped
+  // The seeded Vietnamese fixtures moved to packages/api-client/src/mock/*.ts, which this
+  // walker never reaches: it only descends apps/admin/src.
   'lib/auth/firebase.ts', // "Thiếu biến môi trường NEXT_PUBLIC_FIREBASE_*" — a build-time crash
 ]);
 

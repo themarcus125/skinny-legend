@@ -1,9 +1,16 @@
 # Vercel — admin dashboard (`apps/admin`)
 
 Next.js 16 App Router, Tailwind v4, TanStack Query, Firebase Google sign-in. It is a pure
-client of the Railway API: no server secrets, no database, no `@skinny/shared` dependency
-(deliberately — that package resolves from `dist/`, and depending on it would force a
-cross-package build into the Vercel build).
+client of the Railway API: no server secrets, no database.
+
+Since the `@skinny/api-client` migration the dashboard *does* depend on workspace packages.
+`@skinny/api-client` ships TypeScript source, so Next compiles it through
+`transpilePackages` in `apps/admin/next.config.ts` — nothing to build. Its own dependency
+`@skinny/shared` resolves from `dist/`, so that one package **must be built before
+`next build`**; that is the only cross-package build step, and it is why the Build Command
+below is no longer the default. Nothing drizzle-shaped reaches the browser: the client
+imports only `@skinny/shared/wire`, `/scoring` and `/dates`, never the package root (an
+ESLint `no-restricted-imports` rule in `packages/api-client` enforces it).
 
 ## 1. Create the project
 
@@ -15,7 +22,7 @@ Vercel → **Add New → Project** → import this repository, then:
 | **Root Directory** | **`apps/admin`** |
 | Include source files outside of the Root Directory | **enabled** (the pnpm lockfile lives at the repo root) |
 | Install Command | `pnpm install --frozen-lockfile` (Vercel runs it from the workspace root) |
-| Build Command | default (`next build`) |
+| **Build Command** | **`pnpm --filter @skinny/shared build && next build`** (Vercel runs it from `apps/admin`; the filter still resolves against the workspace root) |
 | Output Directory | default |
 | Node.js Version | 22.x |
 
@@ -27,7 +34,7 @@ pnpm is detected from the root `pnpm-lock.yaml` and `packageManager: pnpm@10.30.
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "installCommand": "pnpm install --frozen-lockfile",
-  "buildCommand": "pnpm --filter @skinny/admin build"
+  "buildCommand": "pnpm --filter @skinny/shared build && pnpm --filter @skinny/admin build"
 }
 ```
 
@@ -39,7 +46,7 @@ Sources: `apps/admin/.env.example`, `apps/admin/src/lib/auth/firebase.ts`.
 | Variable | Value |
 | --- | --- |
 | `NEXT_PUBLIC_API_BASE_URL` | The Railway API domain, **no trailing slash** (e.g. `https://skinny-legend-api.up.railway.app`) |
-| `NEXT_PUBLIC_MOCK` | `0` — **never** `1` in a deployed environment (`1` swaps in `MockAdminApi` and skips Firebase entirely) |
+| `NEXT_PUBLIC_MOCK` | `0` — **never** `1` in a deployed environment (`1` swaps in the seeded mock client and skips Firebase entirely) |
 | `NEXT_PUBLIC_FIREBASE_API_KEY` | Firebase → Project settings → Your apps → Web app (`apiKey`) |
 | `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN` | Same config (`authDomain`, e.g. `skinny-legend.firebaseapp.com`) |
 | `NEXT_PUBLIC_FIREBASE_PROJECT_ID` | Same config (`projectId`) — must equal the API's `FIREBASE_PROJECT_ID` |
