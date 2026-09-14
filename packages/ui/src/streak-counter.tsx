@@ -39,7 +39,8 @@ export function filledDots(days: number, cycle = STREAK_CYCLE): number {
  */
 export function StreakCounter({
   days,
-  longest,
+  // `longest` stays in the props — it is what the caller formats `longestLabel` from, and
+  // dropping it would break the parity with iOS's `StreakCounter` — but nothing here reads it.
   cycle = STREAK_CYCLE,
   daysLabel,
   longestLabel,
