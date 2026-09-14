@@ -41,8 +41,6 @@
 
   /* elevation e1 card / e2 sheet+popover / e3 modal — theme-aware, hence inline */
   --shadow-card: var(--shadow-1);
-  --shadow-raised: var(--shadow-1);
-  --shadow-nav-active: var(--shadow-1);
   --shadow-popover: var(--shadow-2);
   --shadow-dialog: var(--shadow-3);
 
@@ -93,7 +91,6 @@
   /* accent (Vanilla) — marks, milestone fills, map pins */
   --color-brand: var(--brand);
   --color-brand-foreground: var(--brand-foreground);
-  --color-brand-soft: var(--primary-soft);
   --color-primary-soft: var(--primary-soft);
   --color-primary-border: var(--primary-border);
 
@@ -156,8 +153,10 @@
   --brand-foreground: var(--eerie);
 
   /* semantics */
-  --success: #4A6B4E;         --success-soft: var(--honeydew);
-  --warning: #836417;         --warning-soft: #F1E4B0;
+  /* Darkened from the spec's #4A6B4E / #836417: at 12px/600 on their own soft fills those measured
+     4.27:1 and 4.33:1, just under AA. These read 5.23:1 and 5.58:1. See docs/design-system/tokens.md. */
+  --success: #3F5D43;         --success-soft: var(--honeydew);
+  --warning: #6F5412;         --warning-soft: #F1E4B0;
   --info: #48607F;            --info-soft: var(--alice);
   --destructive: #A63B34;     --destructive-soft: #F1DAD8;
   --destructive-hover: #8E2F29;

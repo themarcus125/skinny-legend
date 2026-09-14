@@ -26,7 +26,7 @@ const DEFAULT_START = '2026-09-08';
 const DEFAULT_END = '2026-12-25';
 
 const LINK_CLASS =
-  'rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring text-sm font-semibold text-foreground underline decoration-border-strong underline-offset-4 hover:decoration-foreground';
+  'rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring text-sm font-semibold text-foreground underline decoration-foreground-subtle underline-offset-4 hover:decoration-foreground';
 
 function KpiTile({
   label,
@@ -237,7 +237,7 @@ export default function OverviewPage() {
                     <li key={item.id} className="px-5 py-3">
                       <div className="flex items-center justify-between gap-3">
                         <span className="text-base font-semibold">{item.user.displayName}</span>
-                        <span className="type-label shrink-0 tabular-nums text-foreground-subtle">
+                        <span className="type-label shrink-0 tabular-nums text-foreground-secondary">
                           {formatDateTime(item.createdAt)}
                         </span>
                       </div>

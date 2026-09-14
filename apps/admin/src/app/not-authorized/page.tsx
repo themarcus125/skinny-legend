@@ -12,7 +12,7 @@ export default function NotAuthorizedPage() {
         <p className="text-base text-muted-foreground">
           {t.rich('auth.notAuthorizedHint', { code: (chunks) => <code>{chunks}</code> })}
         </p>
-        <Link href="/" className="rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring text-sm font-semibold text-foreground underline decoration-border-strong underline-offset-4 hover:decoration-foreground">
+        <Link href="/" className="rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring text-sm font-semibold text-foreground underline decoration-foreground-subtle underline-offset-4 hover:decoration-foreground">
           {t('common.retry')}
         </Link>
         <SignOutButton />

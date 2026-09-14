@@ -3,6 +3,7 @@
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ENTRY_STATUSES, type AdminUser } from '@/lib/api/types';
@@ -43,9 +44,9 @@ export function EntriesFilters({
       {/* One flex unit so the fields wrap together (never a stray reset button) below ~1100px. */}
       <div className="flex flex-wrap items-end gap-x-4 gap-y-3">
         <div className="flex flex-col gap-1.5">
-          <label className="type-label text-muted-foreground" htmlFor="filter-user">
+          <Label htmlFor="filter-user">
             {t('common.member')}
-          </label>
+          </Label>
           <Select
             items={memberItems}
             value={value.user}
@@ -66,9 +67,9 @@ export function EntriesFilters({
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <label className="type-label text-muted-foreground" htmlFor="filter-from">
+          <Label htmlFor="filter-from">
             {t('entries.from')}
-          </label>
+          </Label>
           <Input
             id="filter-from"
             type="date"
@@ -79,9 +80,9 @@ export function EntriesFilters({
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <label className="type-label text-muted-foreground" htmlFor="filter-to">
+          <Label htmlFor="filter-to">
             {t('entries.to')}
-          </label>
+          </Label>
           <Input
             id="filter-to"
             type="date"

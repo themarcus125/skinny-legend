@@ -18,7 +18,7 @@ const buttonVariants = cva(
           "text-secondary-foreground hover:bg-surface-2 hover:text-foreground aria-expanded:bg-surface-2 aria-expanded:text-foreground",
         destructive:
           "bg-destructive text-[var(--destructive-foreground)] shadow-card hover:bg-destructive-hover active:bg-[var(--destructive-active)] focus-visible:ring-destructive",
-        link: "font-medium text-foreground underline decoration-border-strong underline-offset-4 hover:decoration-foreground",
+        link: "font-medium text-foreground underline decoration-foreground-subtle underline-offset-4 hover:decoration-foreground",
       },
       size: {
         // md = 44 (the iOS minimum tap target), sm = 32, lg = 54.

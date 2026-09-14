@@ -10,6 +10,7 @@ import {
   MapIcon,
   MessageSquareTextIcon,
   SlidersHorizontalIcon,
+  UserRoundIcon,
   UsersIcon,
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
@@ -19,6 +20,14 @@ import { ThemeToggle } from '@/components/theme-toggle';
 import { SignOutButton } from '@/components/sign-out-button';
 import { IS_MOCK } from '@/lib/api';
 import { useAuth } from '@/lib/auth/auth-context';
+
+/**
+ * One row grammar for the whole rail: 44px tall, a 16px leading icon column, then the label.
+ * The nav links, the language picker, the theme switch and sign-out all sit on it so the rail
+ * reads as a single list rather than four differently-shaped controls.
+ */
+export const RAIL_ROW_CLASS =
+  'flex h-11 w-full shrink-0 items-center gap-2.5 rounded-md border border-transparent px-3 text-sm font-medium text-sidebar-foreground transition-colors justify-start hover:bg-sidebar-accent hover:text-foreground';
 
 /** Section links; `key` is the `nav.*` message key, translated at render. */
 const NAV = [
@@ -59,8 +68,9 @@ function NavLinks({ layout }: { layout: 'rail' | 'bar' }) {
             href={href}
             aria-current={active ? 'page' : undefined}
             className={cn(
-              'group flex h-11 shrink-0 items-center gap-2.5 rounded-md border border-transparent px-3 text-sm font-medium text-sidebar-foreground transition-colors',
-              'hover:bg-sidebar-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+              'group',
+              RAIL_ROW_CLASS,
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
               active &&
                 'border-primary-border bg-sidebar-primary font-semibold text-sidebar-primary-foreground hover:bg-sidebar-primary',
               layout === 'bar' && 'h-9 gap-2 px-2.5',
@@ -93,7 +103,7 @@ export function AppSidebar() {
         <BrandMark />
         <div className="min-w-0">
           <p className="truncate text-sm font-bold leading-5">Skinny Legend</p>
-          <p className="type-label text-foreground-subtle">{t('subtitle')}</p>
+          <p className="type-label text-foreground-secondary">{t('subtitle')}</p>
         </div>
       </div>
       {IS_MOCK ? (
@@ -104,21 +114,14 @@ export function AppSidebar() {
 
       <NavLinks layout="rail" />
 
-      <div className="mt-auto border-t border-sidebar-border pt-3">
-        <div className="flex items-center gap-2.5 px-2 py-1.5">
-          <span
-            aria-hidden
-            className="flex size-8 shrink-0 items-center justify-center rounded-full bg-surface-2 text-xs font-bold text-secondary-foreground"
-          >
-            {(user?.displayName ?? '?').charAt(0).toUpperCase()}
-          </span>
-          <p className="truncate text-sm font-medium">{user?.displayName ?? ''}</p>
+      <div className="mt-auto flex flex-col gap-0.5 border-t border-sidebar-border pt-3">
+        <div className="flex h-11 items-center gap-2.5 px-3">
+          <UserRoundIcon aria-hidden className="size-4 shrink-0 text-muted-foreground" />
+          <p className="truncate text-sm font-semibold text-foreground">{user?.displayName ?? ''}</p>
         </div>
-        <LanguageSwitch />
-        <div className="px-2">
-          <ThemeToggle />
-        </div>
-        <SignOutButton variant="ghost" size="sm" className="mx-2 mt-1 w-[calc(100%-1rem)] justify-start text-secondary-foreground" />
+        <LanguageSwitch className={RAIL_ROW_CLASS} />
+        <ThemeToggle className={RAIL_ROW_CLASS} />
+        <SignOutButton variant="ghost" size="sm" className={RAIL_ROW_CLASS} />
       </div>
     </aside>
   );

@@ -29,7 +29,7 @@ export function NotificationLog({ items }: { items: NotificationLogItem[] }) {
               <p className="font-semibold text-foreground">{item.payload.title}</p>
               <p className="text-sm text-foreground-secondary">{item.payload.body}</p>
             </TableCell>
-            <TableCell className="tabular-nums text-foreground-subtle">{formatDateTime(item.sentAt)}</TableCell>
+            <TableCell className="tabular-nums text-foreground-secondary">{formatDateTime(item.sentAt)}</TableCell>
           </TableRow>
         ))}
       </TableBody>

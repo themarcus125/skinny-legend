@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { SendIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
 import type { AdminUser } from '@/lib/api/types';
 
 /**
@@ -27,9 +28,7 @@ export function TestSendForm({
   return (
     <div className="flex flex-wrap items-end gap-3">
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="test-send-user" className="type-label text-muted-foreground">
-          {t('member')}
-        </label>
+        <Label htmlFor="test-send-user">{t('member')}</Label>
         <select
           id="test-send-user"
           value={userId}

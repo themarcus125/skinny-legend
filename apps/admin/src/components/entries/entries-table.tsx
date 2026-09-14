@@ -77,7 +77,7 @@ export function EntriesTable({
                   {summary}
                 </span>
                 {entry.verdict?.reason ? (
-                  <span className="block truncate text-label text-foreground-subtle" title={entry.verdict.reason}>
+                  <span className="block truncate text-label text-foreground-secondary" title={entry.verdict.reason}>
                     {entry.verdict.reason}
                   </span>
                 ) : null}

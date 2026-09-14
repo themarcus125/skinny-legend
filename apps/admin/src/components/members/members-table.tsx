@@ -83,10 +83,7 @@ export function MembersTable({
                     >
                       {user.displayName.charAt(0).toUpperCase()}
                     </span>
-                    <span className="min-w-0">
-                      <span className="block truncate text-base font-semibold text-foreground">{user.displayName}</span>
-                      <span className="type-label block text-foreground-subtle">{t(ROLE_LABELS[user.role])}</span>
-                    </span>
+                    <span className="min-w-0 truncate text-base font-semibold text-foreground">{user.displayName}</span>
                   </span>
                 </TableCell>
                 <TableCell>

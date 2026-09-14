@@ -112,6 +112,24 @@ Decisions (2026-09-14): accent **Vanilla** is the default; both **light and dark
 | `--sh3` | `0 18px 44px rgba(0,0,0,.65),0 3px 10px rgba(0,0,0,.45)` |
 
 
+## Deviations from the spec (accessibility)
+The admin dashboard (`apps/admin/src/app/globals.css`) matches this table token-for-token except for
+two light-mode semantic inks. Both badges and toasts render at 12px/600 on their own soft fill,
+where the spec values land just under WCAG AA (4.5:1):
+
+| Token | Spec | Admin | On | Spec ratio | Admin ratio |
+|---|---|---|---|---|---|
+| `--success` (light) | `#4A6B4E` | `#3F5D43` | `--success-soft` `#CFDECA` | 4.27:1 | 5.23:1 |
+| `--warning` (light) | `#836417` | `#6F5412` | `--warning-soft` `#F1E4B0` | 4.33:1 | 5.58:1 |
+
+Both stay in the same hue family, so a success pill still reads green and a warning pill still reads
+amber. The dark counterparts already pass (6.47:1 and 7.59:1) and are unchanged.
+
+Related rule, not a token change: `--fg-subtle` (`#85858F`) measures 3.51:1 on the card and 2.94:1 on
+the sidebar rail in light mode. It is decoration only — placeholder text, empty-state marks. Anything
+a reader has to read (timestamps, sub-lines, AI verdict reasons) uses `--foreground-secondary`
+(`#5C5C63`, 6.38:1 on the card, 5.35:1 on the rail).
+
 ## Accent variants (not default)
 Light honeydew: see html
 Light alice: see html

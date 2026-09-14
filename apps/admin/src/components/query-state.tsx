@@ -10,7 +10,6 @@ export function QueryState({
   error,
   isEmpty,
   emptyLabel,
-  emptyAction,
   children,
 }: {
   isPending: boolean;
@@ -18,8 +17,6 @@ export function QueryState({
   isEmpty: boolean;
   /** Already-translated copy; each caller passes its own `t('…')`. */
   emptyLabel: string;
-  /** Optional primary action for the empty state (the design system's empty-state spec). */
-  emptyAction?: ReactNode;
   children: ReactNode;
 }) {
   const t = useTranslations();
@@ -45,7 +42,7 @@ export function QueryState({
     );
   }
   if (isEmpty) {
-    // Empty-state spec: mark, one-line title, and room for a single primary action.
+    // Empty-state spec: mark and a one-line title.
     return (
       <div className="flex flex-col items-center px-5 py-16 text-center">
         <span
@@ -55,7 +52,6 @@ export function QueryState({
           <InboxIcon className="size-5" />
         </span>
         <p className="type-h3 max-w-sm text-balance text-foreground">{emptyLabel}</p>
-        {emptyAction ? <div className="mt-5">{emptyAction}</div> : null}
       </div>
     );
   }

@@ -11,6 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { CATEGORIES, ENTRY_STATUSES, type AdminEntry, type Category, type EntryPatch, type EntryStatus } from '@/lib/api/types';
@@ -95,9 +96,7 @@ function OverrideDialogBody({
           </div>
 
           <div className="space-y-1.5">
-            <label className="type-label text-muted-foreground" htmlFor="override-status">
-              {t('common.status')}
-            </label>
+            <Label htmlFor="override-status">{t('common.status')}</Label>
             <Select items={statusItems} value={status} onValueChange={(next) => setStatus(next as EntryStatus)}>
               <SelectTrigger id="override-status">
                 <SelectValue />

@@ -22,7 +22,7 @@ export function FeedbackList({ items }: { items: FeedbackItem[] }) {
             </div>
             <div className="flex items-center gap-2">
               {item.appVersion ? <Badge variant="secondary">{item.appVersion}</Badge> : null}
-              <span className="type-label shrink-0 tabular-nums text-foreground-subtle">{formatDateTime(item.createdAt)}</span>
+              <span className="type-label shrink-0 tabular-nums text-foreground-secondary">{formatDateTime(item.createdAt)}</span>
             </div>
           </div>
           <p className="mt-2 whitespace-pre-wrap text-base text-foreground">{item.message}</p>
@@ -31,7 +31,7 @@ export function FeedbackList({ items }: { items: FeedbackItem[] }) {
               href={item.screenshotUrl}
               target="_blank"
               rel="noreferrer"
-              className="mt-3 inline-flex items-center gap-1.5 rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring text-sm font-semibold text-foreground underline decoration-border-strong underline-offset-4 hover:decoration-foreground"
+              className="mt-3 inline-flex items-center gap-1.5 rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring text-sm font-semibold text-foreground underline decoration-foreground-subtle underline-offset-4 hover:decoration-foreground"
             >
               <ImageIcon aria-hidden className="size-4" />
               {t('viewScreenshot')}
