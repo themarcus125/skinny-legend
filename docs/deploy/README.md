@@ -8,12 +8,12 @@ Four providers, one order. Each step below links to the runbook that has the cli
 | 2 | OpenRouter API key | (no runbook: openrouter.ai → Keys → create) | — |
 | 3 | Firebase project, Google provider, service account, web app config | [`firebase.md`](./firebase.md) | — |
 | 4 | Railway project, Postgres, `api` service, env vars, migrate + seed, domain | [`railway.md`](./railway.md) | 1–3 (the API will not boot without R2, OpenRouter and Firebase vars) |
-| 5 | Promote the first admin (SQL) | [`railway.md`](./railway.md) §4 | 4, plus one sign-in |
-| 6 | Vercel admin project, env vars, `CORS_ORIGINS` back on Railway | [`admin-vercel.md`](./admin-vercel.md) | 3, 4 |
-| 7 | Firebase authorized domains for the Vercel domain | [`firebase.md`](./firebase.md) §6 | 6 |
+| 5 | Vercel admin project, env vars, `CORS_ORIGINS` back on Railway | [`admin-vercel.md`](./admin-vercel.md) | 3, 4 |
+| 6 | Firebase authorized domains for the Vercel domain | [`firebase.md`](./firebase.md) §6 | 5 |
+| 7 | Promote the first admin (SQL) | [`railway.md`](./railway.md) §4 | 5, 6, plus one sign-in from the dashboard |
 | 8 | `cleanup` cron service (`railway.cleanup.json`, `0 3 * * 1`) | [`railway.md`](./railway.md) §6 | 4 |
 | 9 | Apple: Sign in with Apple key + APNs key, uploaded to Firebase | [`firebase.md`](./firebase.md) §3, §5 | **SKI-42** (paid Apple Developer account) |
-| 10 | `notify` cron service (`railway.notify.json`, `0 13 * * *`) | [`railway.md`](./railway.md) §6 | 9 — it refuses to boot without the `FIREBASE_*` vars, and sends fail without the APNs key |
+| 10 | `notify` cron service (`railway.notify.json`, `0 13 * * *`) | [`railway.md`](./railway.md) §6 | 4, 9 — it refuses to boot without the `FIREBASE_*` vars, and sends fail without the APNs key |
 | 11 | iOS release wiring: `GoogleService-Info.plist`, `GOOGLE_REVERSED_CLIENT_ID`, Release `API_BASE_URL`, `DEVELOPMENT_TEAM`, `aps-environment: production` | [`firebase.md`](./firebase.md) §2 and README "Before TestFlight" | 3, 4, SKI-42 |
 
 Config-as-code lives at the repo root: `railway.json` (API, Railway's default path),
@@ -36,7 +36,6 @@ these anywhere:
 | **R2 bucket name** | you chose it | `R2_BUCKET` — only if it is not `skinny-legend` |
 | **Bundle id** | already `com.themarcus125.skinnylegend` | Firebase iOS app registration, Apple App ID |
 | **Apple Team ID** (SKI-42) | Apple Developer → Membership | `DEVELOPMENT_TEAM` in `ios/project.yml`, Firebase Apple provider, APNs key upload |
-| **Firebase service-account `client_email`** | the downloaded service-account JSON | `FIREBASE_CLIENT_EMAIL` — not strictly secret, but it ships with the key, so treat it as part of that credential |
 
 ## Where secrets go
 

@@ -104,9 +104,8 @@ Sign in once from the iOS app or the admin dashboard to create the row, then run
 production database (Railway → Postgres service → *Data* tab, or `psql "<production url>"`):
 
 ```sql
--- find your row (the uid is also printed by the app's sign-in; email may be null for Apple
--- private relay)
-SELECT id, firebase_uid, email, display_name, role, status FROM users ORDER BY created_at DESC;
+-- find your row: it is the newest one, and display_name is the name you signed in with
+SELECT id, firebase_uid, display_name, role, status, created_at FROM users ORDER BY created_at DESC;
 
 -- promote it
 UPDATE users SET role = 'admin', status = 'active' WHERE firebase_uid = '<your firebase uid>';

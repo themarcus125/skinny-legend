@@ -74,6 +74,7 @@ Set these on the Railway service (see `.env.example` for the shape):
 | `R2_BUCKET` | Defaults to `skinny-legend` |
 | `OPENROUTER_API_KEY` | Required |
 | `VISION_MODEL` | Defaults to `qwen/qwen3.7-flash` |
+| `CORS_ORIGINS` | Comma-separated admin origins; defaults to `http://localhost:3001` |
 
 `AUTH_MODE` must be **unset** in production. It defaults to `firebase`, and the API refuses to
 boot when it is `test` while `NODE_ENV=production`. Any missing or empty variable from the list
