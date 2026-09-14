@@ -11,17 +11,18 @@ struct DisabledView: View {
     var body: some View {
         VStack(spacing: 24) {
             Spacer()
-            GlassCard(padding: 26) {
+            SurfaceCard(padding: 26) {
                 VStack(spacing: 16) {
                     Image(systemName: "lock.fill")
                         .font(.system(size: 48, weight: .bold))
-                        .foregroundStyle(Theme.ember)
+                        .foregroundStyle(Theme.primary)
                     Text("Tài khoản đã bị khoá")
-                        .font(.roundedLabel(22, weight: .bold))
+                        .typeStyle(.h2)
+                        .foregroundStyle(Theme.fg)
                         .multilineTextAlignment(.center)
                     Text(message)
-                        .font(.roundedLabel(15, weight: .medium))
-                        .foregroundStyle(.secondary)
+                        .typeStyle(.bodyMedium)
+                        .foregroundStyle(Theme.fgMuted)
                         .multilineTextAlignment(.center)
                 }
             }
@@ -32,16 +33,13 @@ struct DisabledView: View {
             } label: {
                 Group {
                     if env.isSigningOut {
-                        ProgressView()
+                        ProgressView().tint(Theme.fgOnAccent)
                     } else {
                         Text("Đăng xuất")
-                            .font(.roundedLabel(16))
                     }
                 }
-                .frame(maxWidth: .infinity)
-                .frame(height: 52)
             }
-            .buttonStyle(.glassProminent)
+            .buttonStyle(.ds(.primary, size: .lg, fullWidth: true))
             .disabled(env.isSigningOut)
             .padding(.horizontal, 24)
 
@@ -52,7 +50,7 @@ struct DisabledView: View {
 
 #Preview("Đã khoá") {
     ZStack {
-        WarmBackground()
+        AppBackground()
         DisabledView(message: "Tài khoản của bạn đã bị khoá. Liên hệ quản trị viên.")
     }
     .environment(AppEnvironment(api: MockAPIClient(), auth: MockAuthService(startSignedIn: false),

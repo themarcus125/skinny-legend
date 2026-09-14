@@ -273,6 +273,35 @@ struct AppModeTests {
         #expect(AppMode.servicesAreLive(isMock: false, hasFirebasePlist: false) == false)
     }
 
+    // MARK: - (argument, override, plist) → live / mock
+
+    @Test("With a plist and neither mock signal, the app runs live")
+    func liveWhenNothingForcesMock() {
+        #expect(AppMode.services(launchArgumentIsMock: false, mockOverride: false, hasFirebasePlist: true) == .live)
+    }
+
+    @Test("The -mockAPI launch argument forces the mock, plist or not")
+    func launchArgumentForcesMock() {
+        #expect(AppMode.services(launchArgumentIsMock: true, mockOverride: false, hasFirebasePlist: true) == .mock)
+        #expect(AppMode.services(launchArgumentIsMock: true, mockOverride: false, hasFirebasePlist: false) == .mock)
+    }
+
+    @Test("The DEBUG sample-data override forces the mock on its own")
+    func overrideForcesMock() {
+        #expect(AppMode.services(launchArgumentIsMock: false, mockOverride: true, hasFirebasePlist: true) == .mock)
+    }
+
+    @Test("Clearing the override returns to live, but only when a Firebase plist is present")
+    func clearingTheOverrideReturnsToLive() {
+        #expect(AppMode.services(launchArgumentIsMock: false, mockOverride: false, hasFirebasePlist: true) == .live)
+        #expect(AppMode.services(launchArgumentIsMock: false, mockOverride: false, hasFirebasePlist: false) == .mock)
+    }
+
+    @Test("The override cannot override the launch argument back to live")
+    func argumentStillWinsWhenOverrideIsOff() {
+        #expect(AppMode.services(launchArgumentIsMock: true, mockOverride: false, hasFirebasePlist: true) == .mock)
+    }
+
     // MARK: - API base URL resolution: env → Info.plist → localhost
 
     @Test("The environment override wins over the bundled value")

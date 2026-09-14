@@ -33,10 +33,12 @@ struct VerdictSheet: View {
                             .frame(maxWidth: .infinity, alignment: .leading)
                     } else if let name = model.placeName {
                         Label(name, systemImage: "mappin.circle.fill")
-                            .font(.roundedLabel(14, weight: .medium))
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 9)
-                            .glassEffect(.regular, in: Capsule())
+                            .typeStyle(.caption)
+                            .foregroundStyle(Theme.fgMuted)
+                            .padding(.horizontal, Theme.Space.x3)
+                            .padding(.vertical, Theme.Space.x2)
+                            .background(Theme.surface2, in: Capsule())
+                            .overlay { Capsule().strokeBorder(Theme.border, lineWidth: 1) }
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
                     if model.mode != .edit || model.hasConfirmedProjection {
@@ -45,15 +47,14 @@ struct VerdictSheet: View {
                         pendingProjectionNote
                     }
                     if let errorMessage = model.errorMessage {
-                        Text(errorMessage)
-                            .font(.roundedLabel(14, weight: .medium))
-                            .foregroundStyle(.red)
+                        AlertBanner(kind: .destructive, message: errorMessage)
                     }
                 }
                 .padding(.horizontal, 20)
                 .padding(.bottom, 120)
             }
-            .background { WarmBackground() }
+            .background { AppBackground() }
+            .scrollContentBackground(.hidden)
             .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -75,15 +76,11 @@ struct VerdictSheet: View {
                     }
                 } label: {
                     Text(primaryLabel)
-                        .font(.roundedLabel(18))
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 54)
                 }
-                .buttonStyle(.glassProminent)
-                .tint(Theme.flame)
+                .buttonStyle(.ds(.primary, size: .lg, fullWidth: true))
                 .disabled(!model.canSave)
-                .padding(.horizontal, 20)
-                .padding(.bottom, 12)
+                .padding(.horizontal, Theme.Space.x4 + 4)
+                .padding(.bottom, Theme.Space.x3)
             }
         }
         .onChange(of: placeResolver?.selected) { _, _ in
@@ -129,17 +126,18 @@ struct VerdictSheet: View {
     @ViewBuilder
     private var reasonCard: some View {
         if let verdict = model.verdict {
-            GlassCard {
+            SurfaceCard {
                 HStack(alignment: .top, spacing: 12) {
                     Image(systemName: verdict.failed ? "questionmark.circle.fill" : "sparkles")
                         .font(.system(size: 20, weight: .bold))
-                        .foregroundStyle(Theme.ember)
-                    VStack(alignment: .leading, spacing: 4) {
+                        .foregroundStyle(verdict.failed ? Theme.warning : Theme.info)
+                    VStack(alignment: .leading, spacing: Theme.Space.x1) {
                         Text(verdict.failed ? "Không nhận diện được ảnh" : "AI nhận định")
-                            .font(.roundedLabel(13, weight: .bold))
-                            .foregroundStyle(.secondary)
+                            .typeStyle(.label)
+                            .foregroundStyle(Theme.fgSubtle)
                         Text(verdict.failed ? Localized.string("Hãy chọn hạng mục phù hợp bên dưới.") : verdict.reason)
-                            .font(.roundedLabel(16, weight: .medium))
+                            .typeStyle(.bodyMedium)
+                            .foregroundStyle(Theme.fg)
                     }
                 }
             }
@@ -147,12 +145,12 @@ struct VerdictSheet: View {
     }
 
     private var chipsCard: some View {
-        GlassCard {
+        SurfaceCard {
             VStack(alignment: .leading, spacing: 14) {
                 HStack {
                     Text("Hạng mục")
-                        .font(.roundedLabel(13, weight: .bold))
-                        .foregroundStyle(.secondary)
+                        .typeStyle(.label)
+                        .foregroundStyle(Theme.fgSubtle)
                     Spacer()
                     if model.verdict != nil {
                         // "Thu gọn" rather than "Xong" so it cannot be mistaken for the primary
@@ -160,28 +158,23 @@ struct VerdictSheet: View {
                         Button(model.isEditingCategories ? "Thu gọn" : "Không đúng?") {
                             withAnimation(.smooth(duration: 0.25)) { model.isEditingCategories.toggle() }
                         }
-                        .font(.roundedLabel(14))
-                        .foregroundStyle(Theme.flame)
+                        .buttonStyle(.ds(.ghost, size: .sm))
                     }
                 }
 
-                GlassEffectContainer(spacing: 10) {
-                    HStack(spacing: 10) {
-                        ForEach(visibleCategories) { category in
-                            CategoryChip(
-                                category: category,
-                                isOn: model.selected.contains(category),
-                                isCapped: model.isCapped(category),
-                                action: model.isEditingCategories ? { model.toggle(category) } : nil
-                            )
-                        }
+                HStack(spacing: 10) {
+                    ForEach(visibleCategories) { category in
+                        CategoryChip(
+                            category: category,
+                            isOn: model.selected.contains(category),
+                            isCapped: model.isCapped(category),
+                            action: model.isEditingCategories ? { model.toggle(category) } : nil
+                        )
                     }
                 }
 
                 ForEach(model.capWarnings, id: \.self) { warning in
-                    Label(warning, systemImage: "exclamationmark.triangle.fill")
-                        .font(.roundedLabel(13, weight: .medium))
-                        .foregroundStyle(Theme.ember)
+                    AlertBanner(kind: .warning, message: warning)
                 }
             }
         }
@@ -196,10 +189,10 @@ struct VerdictSheet: View {
     /// `confirm()`, so the points card (which would otherwise show an uncapped local estimate)
     /// is replaced by this note until the server's PATCH response lands.
     private var pendingProjectionNote: some View {
-        GlassCard {
+        SurfaceCard {
             Text("Điểm sẽ được máy chủ tính lại khi lưu.")
-                .font(.roundedLabel(14, weight: .medium))
-                .foregroundStyle(.secondary)
+                .typeStyle(.caption)
+                .foregroundStyle(Theme.fgMuted)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
@@ -207,27 +200,27 @@ struct VerdictSheet: View {
     /// An already-tracked entry with no pending correction shows its points as earned; every
     /// other state shows a projection the server will settle on save.
     private var pointsCard: some View {
-        GlassCard {
+        SurfaceCard {
             HStack(alignment: .firstTextBaseline) {
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: Theme.Space.x1) {
                     if model.isAlreadyTracked && !model.hasChanges {
                         Text("Điểm đã cộng")
-                            .font(.roundedLabel(13, weight: .bold))
-                            .foregroundStyle(.secondary)
+                            .typeStyle(.label)
+                            .foregroundStyle(Theme.fgSubtle)
                         Text("Đã tính vào tổng điểm của bạn.")
-                            .font(.roundedLabel(12, weight: .medium))
-                            .foregroundStyle(.secondary)
+                            .typeStyle(.caption)
+                            .foregroundStyle(Theme.fgMuted)
                     } else {
                         Text("Điểm dự kiến")
-                            .font(.roundedLabel(13, weight: .bold))
-                            .foregroundStyle(.secondary)
+                            .typeStyle(.label)
+                            .foregroundStyle(Theme.fgSubtle)
                         Text("Điểm chính thức do máy chủ tính khi xác nhận.")
-                            .font(.roundedLabel(12, weight: .medium))
-                            .foregroundStyle(.secondary)
+                            .typeStyle(.caption)
+                            .foregroundStyle(Theme.fgMuted)
                     }
                 }
                 Spacer()
-                BigNumber(value: model.projectedPoints, size: 44)
+                BigNumber(value: model.projectedPoints, size: 36)
             }
         }
     }

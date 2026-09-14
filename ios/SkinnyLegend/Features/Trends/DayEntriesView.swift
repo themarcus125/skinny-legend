@@ -13,7 +13,7 @@ struct DayEntriesView: View {
 
     var body: some View {
         ZStack {
-            WarmBackground()
+            AppBackground()
             if model.isLoading && model.entries.isEmpty {
                 ProgressView()
             } else if model.entries.isEmpty {
@@ -22,6 +22,7 @@ struct DayEntriesView: View {
                     systemImage: "calendar.badge.exclamationmark",
                     description: Text(model.errorMessage ?? Localized.string("Ngày này bạn chưa ghi nhận hoạt động nào."))
                 )
+                .emptyStateStyle()
             } else {
                 ScrollView {
                     LazyVStack(spacing: 14) {
@@ -31,25 +32,28 @@ struct DayEntriesView: View {
                                     .frame(width: 72, height: 72)
                                     .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                                 VStack(alignment: .leading, spacing: 6) {
-                                    GlassEffectContainer(spacing: 6) {
-                                        FlowLayout(spacing: 6, rowSpacing: 6) {
-                                            ForEach(entry.categories) { category in
-                                                CategoryChip(category: category)
-                                            }
+                                    FlowLayout(spacing: 6, rowSpacing: 6) {
+                                        ForEach(entry.categories) { category in
+                                            CategoryChip(category: category)
                                         }
                                     }
                                     if let placeName = entry.placeName {
                                         Label(placeName, systemImage: "mappin.circle.fill")
-                                            .font(.roundedLabel(12, weight: .medium))
-                                            .foregroundStyle(.secondary)
+                                            .typeStyle(.caption)
+                                            .foregroundStyle(Theme.fgMuted)
                                             .lineLimit(1)
                                     }
                                 }
                                 Spacer()
                                 PointsBadge(points: entry.points, isCapped: entry.capped)
                             }
-                            .padding(14)
-                            .glassEffect(.regular, in: RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous))
+                            .padding(Theme.Space.x3 + 2)
+                            .background(Theme.surface, in: RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous))
+                            .overlay {
+                                RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
+                                    .strokeBorder(Theme.border, lineWidth: 1)
+                            }
+                            .elevation(.e1)
                         }
                     }
                     .padding(.horizontal, 20)

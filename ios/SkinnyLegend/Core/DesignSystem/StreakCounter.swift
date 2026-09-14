@@ -1,27 +1,62 @@
 import SwiftUI
 
-/// The streak, shown as a flame with its count (spec §14). The flame breathes only while the
-/// streak is alive so a broken streak reads as visually inert.
-struct StreakFlame: View {
+/// The design system's "streak counter": a display-weight number, the "ngày liên tiếp" caption,
+/// the previous-best line, and a row of seven dots for the current streak week.
+///
+/// The dots are derived, not new data: the rulebook pays a streak bonus every
+/// `Rulebook.streakLength` days (7), so `filledDots` is simply where the current streak sits
+/// inside that cycle — a full row means the bonus has just landed.
+struct StreakCounter: View {
+    /// Declared so this body re-runs when the Account picker changes the language: it renders a
+    /// `String` accessibility label built from `Localized`.
+    @Environment(\.locale) private var locale
     let days: Int
-    var size: CGFloat = 34
+    let longest: Int
+    var numberSize: CGFloat = 40
+
+    /// How many of the seven dots are lit. A live streak whose length is an exact multiple of
+    /// seven shows a full row (the bonus day itself) rather than an empty one.
+    static func filledDots(days: Int, cycle: Int = Rulebook.streakLength) -> Int {
+        guard days > 0, cycle > 0 else { return 0 }
+        let remainder = days % cycle
+        return remainder == 0 ? cycle : remainder
+    }
+
+    private var isAlive: Bool { days > 0 }
 
     var body: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "flame.fill")
-                .font(.system(size: size, weight: .bold))
-                .foregroundStyle(days > 0 ? AnyShapeStyle(LinearGradient(colors: [Theme.ember, Theme.flame], startPoint: .top, endPoint: .bottom)) : AnyShapeStyle(Color.secondary.opacity(0.4)))
-                .symbolEffect(.breathe, isActive: days > 0)
-            VStack(alignment: .leading, spacing: 0) {
+        VStack(alignment: .leading, spacing: Theme.Space.x2) {
+            HStack(alignment: .firstTextBaseline, spacing: Theme.Space.x2) {
                 Text("\(days)")
-                    .font(.numerals(size))
+                    .font(.numerals(numberSize))
+                    .foregroundStyle(isAlive ? Theme.primary : Theme.fgSubtle)
                     .contentTransition(.numericText(value: Double(days)))
+                    .monospacedDigit()
                 Text("ngày liên tiếp")
-                    .font(.roundedLabel(12, weight: .medium))
-                    .foregroundStyle(.secondary)
+                    .typeStyle(.caption)
+                    .foregroundStyle(Theme.fgMuted)
+            }
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("Chuỗi \(days) ngày liên tiếp")
+
+            Text("Dài nhất: \(longest) ngày")
+                .typeStyle(.caption)
+                .foregroundStyle(Theme.fgSubtle)
+
+            dots
+        }
+    }
+
+    private var dots: some View {
+        let filled = Self.filledDots(days: days)
+        return HStack(spacing: Theme.Space.x1 + 2) {
+            ForEach(0..<Rulebook.streakLength, id: \.self) { index in
+                Circle()
+                    .fill(index < filled ? Theme.primary : Theme.track)
+                    .frame(width: 8, height: 8)
             }
         }
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("Chuỗi \(days) ngày liên tiếp")
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(filled) trên 7 ngày của chuỗi hiện tại")
     }
 }

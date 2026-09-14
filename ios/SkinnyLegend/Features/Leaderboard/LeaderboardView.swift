@@ -16,7 +16,7 @@ struct LeaderboardView: View {
 
     var body: some View {
         ZStack {
-            WarmBackground()
+            AppBackground()
             switch model.state {
             case .loading:
                 ProgressView()
@@ -27,8 +27,9 @@ struct LeaderboardView: View {
                     Text(message)
                 } actions: {
                     Button("Thử lại") { Task { await model.load() } }
-                        .buttonStyle(.glassProminent)
+                        .buttonStyle(.ds(.primary, size: .md))
                 }
+                .emptyStateStyle()
             case .loaded(let rows):
                 ScrollView {
                     LazyVStack(spacing: 12) {
@@ -64,53 +65,64 @@ struct LeaderboardRowView: View {
     let row: LeaderboardRow
 
     var body: some View {
-        HStack(spacing: 14) {
+        HStack(spacing: Theme.Space.x3) {
             Text("\(row.rank)")
                 .font(.numerals(22))
+                .monospacedDigit()
                 .foregroundStyle(medalTint)
-                .frame(width: 34, alignment: .center)
+                .frame(width: 30, alignment: .center)
 
             AvatarView(url: row.user.avatarUrl, displayName: row.user.displayName, size: 44)
 
-            VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: 6) {
+            VStack(alignment: .leading, spacing: Theme.Space.x1 - 2) {
+                HStack(spacing: Theme.Space.x2 - 2) {
                     Text(row.user.displayName)
-                        .font(.roundedLabel(17, weight: .bold))
-                    if row.isMe {
-                        Text("Bạn")
-                            .font(.roundedLabel(11, weight: .bold))
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 3)
-                            .glassEffect(.regular.tint(Theme.flame.opacity(0.45)), in: Capsule())
-                    }
+                        .typeStyle(.h3)
+                        .foregroundStyle(Theme.fg)
+                        .lineLimit(1)
+                    if row.isMe { youPill }
                 }
                 Text("Tuần này +\(row.weekPoints)")
-                    .font(.roundedLabel(13, weight: .medium))
-                    .foregroundStyle(.secondary)
+                    .typeStyle(.caption)
+                    .foregroundStyle(Theme.fgMuted)
             }
 
-            Spacer()
+            Spacer(minLength: Theme.Space.x2)
 
-            BigNumber(value: row.total, size: 30)
+            BigNumber(value: row.total, size: 26)
 
             Image(systemName: "chevron.right")
-                .font(.system(size: 13, weight: .bold))
-                .foregroundStyle(.secondary)
+                .font(.system(size: 12, weight: .bold))
+                .foregroundStyle(Theme.fgSubtle)
         }
-        .padding(16)
-        .glassEffect(
-            row.isMe ? .regular.tint(Theme.flame.opacity(0.30)) : .regular,
-            in: RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
-        )
+        .padding(Theme.Space.x4)
+        .background(row.isMe ? Theme.primarySoft : Theme.surface, in: shape)
+        .overlay { shape.strokeBorder(row.isMe ? Theme.primaryBorder : Theme.border, lineWidth: 1) }
+        .elevation(.e1)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(Self.accessibilityLabel(for: row))
     }
 
+    private var shape: RoundedRectangle {
+        RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
+    }
+
+    /// The "YOU" pill from the leaderboard-row spec: the label type role (11 / 600 / +6% /
+    /// uppercase) on the accent.
+    private var youPill: some View {
+        Text("BẠN")
+            .typeStyle(.label)
+            .foregroundStyle(Theme.fgOnAccent)
+            .padding(.horizontal, Theme.Space.x2)
+            .padding(.vertical, Theme.Space.x1 - 1)
+            .background(Theme.primary, in: Capsule())
+    }
+
     private var medalTint: Color {
         switch row.rank {
-        case 1: Theme.ember
-        case 2, 3: Theme.flame.opacity(0.75)
-        default: Color.secondary
+        case 1: Theme.warning
+        case 2, 3: Theme.fgMuted
+        default: Theme.fgSubtle
         }
     }
 

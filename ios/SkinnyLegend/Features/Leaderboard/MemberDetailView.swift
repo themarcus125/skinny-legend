@@ -19,7 +19,7 @@ struct MemberDetailView: View {
 
     var body: some View {
         ZStack {
-            WarmBackground()
+            AppBackground()
             ScrollView {
                 LazyVStack(spacing: 14) {
                     headerCard
@@ -27,8 +27,8 @@ struct MemberDetailView: View {
                         ProgressView().padding(.vertical, 24)
                     } else if model.entries.isEmpty {
                         Text(model.errorMessage ?? Localized.string("Thành viên này chưa có hoạt động nào."))
-                            .font(.roundedLabel(15, weight: .medium))
-                            .foregroundStyle(.secondary)
+                            .typeStyle(.bodyMedium)
+                            .foregroundStyle(Theme.fgMuted)
                             .padding(.vertical, 24)
                     } else {
                         entriesCard
@@ -61,11 +61,11 @@ struct MemberDetailView: View {
     /// The rows carry no pagination of their own — a nested lazy stack inside a card can lay out
     /// more than it shows, so the trigger lives on the footer of the outer stack instead.
     private var entriesCard: some View {
-        GlassCard(padding: 0) {
+        SurfaceCard(padding: 0) {
             LazyVStack(spacing: 0) {
                 ForEach(Array(model.entries.enumerated()), id: \.element.id) { index, entry in
                     if index > 0 {
-                        Divider().padding(.leading, 16)
+                        Divider().overlay(Theme.border).padding(.leading, Theme.Space.x4)
                     }
                     MemberEntryRow(entry: entry)
                 }
@@ -77,18 +77,19 @@ struct MemberDetailView: View {
     }
 
     private var headerCard: some View {
-        GlassCard {
+        SurfaceCard {
             HStack(spacing: 14) {
                 AvatarView(url: member.avatarUrl, displayName: member.displayName, size: 56)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(member.displayName)
-                        .font(.roundedLabel(20, weight: .bold))
+                        .typeStyle(.h2)
+                        .foregroundStyle(Theme.fg)
                     Text("Hạng \(rank)")
-                        .font(.roundedLabel(13, weight: .medium))
-                        .foregroundStyle(.secondary)
+                        .typeStyle(.caption)
+                        .foregroundStyle(Theme.fgMuted)
                 }
                 Spacer()
-                BigNumber(value: total, size: 34)
+                BigNumber(value: total, size: 30)
             }
         }
     }
@@ -109,24 +110,23 @@ private struct MemberEntryRow: View {
 
             VStack(alignment: .leading, spacing: 6) {
                 Text(LocalDay.display(entry.localDate))
-                    .font(.roundedLabel(15, weight: .bold))
-                GlassEffectContainer(spacing: 6) {
-                    FlowLayout(spacing: 6, rowSpacing: 6) {
-                        ForEach(entry.categories) { category in
-                            CategoryChip(category: category)
-                        }
+                    .typeStyle(.h3)
+                    .foregroundStyle(Theme.fg)
+                FlowLayout(spacing: 6, rowSpacing: 6) {
+                    ForEach(entry.categories) { category in
+                        CategoryChip(category: category)
                     }
                 }
                 if let placeName = entry.placeName {
                     Label(placeName, systemImage: "mappin.circle.fill")
-                        .font(.roundedLabel(12, weight: .medium))
-                        .foregroundStyle(.secondary)
+                        .typeStyle(.caption)
+                        .foregroundStyle(Theme.fgMuted)
                         .lineLimit(1)
                 }
             }
             Spacer()
         }
-        // No glass of its own: the enclosing `GlassCard` is the single surface for every row.
+        // No glass of its own: the enclosing `SurfaceCard` is the single surface for every row.
         .padding(.horizontal, 16)
         .padding(.vertical, 14)
     }

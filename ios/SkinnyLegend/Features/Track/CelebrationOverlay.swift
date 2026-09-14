@@ -13,16 +13,23 @@ struct CelebrationOverlay: View {
             VStack(spacing: 12) {
                 Image(systemName: "flame.fill")
                     .font(.system(size: 80, weight: .bold))
-                    .foregroundStyle(LinearGradient(colors: [Theme.ember, Theme.flame], startPoint: .top, endPoint: .bottom))
+                    .foregroundStyle(Theme.primary)
                     .symbolEffect(.bounce, value: appeared)
                 Text(points > 0 ? "+\(points)" : "0")
-                    .font(.numerals(52))
-                    .foregroundStyle(Theme.flame)
+                    .font(.numerals(44))
+                    .tracking(-1.5)
+                    .foregroundStyle(Theme.fg)
                 Text(points > 0 ? "Đã ghi nhận, giữ chuỗi nhé!" : "Đã ghi nhận")
-                    .font(.roundedLabel(17, weight: .bold))
+                    .typeStyle(.h3)
+                    .foregroundStyle(Theme.fgMuted)
             }
-            .padding(36)
-            .glassEffect(.regular.tint(Theme.flame.opacity(0.28)), in: RoundedRectangle(cornerRadius: 32, style: .continuous))
+            .padding(Theme.Space.x8)
+            .background(Theme.elevated, in: RoundedRectangle(cornerRadius: Theme.Radius.lg, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: Theme.Radius.lg, style: .continuous)
+                    .strokeBorder(Theme.border, lineWidth: 1)
+            }
+            .elevation(.e3)
             .scaleEffect(appeared ? 1 : 0.5)
             .opacity(appeared ? 1 : 0)
         }

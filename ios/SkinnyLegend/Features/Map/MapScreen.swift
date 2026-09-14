@@ -21,7 +21,7 @@ struct MapScreen: View {
 
     var body: some View {
         ZStack {
-            WarmBackground()
+            AppBackground()
             switch model.state {
             case .idle, .loading:
                 ProgressView()
@@ -32,10 +32,12 @@ struct MapScreen: View {
                     Text(message)
                 } actions: {
                     Button("Thử lại") { Task { await model.load() } }
-                        .buttonStyle(.glassProminent)
+                        .buttonStyle(.ds(.primary, size: .md))
                 }
+                .emptyStateStyle()
             case .loaded(let clusters) where clusters.isEmpty:
                 ContentUnavailableView("Chưa có địa điểm nào được chia sẻ.", systemImage: "map")
+                    .emptyStateStyle()
             case .loaded(let clusters):
                 mapView(clusters)
             }
@@ -131,16 +133,18 @@ private struct ClusterPin: View {
         ZStack(alignment: .topTrailing) {
             AvatarView(url: cluster.pins[0].user.avatarUrl, displayName: cluster.pins[0].user.displayName, size: 36)
                 .padding(4)
-                .glassEffect(.regular.interactive(), in: Circle())
+                .background(Theme.surface, in: Circle())
+                .overlay { Circle().strokeBorder(Theme.border, lineWidth: 1) }
+                .elevation(.e2)
 
             if cluster.pins.count > 1 {
                 Text("\(cluster.pins.count)")
-                    .font(.roundedLabel(11, weight: .bold))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 6)
+                    .typeStyle(.label)
+                    .foregroundStyle(Theme.fgOnAccent)
+                    .padding(.horizontal, Theme.Space.x2 - 2)
                     .padding(.vertical, 2)
-                    .background(Theme.flame, in: Capsule())
-                    .overlay(Capsule().stroke(.white, lineWidth: 1.5))
+                    .background(Theme.primary, in: Capsule())
+                    .overlay(Capsule().stroke(Theme.surface, lineWidth: 1.5))
                     .offset(x: 8, y: -6)
             }
         }
@@ -181,15 +185,16 @@ private struct MapPinListSheet: View {
             AvatarView(url: pin.user.avatarUrl, displayName: pin.user.displayName, size: 40)
             VStack(alignment: .leading, spacing: 2) {
                 Text(pin.user.displayName)
-                    .font(.roundedLabel(15, weight: .bold))
+                    .typeStyle(.h3)
+                    .foregroundStyle(Theme.fg)
                 Text(LocalDay.display(pin.localDate))
-                    .font(.roundedLabel(12, weight: .medium))
-                    .foregroundStyle(.secondary)
+                    .typeStyle(.caption)
+                    .foregroundStyle(Theme.fgMuted)
             }
             Spacer()
             Image(systemName: "chevron.right")
                 .font(.system(size: 12, weight: .bold))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Theme.fgMuted)
         }
         .contentShape(Rectangle())
     }

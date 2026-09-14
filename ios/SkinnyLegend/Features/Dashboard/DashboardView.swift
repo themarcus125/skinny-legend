@@ -21,7 +21,7 @@ struct DashboardView: View {
 
     var body: some View {
         ZStack {
-            WarmBackground()
+            AppBackground()
             switch model.state {
             case .loading:
                 ProgressView()
@@ -32,8 +32,9 @@ struct DashboardView: View {
                     Text(message)
                 } actions: {
                     Button("Thử lại") { Task { await model.load() } }
-                        .buttonStyle(.glassProminent)
+                        .buttonStyle(.ds(.primary, size: .md))
                 }
+                .emptyStateStyle()
             case .loaded(let dashboard):
                 content(dashboard)
             }
@@ -66,14 +67,15 @@ struct DashboardView: View {
                 NavigationLink {
                     FeedView(api: apiClient)
                 } label: {
-                    GlassCard {
+                    SurfaceCard {
                         HStack {
                             Label("Nhật ký nhóm", systemImage: "photo.stack")
-                                .font(.roundedLabel(17, weight: .semibold))
+                                .typeStyle(.h3)
+                                .foregroundStyle(Theme.fg)
                             Spacer()
                             Image(systemName: "chevron.right")
-                                .font(.system(size: 14, weight: .bold))
-                                .foregroundStyle(.secondary)
+                                .font(.system(size: 13, weight: .bold))
+                                .foregroundStyle(Theme.fgSubtle)
                         }
                     }
                 }
@@ -86,29 +88,28 @@ struct DashboardView: View {
     }
 
     private func todayCard(_ dashboard: DashboardDTO) -> some View {
-        GlassCard(padding: 22) {
-            VStack(alignment: .leading, spacing: 6) {
+        SurfaceCard(padding: Theme.Space.x6) {
+            VStack(alignment: .leading, spacing: Theme.Space.x2) {
                 Text("Điểm hôm nay")
-                    .font(.roundedLabel(13, weight: .bold))
-                    .foregroundStyle(.secondary)
-                HStack(alignment: .firstTextBaseline, spacing: 12) {
-                    BigNumber(value: dashboard.today.points, size: 66)
+                    .typeStyle(.label)
+                    .foregroundStyle(Theme.fgSubtle)
+                HStack(alignment: .firstTextBaseline, spacing: Theme.Space.x3) {
+                    BigNumber(value: dashboard.today.points, size: 44)
                         .accessibilityElement(children: .combine)
                         .accessibilityLabel("Điểm hôm nay: \(dashboard.today.points)")
                     deltaBadge(dashboard.deltaVsYesterday)
                 }
                 if dashboard.today.categories.isEmpty {
                     Text("Chưa ghi nhận hoạt động nào hôm nay.")
-                        .font(.roundedLabel(14, weight: .medium))
-                        .foregroundStyle(.secondary)
+                        .typeStyle(.caption)
+                        .foregroundStyle(Theme.fgMuted)
                 } else {
-                    GlassEffectContainer(spacing: 8) {
-                        FlowLayout(spacing: 8, rowSpacing: 8) {
-                            ForEach(dashboard.today.categories) { category in
-                                CategoryChip(category: category)
-                            }
+                    FlowLayout(spacing: Theme.Space.x2, rowSpacing: Theme.Space.x2) {
+                        ForEach(dashboard.today.categories) { category in
+                            CategoryChip(category: category)
                         }
                     }
+                    .padding(.top, Theme.Space.x1)
                 }
             }
         }
@@ -119,8 +120,8 @@ struct DashboardView: View {
             deltaCaption(delta),
             systemImage: delta > 0 ? "arrow.up.right" : delta < 0 ? "arrow.down.right" : "equal"
         )
-        .font(.roundedLabel(13, weight: .semibold))
-        .foregroundStyle(delta > 0 ? Theme.meal : delta < 0 ? Theme.flame : Color.secondary)
+        .typeStyle(.caption)
+        .foregroundStyle(delta > 0 ? Theme.success : delta < 0 ? Theme.destructive : Theme.fgSubtle)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(delta == 0 ? "Bằng hôm qua" : delta > 0 ? "Hơn hôm qua \(delta) điểm" : "Kém hôm qua \(-delta) điểm")
     }
@@ -133,66 +134,69 @@ struct DashboardView: View {
     }
 
     private func streakCard(_ dashboard: DashboardDTO) -> some View {
-        GlassCard {
-            VStack(alignment: .leading, spacing: 10) {
+        SurfaceCard {
+            VStack(alignment: .leading, spacing: Theme.Space.x3) {
                 Text("Chuỗi ngày")
-                    .font(.roundedLabel(13, weight: .bold))
-                    .foregroundStyle(.secondary)
-                StreakFlame(days: dashboard.streak.current, size: 30)
-                Text("Dài nhất: \(dashboard.streak.longest) ngày")
-                    .font(.roundedLabel(12, weight: .medium))
-                    .foregroundStyle(.secondary)
+                    .typeStyle(.label)
+                    .foregroundStyle(Theme.fgSubtle)
+                StreakCounter(days: dashboard.streak.current, longest: dashboard.streak.longest, numberSize: 30)
             }
         }
     }
 
     private func rankCard(_ dashboard: DashboardDTO) -> some View {
-        GlassCard {
-            VStack(alignment: .leading, spacing: 10) {
+        SurfaceCard {
+            VStack(alignment: .leading, spacing: Theme.Space.x3) {
                 Text("Thứ hạng")
-                    .font(.roundedLabel(13, weight: .bold))
-                    .foregroundStyle(.secondary)
-                HStack(alignment: .firstTextBaseline, spacing: 4) {
-                    BigNumber(value: dashboard.rank, size: 34, tint: Theme.ember)
+                    .typeStyle(.label)
+                    .foregroundStyle(Theme.fgSubtle)
+                HStack(alignment: .firstTextBaseline, spacing: Theme.Space.x1) {
+                    BigNumber(value: dashboard.rank, size: 30)
                     Text("/ \(dashboard.memberCount)")
-                        .font(.roundedLabel(16, weight: .bold))
-                        .foregroundStyle(.secondary)
+                        .typeStyle(.h3)
+                        .foregroundStyle(Theme.fgMuted)
                 }
                 .accessibilityElement(children: .combine)
                 .accessibilityLabel("Xếp hạng \(dashboard.rank) trên \(dashboard.memberCount)")
                 Text("trong nhóm")
-                    .font(.roundedLabel(12, weight: .medium))
-                    .foregroundStyle(.secondary)
+                    .typeStyle(.caption)
+                    .foregroundStyle(Theme.fgSubtle)
             }
         }
     }
 
     private func checklistCard(_ dashboard: DashboardDTO) -> some View {
-        GlassCard {
-            VStack(alignment: .leading, spacing: 12) {
+        SurfaceCard {
+            VStack(alignment: .leading, spacing: 0) {
                 Text("Hôm nay còn ghi điểm được")
-                    .font(.roundedLabel(13, weight: .bold))
-                    .foregroundStyle(.secondary)
-                ForEach(Category.allCases) { category in
+                    .typeStyle(.label)
+                    .foregroundStyle(Theme.fgSubtle)
+                    .padding(.bottom, Theme.Space.x2)
+                ForEach(Array(Category.allCases.enumerated()), id: \.element) { index, category in
+                    if index > 0 {
+                        Divider().overlay(Theme.border)
+                    }
                     ChecklistRow(category: category, isDone: dashboard.capsHit[category])
                 }
             }
         }
     }
 
+    /// The design system's "accent milestone card": the one card on the screen that carries the
+    /// accent soft fill and its border, so the challenge total reads as the milestone number.
     private func totalCard(_ dashboard: DashboardDTO) -> some View {
-        GlassCard {
+        SurfaceCard(background: Theme.primarySoft, border: Theme.primaryBorder) {
             HStack {
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: Theme.Space.x1) {
                     Text("Tổng điểm thử thách")
-                        .font(.roundedLabel(13, weight: .bold))
-                        .foregroundStyle(.secondary)
+                        .typeStyle(.label)
+                        .foregroundStyle(Theme.fgSubtle)
                     Text("Thưởng chuỗi: +\(dashboard.streak.bonusPoints)")
-                        .font(.roundedLabel(12, weight: .medium))
-                        .foregroundStyle(.secondary)
+                        .typeStyle(.caption)
+                        .foregroundStyle(Theme.fgMuted)
                 }
                 Spacer()
-                BigNumber(value: dashboard.total, size: 40)
+                BigNumber(value: dashboard.total, size: 30)
             }
             .accessibilityElement(children: .combine)
             .accessibilityLabel(
@@ -214,18 +218,19 @@ private struct ChecklistRow: View {
     @Environment(\.locale) private var locale
 
     var body: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: Theme.Space.x3) {
             Image(systemName: isDone ? "checkmark.circle.fill" : "circle")
                 .font(.system(size: 18, weight: .bold))
-                .foregroundStyle(isDone ? Theme.meal : Color.secondary)
+                .foregroundStyle(isDone ? Theme.success : Theme.borderStrong)
             Text(category.label)
-                .font(.roundedLabel(16, weight: .medium))
-                .strikethrough(isDone, color: .secondary)
-                .foregroundStyle(isDone ? Color.secondary : Color.primary)
+                .typeStyle(.bodyMedium)
+                .strikethrough(isDone, color: Theme.fgSubtle)
+                .foregroundStyle(isDone ? Theme.fgSubtle : Theme.fg)
             Spacer()
             Text(isDone ? "đã đủ \(Rulebook.capNoun(for: category))" : "+\(Rulebook.points(for: category))")
-                .font(.roundedLabel(14, weight: .bold))
-                .foregroundStyle(isDone ? Color.secondary : Theme.flame)
+                .typeStyle(.caption)
+                .foregroundStyle(isDone ? Theme.fgSubtle : Theme.fg)
         }
+        .frame(minHeight: Theme.ControlHeight.md)
     }
 }

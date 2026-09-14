@@ -50,16 +50,16 @@ struct MainTabView: View {
         .onChange(of: router.requestedTab) { _, tab in
             if tab != nil, let requested = router.consume() { selection = requested }
         }
-        .tint(Theme.flame)
+        .tint(Theme.primary)
     }
 }
 
-/// A pre-tinted camera glyph so the Track bubble stays `Theme.flame` regardless of selection
+/// A pre-tinted camera glyph so the Track bubble stays `Theme.primary` regardless of selection
 /// (tab bars template-render plain symbols to grey when unselected).
 enum TrackTabIcon {
     static let image: UIImage = {
         let configuration = UIImage.SymbolConfiguration(pointSize: 20, weight: .semibold)
         let symbol = UIImage(systemName: "camera.fill", withConfiguration: configuration) ?? UIImage()
-        return symbol.withTintColor(UIColor(Theme.flame), renderingMode: .alwaysOriginal)
+        return symbol.withTintColor(UIColor(Theme.primary), renderingMode: .alwaysOriginal)
     }()
 }

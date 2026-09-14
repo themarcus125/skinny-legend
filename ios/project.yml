@@ -73,6 +73,15 @@ targets:
         CFBundleShortVersionString: "1.0"
         CFBundleVersion: "1"
         UILaunchScreen: {}
+        # Be Vietnam Pro, the app's text face (OFL — see Resources/ATTRIBUTION.md). Five static
+        # weights: 400/500/600/700/800. XcodeGen copies everything under `Resources/` into the
+        # bundle root, so these are flat file names.
+        UIAppFonts:
+          - BeVietnamPro-Regular.ttf
+          - BeVietnamPro-Medium.ttf
+          - BeVietnamPro-SemiBold.ttf
+          - BeVietnamPro-Bold.ttf
+          - BeVietnamPro-ExtraBold.ttf
         UIBackgroundModes:
           - remote-notification
         UIApplicationSceneManifest:

@@ -13,6 +13,7 @@ struct AccountView: View {
     @State private var isProfileSheetPresented = false
     @State private var isFeedbackSheetPresented = false
     @State private var isSignOutConfirming = false
+    private let modeStore = AppModeStore.shared
     @Environment(AppEnvironment.self) private var env
     @Environment(\.openURL) private var openURL
     @Environment(\.scenePhase) private var scenePhase
@@ -36,17 +37,18 @@ struct AccountView: View {
                                    size: 56)
                         VStack(alignment: .leading, spacing: 3) {
                             Text(name)
-                                .font(.roundedLabel(19, weight: .bold))
+                                .typeStyle(.h2)
+                                .foregroundStyle(Theme.fg)
                             if let rank = model.myRank, let total = model.myTotal {
                                 Text("Hạng \(rank) · \(total) điểm")
-                                    .font(.roundedLabel(13, weight: .medium))
-                                    .foregroundStyle(.secondary)
+                                    .typeStyle(.caption)
+                                    .foregroundStyle(Theme.fgMuted)
                             }
                         }
                         Spacer()
                         Image(systemName: "chevron.right")
-                            .font(.system(size: 13, weight: .bold))
-                            .foregroundStyle(.secondary)
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundStyle(Theme.fgSubtle)
                             .accessibilityHidden(true)
                     }
                     .padding(.vertical, 4)
@@ -69,7 +71,7 @@ struct AccountView: View {
                     }
                 )) {
                     Label("Nhắc nhở", systemImage: "bell.badge")
-                        .font(.roundedLabel(16, weight: .medium))
+                        .typeStyle(.bodyMedium)
                 }
                 .disabled(env.push.isBusy || env.push.permission == .denied)
                 .accessibilityHint("Nhắc bạn ghi nhận hoạt động mỗi tối")
@@ -82,10 +84,10 @@ struct AccountView: View {
                     } label: {
                         VStack(alignment: .leading, spacing: 4) {
                             Label("Mở Cài đặt", systemImage: "gearshape")
-                                .font(.roundedLabel(16, weight: .medium))
+                                .typeStyle(.bodyMedium)
                             Text("Thông báo đang tắt trong Cài đặt. Bật lại ở đó để nhận nhắc nhở.")
-                                .font(.roundedLabel(13, weight: .medium))
-                                .foregroundStyle(.secondary)
+                                .typeStyle(.caption)
+                                .foregroundStyle(Theme.fgMuted)
                         }
                     }
                     .accessibilityElement(children: .combine)
@@ -93,9 +95,7 @@ struct AccountView: View {
                 }
 
                 if let pushError = env.push.errorMessage {
-                    Label(pushError, systemImage: "exclamationmark.triangle.fill")
-                        .font(.roundedLabel(13, weight: .medium))
-                        .foregroundStyle(Theme.flame)
+                    AlertBanner(kind: .warning, message: pushError)
                 }
 
                 Picker(selection: Binding(
@@ -107,14 +107,14 @@ struct AccountView: View {
                     Text("English").tag(AppLocale.en)
                 } label: {
                     Label("Ngôn ngữ", systemImage: "globe")
-                        .font(.roundedLabel(16, weight: .medium))
+                        .typeStyle(.bodyMedium)
                 }
                 .pickerStyle(.menu)
                 .accessibilityHint("Đổi ngôn ngữ hiển thị của ứng dụng")
 
                 Link(destination: AppMode.momoFundURL) {
                     Label("Quỹ nhóm", systemImage: "banknote")
-                        .font(.roundedLabel(16, weight: .medium))
+                        .typeStyle(.bodyMedium)
                 }
                 .accessibilityElement(children: .combine)
                 .accessibilityHint("Mở trang quỹ Momo")
@@ -123,7 +123,7 @@ struct AccountView: View {
                     isFeedbackSheetPresented = true
                 } label: {
                     Label("Gửi góp ý", systemImage: "bubble.left.and.text.bubble.right")
-                        .font(.roundedLabel(16, weight: .medium))
+                        .typeStyle(.bodyMedium)
                 }
                 .buttonStyle(.plain)
 
@@ -132,7 +132,10 @@ struct AccountView: View {
                 } label: {
                     HStack {
                         Label("Đăng xuất", systemImage: "rectangle.portrait.and.arrow.right")
-                            .font(.roundedLabel(16, weight: .medium))
+                            .typeStyle(.bodyMedium)
+                            // The list's own `.tint` is the accent; the one destructive row
+                            // states its colour itself.
+                            .foregroundStyle(Theme.destructive)
                         if env.isSigningOut {
                             Spacer()
                             ProgressView()
@@ -142,21 +145,33 @@ struct AccountView: View {
                 .buttonStyle(.plain)
                 .disabled(env.isSigningOut)
 
+                #if DEBUG
+                // Debug builds only: the counterpart to "Dùng dữ liệu mẫu" on the sign-in screen.
+                if modeStore.isMockOverridden {
+                    Button {
+                        modeStore.leaveMockMode()
+                    } label: {
+                        Label("Thoát dữ liệu mẫu", systemImage: "testtube.2")
+                            .typeStyle(.bodyMedium)
+                    }
+                    .buttonStyle(.plain)
+                }
+                #endif
+
                 HStack {
                     Label("Phiên bản", systemImage: "info.circle")
-                        .font(.roundedLabel(16, weight: .medium))
+                        .typeStyle(.bodyMedium)
                     Spacer()
                     Text(AppMode.appVersion)
-                        .font(.roundedLabel(15, weight: .medium))
-                        .foregroundStyle(.secondary)
+                        .typeStyle(.caption)
+                        .foregroundStyle(Theme.fgMuted)
+                        .monospacedDigit()
                 }
             }
 
             if let errorMessage = model.errorMessage {
                 Section {
-                    Label(errorMessage, systemImage: "exclamationmark.triangle.fill")
-                        .font(.roundedLabel(14, weight: .medium))
-                        .foregroundStyle(Theme.flame)
+                    AlertBanner(kind: .destructive, message: errorMessage)
                 }
             }
 
@@ -164,6 +179,7 @@ struct AccountView: View {
                 Section {
                     ContentUnavailableView("Chưa có hoạt động", systemImage: "camera",
                                            description: Text("Ghi nhận hoạt động đầu tiên ở tab Ghi nhận."))
+                        .emptyStateStyle()
                 }
             }
 
@@ -185,11 +201,13 @@ struct AccountView: View {
                 } header: {
                     HStack {
                         Text(LocalDay.display(section.date))
-                            .font(.roundedLabel(13, weight: .bold))
+                            .typeStyle(.label)
+                            .foregroundStyle(Theme.fgSubtle)
                         Spacer()
                         Text("+\(section.points)")
-                            .font(.numerals(14))
-                            .foregroundStyle(Theme.flame)
+                            .font(.numerals(13))
+                            .monospacedDigit()
+                            .foregroundStyle(Theme.fg)
                     }
                     .accessibilityElement(children: .combine)
                     .accessibilityLabel("\(LocalDay.display(section.date)): \(section.points) điểm")
@@ -204,7 +222,9 @@ struct AccountView: View {
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
-        .background { WarmBackground() }
+        .listRowBackground(Theme.surface)
+        .background { AppBackground() }
+        .tint(Theme.primary)
         // A `String` title on purpose: a `LocalizedStringKey` title is bridged to the navigation bar
         // once and never re-resolves when the in-app language changes; this one is recomputed
         // because the view declares `@Environment(\.locale)`.
@@ -285,28 +305,29 @@ private struct HistoryRow: View {
                 .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
 
             VStack(alignment: .leading, spacing: 6) {
-                GlassEffectContainer(spacing: 6) {
-                    FlowLayout(spacing: 6, rowSpacing: 6) {
-                        ForEach(entry.categories) { category in
-                            CategoryChip(category: category)
-                        }
-                        if entry.categories.isEmpty {
-                            Text("Chưa chọn hạng mục")
-                                .font(.roundedLabel(13, weight: .medium))
-                                .foregroundStyle(.secondary)
-                        }
+                FlowLayout(spacing: 6, rowSpacing: 6) {
+                    ForEach(entry.categories) { category in
+                        CategoryChip(category: category)
+                    }
+                    if entry.categories.isEmpty {
+                        Text("Chưa chọn hạng mục")
+                            .typeStyle(.caption)
+                            .foregroundStyle(Theme.fgSubtle)
                     }
                 }
                 HStack(spacing: 6) {
                     if entry.status == .pending {
                         Text("Chưa xác nhận")
-                            .font(.roundedLabel(12, weight: .bold))
-                            .foregroundStyle(Theme.ember)
+                            .typeStyle(.label)
+                            .foregroundStyle(Theme.warning)
+                            .padding(.horizontal, Theme.Space.x2 - 2)
+                            .padding(.vertical, 2)
+                            .background(Theme.warningSoft, in: Capsule())
                     }
                     if let placeName = entry.placeName {
                         Label(placeName, systemImage: "mappin.circle.fill")
-                            .font(.roundedLabel(12, weight: .medium))
-                            .foregroundStyle(.secondary)
+                            .typeStyle(.caption)
+                            .foregroundStyle(Theme.fgMuted)
                             .lineLimit(1)
                     }
                 }

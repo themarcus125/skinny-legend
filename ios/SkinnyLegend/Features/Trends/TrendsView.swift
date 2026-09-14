@@ -19,7 +19,7 @@ struct TrendsView: View {
 
     var body: some View {
         ZStack {
-            WarmBackground()
+            AppBackground()
             switch model.state {
             case .loading:
                 ProgressView()
@@ -30,8 +30,9 @@ struct TrendsView: View {
                     Text(message)
                 } actions: {
                     Button("Thử lại") { Task { await model.load() } }
-                        .buttonStyle(.glassProminent)
+                        .buttonStyle(.ds(.primary, size: .md))
                 }
+                .emptyStateStyle()
             case .loaded(let trends):
                 ScrollView {
                     VStack(spacing: 16) {
@@ -80,18 +81,18 @@ struct TrendsView: View {
                 WeeklyBar(id: "\(week.week)-avg", week: label, series: Self.groupSeries, points: week.groupAvg),
             ]
         }
-        return GlassCard {
+        return SurfaceCard {
             VStack(alignment: .leading, spacing: 12) {
                 Text("Điểm theo tuần")
-                    .font(.roundedLabel(13, weight: .bold))
-                    .foregroundStyle(.secondary)
+                    .typeStyle(.label)
+                    .foregroundStyle(Theme.fgSubtle)
                 Chart(bars) { bar in
                     BarMark(x: .value("Tuần", bar.week), y: .value("Điểm", bar.points))
                         .foregroundStyle(by: .value("Nhóm", bar.series))
                         .position(by: .value("Nhóm", bar.series))
                         .cornerRadius(6)
                 }
-                .chartForegroundStyleScale([Self.mineSeries: Theme.flame, Self.groupSeries: Theme.exercise.opacity(0.55)])
+                .chartForegroundStyleScale([Self.mineSeries: Theme.primary, Self.groupSeries: Theme.info.opacity(0.45)])
                 .chartLegend(position: .bottom, spacing: 8)
                 .frame(height: 200)
             }
@@ -101,11 +102,11 @@ struct TrendsView: View {
     // MARK: - Calendar heatmap
 
     private var heatmap: some View {
-        GlassCard {
+        SurfaceCard {
             VStack(alignment: .leading, spacing: 12) {
                 Text("Ngày hoạt động")
-                    .font(.roundedLabel(13, weight: .bold))
-                    .foregroundStyle(.secondary)
+                    .typeStyle(.label)
+                    .foregroundStyle(Theme.fgSubtle)
                 Chart(model.heatCells) { cell in
                     RectangleMark(
                         x: .value("Thứ", cell.weekdayLabel),
@@ -114,7 +115,7 @@ struct TrendsView: View {
                     .foregroundStyle(by: .value("Điểm", cell.points))
                     .cornerRadius(6)
                 }
-                .chartForegroundStyleScale(range: Gradient(colors: [Theme.flame.opacity(0.10), Theme.ember, Theme.flame]))
+                .chartForegroundStyleScale(range: Gradient(colors: [Theme.track, Theme.primarySoft, Theme.primary]))
                 .chartXScale(domain: TrendsModel.weekdayLabels)
                 .chartYScale(domain: Array(model.weekKeys.reversed()))
                 // Both axes keep language-neutral domain values (the tap gesture maps them back
@@ -123,7 +124,7 @@ struct TrendsView: View {
                     AxisMarks { value in
                         AxisValueLabel {
                             if let weekday = value.as(String.self) {
-                                Text(TrendsModel.weekdayTitle(weekday)).font(.roundedLabel(11, weight: .medium))
+                                Text(TrendsModel.weekdayTitle(weekday)).font(.brand(11, weight: .semibold)).foregroundStyle(Theme.fgSubtle)
                             }
                         }
                     }
@@ -132,7 +133,7 @@ struct TrendsView: View {
                     AxisMarks(position: .leading) { value in
                         AxisValueLabel {
                             if let week = value.as(String.self) {
-                                Text(TrendsModel.weekLabel(week)).font(.roundedLabel(11, weight: .medium))
+                                Text(TrendsModel.weekLabel(week)).font(.brand(11, weight: .semibold)).foregroundStyle(Theme.fgSubtle)
                             }
                         }
                     }
@@ -171,8 +172,8 @@ struct TrendsView: View {
                     }
                 }
                 Text("Chạm vào một ô để xem hoạt động của ngày đó.")
-                    .font(.roundedLabel(12, weight: .medium))
-                    .foregroundStyle(.secondary)
+                    .typeStyle(.caption)
+                    .foregroundStyle(Theme.fgMuted)
             }
         }
     }
@@ -191,15 +192,15 @@ struct TrendsView: View {
         let slices = Category.allCases
             .map { CategorySlice(id: $0, label: $0.shortLabel, points: trends.byCategory[$0]) }
             .filter { $0.points > 0 }
-        return GlassCard {
+        return SurfaceCard {
             VStack(alignment: .leading, spacing: 12) {
                 Text("Điểm theo hạng mục")
-                    .font(.roundedLabel(13, weight: .bold))
-                    .foregroundStyle(.secondary)
+                    .typeStyle(.label)
+                    .foregroundStyle(Theme.fgSubtle)
                 if slices.isEmpty {
                     Text("Chưa có điểm nào được ghi nhận.")
-                        .font(.roundedLabel(15, weight: .medium))
-                        .foregroundStyle(.secondary)
+                        .typeStyle(.bodyMedium)
+                        .foregroundStyle(Theme.fgMuted)
                 } else {
                     Chart(slices) { slice in
                         SectorMark(angle: .value("Điểm", slice.points), innerRadius: .ratio(0.618), angularInset: 2)
@@ -207,17 +208,17 @@ struct TrendsView: View {
                             .cornerRadius(4)
                     }
                     .chartForegroundStyleScale([
-                        Category.exercise.shortLabel: Theme.exercise,
-                        Category.meal.shortLabel: Theme.meal,
-                        Category.group.shortLabel: Theme.group,
+                        Category.exercise.shortLabel: Theme.info,
+                        Category.meal.shortLabel: Theme.success,
+                        Category.group.shortLabel: Theme.primary,
                     ])
                     .chartLegend(position: .bottom, spacing: 8)
                     .frame(height: 200)
                 }
-                HStack(spacing: 10) {
+                HStack(spacing: Theme.Space.x3) {
                     Text("Thưởng chuỗi")
-                        .font(.roundedLabel(14, weight: .medium))
-                        .foregroundStyle(.secondary)
+                        .typeStyle(.caption)
+                        .foregroundStyle(Theme.fgMuted)
                     Spacer()
                     PointsBadge(points: trends.streakBonus)
                 }
@@ -229,18 +230,18 @@ struct TrendsView: View {
 
     private func rankLine(_ trends: TrendsDTO) -> some View {
         let worst = max(trends.weeks.map(\.rank).max() ?? 1, 2)
-        return GlassCard {
+        return SurfaceCard {
             VStack(alignment: .leading, spacing: 12) {
                 Text("Thứ hạng theo tuần")
-                    .font(.roundedLabel(13, weight: .bold))
-                    .foregroundStyle(.secondary)
+                    .typeStyle(.label)
+                    .foregroundStyle(Theme.fgSubtle)
                 Chart(trends.weeks) { week in
                     LineMark(x: .value("Tuần", TrendsModel.weekLabel(week.week)), y: .value("Hạng", Double(week.rank)))
-                        .foregroundStyle(Theme.flame)
+                        .foregroundStyle(Theme.primary)
                         .interpolationMethod(.catmullRom)
                         .lineStyle(StrokeStyle(lineWidth: 3, lineCap: .round))
                     PointMark(x: .value("Tuần", TrendsModel.weekLabel(week.week)), y: .value("Hạng", Double(week.rank)))
-                        .foregroundStyle(Theme.flame)
+                        .foregroundStyle(Theme.primary)
                         .symbolSize(80)
                 }
                 // Rank 1 is best, so the axis runs downwards.
@@ -250,7 +251,7 @@ struct TrendsView: View {
                         AxisGridLine()
                         AxisValueLabel {
                             if let rank = value.as(Double.self) {
-                                Text("#\(Int(rank))").font(.roundedLabel(11, weight: .medium))
+                                Text("#\(Int(rank))").font(.brand(11, weight: .semibold)).foregroundStyle(Theme.fgSubtle)
                             }
                         }
                     }
