@@ -83,12 +83,12 @@ describe('manifest', () => {
 });
 
 describe('models.json', () => {
-  it('parses and lists the three SKI-41 candidates with pricing', async () => {
+  it('parses and lists the SKI-41 candidates with pricing', async () => {
     const models = parseModelsFile(JSON.parse(await readFile(MODELS_PATH, 'utf8')));
-    expect(models.models.map((m) => m.id)).toEqual(['qwen/qwen3.7-flash', 'z-ai/glm-4.6v', 'moonshotai/kimi-k2.5-vl']);
+    expect(models.models.map((m) => m.id)).toEqual(['qwen/qwen3.7-flash', 'z-ai/glm-4.6v', 'z-ai/glm-5.3-flash', 'google/gemini-3.1-flash-lite']);
     expect(models.models.every((m) => typeof m.inputPerMTokensUsd === 'number' && typeof m.outputPerMTokensUsd === 'number')).toBe(true);
-    // These ids are unverified on purpose; the status text is what tells the operator so.
-    expect(models.models.every((m) => /CANDIDATE/.test(m.status ?? ''))).toBe(true);
+    // Every id carries the date it was last verified against the OpenRouter catalogue.
+    expect(models.models.every((m) => /verified \d{4}-\d{2}-\d{2}/.test(m.status ?? ''))).toBe(true);
     expect(models.pricing?.assumedPromptTokens).toBeGreaterThan(0);
   });
 

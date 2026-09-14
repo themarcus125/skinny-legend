@@ -97,9 +97,10 @@ key the script prints how to get one and exits `1`.
 `models.json` ships three ids:
 
 ```
-qwen/qwen3.7-flash        <- the current VISION_MODEL default
+qwen/qwen3.7-flash            <- the current VISION_MODEL default (cheapest: $0.03/M in)
 z-ai/glm-4.6v
-moonshotai/kimi-k2.5-vl
+z-ai/glm-5.3-flash
+google/gemini-3.1-flash-lite  <- non-Chinese control
 ```
 
 **Check all three against <https://openrouter.ai/models> before the first paid run**, and
