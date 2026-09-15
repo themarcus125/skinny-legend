@@ -1,0 +1,4 @@
+# Cloudflare Pages SPA fallback: every route is client-side (React Router), so a hard refresh
+# on /leaderboard must be answered with the shell, not a 404. The service worker has its own
+# fallback (workbox.navigateFallback) for navigations it answers offline; this is the edge half.
+/*    /index.html   200

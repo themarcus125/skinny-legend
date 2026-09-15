@@ -10,6 +10,7 @@ Four providers, one order. Each step below links to the runbook that has the cli
 | 4 | Railway project, Postgres, `api` service, env vars, migrate + seed, domain | [`railway.md`](./railway.md) | 1–3 (the API will not boot without R2, OpenRouter and Firebase vars) |
 | 5 | Vercel admin project, env vars, `CORS_ORIGINS` back on Railway | [`admin-vercel.md`](./admin-vercel.md) | 3, 4 |
 | 6 | Firebase authorized domains for the Vercel domain | [`firebase.md`](./firebase.md) §6 | 5 |
+| 6b | Cloudflare Pages project for the member PWA, env vars, `CORS_ORIGINS` and Firebase authorized domains for the Pages domain | [`web-pages.md`](./web-pages.md) | 3, 4 |
 | 7 | Promote the first admin (SQL) | [`railway.md`](./railway.md) §4 | 5, 6, plus one sign-in from the dashboard |
 | 8 | `cleanup` cron service (`railway.cleanup.json`, `0 3 * * 1`) | [`railway.md`](./railway.md) §6 | 4 |
 | 9 | Apple: Sign in with Apple key + APNs key, uploaded to Firebase | [`firebase.md`](./firebase.md) §3, §5 | **SKI-42** (paid Apple Developer account) |
@@ -29,6 +30,8 @@ these anywhere:
 | --- | --- | --- |
 | **API domain** (e.g. `https://skinny-legend-api.up.railway.app`) | Railway → `api` → Settings → Networking | `NEXT_PUBLIC_API_BASE_URL` on Vercel; Release `API_BASE_URL` in `ios/project.yml` |
 | **Admin domain** (e.g. `https://skinny-legend-admin.vercel.app`) | Vercel project | `CORS_ORIGINS` on Railway; Firebase authorized domains |
+| **Web PWA domain** (e.g. `https://skinny-legend.pages.dev`) | Cloudflare Pages project | `CORS_ORIGINS` on Railway; Firebase authorized domains |
+| **Web Push certificate** ("Key pair") | Firebase → Project settings → Cloud Messaging → Web Push certificates | `VITE_FIREBASE_VAPID_KEY` on Cloudflare Pages |
 | **Firebase project id** | Firebase → Project settings | `FIREBASE_PROJECT_ID` (Railway) + `NEXT_PUBLIC_FIREBASE_PROJECT_ID` (Vercel) — must match |
 | **Firebase web config**: `apiKey`, `authDomain`, `projectId`, `appId` | Firebase → Project settings → Your apps → Web app | the four `NEXT_PUBLIC_FIREBASE_*` vars |
 | **`REVERSED_CLIENT_ID`** | inside the downloaded `GoogleService-Info.plist` | `GOOGLE_REVERSED_CLIENT_ID` in `ios/project.yml` |

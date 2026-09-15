@@ -14,6 +14,9 @@ reject it outright.
 - `packages/shared` — Drizzle schema, scoring engine, date helpers
 - `apps/api` — Hono REST API (Railway)
 - `apps/admin` — Next.js 16 admin dashboard (Vercel), standalone: no `@skinny/shared` dependency
+- `apps/web` — Vite + React member PWA (Cloudflare Pages), the web twin of the iOS app
+- `packages/ui` — the design system shared by `apps/web` and `apps/admin`
+- `packages/api-client` — the typed member API client (+ its seeded mock), shared by `apps/web`
 - `ios/` — SwiftUI app
 
 ## Local dev
@@ -220,6 +223,53 @@ this variable is the single most likely cause of "the dashboard loads but every 
    dashboard shows "Không kết nối được máy chủ…".
 4. Sign in once, then promote yourself with the SQL in "Bootstrapping the first admin" above;
    until then the dashboard shows `/not-authorized`.
+
+## Web PWA (`apps/web`)
+
+The member app on the web: the same screens as the iOS app — Tổng quan, Xếp hạng, Xu hướng, Ghi
+nhận, Tài khoản — as an installable PWA. Vite 8 + React 19, React Router, TanStack Query,
+Tailwind v4 over `@skinny/ui`, `@skinny/api-client` for the wire, `vite-plugin-pwa` for the
+service worker and manifest, Firebase for Google sign-in and FCM web push. Vietnamese is the
+source of truth; English is generated from the iOS String Catalog.
+
+### Local dev
+
+```bash
+pnpm --filter @skinny/web dev            # http://localhost:5173
+```
+
+`VITE_MOCK=1` (in `apps/web/.env.local`, or inline) swaps the real client for the seeded mock, so
+every screen renders with no API, no database and no Firebase project — that is also how the
+Playwright suite runs. Without it, fill the `VITE_FIREBASE_*` variables and point
+`VITE_API_BASE_URL` at the local API on port 3000, whose `CORS_ORIGINS` must then include
+`http://localhost:5173`.
+
+Copy is edited in `apps/web/messages/vi.json` (plus `web-only.json` for strings the iOS catalog
+has never seen, as `vi`/`en` pairs). After touching either:
+
+```bash
+pnpm --filter @skinny/web seed:messages  # regenerates messages/en.json from the iOS catalog
+```
+
+`en.json` is generated output — never edit it by hand. `pnpm --filter @skinny/web test` runs the
+seeder first, so an untranslated string fails the run instead of shipping.
+
+### Tests
+
+```bash
+pnpm --filter @skinny/web test           # Vitest + React Testing Library (jsdom)
+pnpm --filter @skinny/web lint           # ESLint + lint-i18n (no Vietnamese literals in src/)
+pnpm --filter @skinny/web typecheck
+pnpm --filter @skinny/web test:e2e       # Playwright, iPhone viewport, against `vite preview`
+```
+
+### Deploy (Cloudflare Pages)
+
+Framework preset "None", root directory `apps/web`, output `apps/web/dist`, Node 22, and a build
+command that builds `@skinny/shared` first. The full runbook — every `VITE_*` variable, the SPA
+`_redirects` fallback, the two service-worker rules worth knowing, the `CORS_ORIGINS` and Firebase
+authorized-domain additions, and the post-deploy checklist — is in
+[`docs/deploy/web-pages.md`](docs/deploy/web-pages.md).
 
 ## iOS app (`ios/`)
 
