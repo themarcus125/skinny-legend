@@ -13,6 +13,13 @@ export interface ProcessSpec {
   port: number;
 }
 
+/**
+ * `vite preview` binds "localhost", which on this machine is ::1 only, while `next start` and
+ * the API bind 0.0.0.0. Probing the name rather than 127.0.0.1 lets Node try both families, so
+ * one check covers every service.
+ */
+const LOOPBACK = 'localhost';
+
 const children: ChildProcess[] = [];
 
 /**
@@ -23,7 +30,7 @@ const children: ChildProcess[] = [];
  * so the service is adopted as is rather than started a second time.
  */
 export async function startService(spec: ProcessSpec): Promise<void> {
-  if (process.env.E2E_REUSE === '1' && !(await isPortFree(spec.port))) {
+  if (process.env.E2E_REUSE === '1' && !(await isPortFree(spec.port, LOOPBACK))) {
     console.log(`[e2e] reusing ${spec.name} already listening on ${spec.port}`);
     return;
   }
@@ -49,7 +56,7 @@ export async function startService(spec: ProcessSpec): Promise<void> {
   });
 
   try {
-    await waitForPort(spec.port, { timeoutMs: 180_000 });
+    await waitForPort(spec.port, { host: LOOPBACK, timeoutMs: 180_000 });
   } catch {
     throw new Error(
       `${spec.name} did not come up on port ${spec.port}${exited === null ? '' : ` (it exited with ${exited})`} — read ${logPath}.`,

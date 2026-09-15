@@ -63,6 +63,10 @@ export default async function globalSetup(): Promise<void> {
   };
 
   const adminEnv = {
+    // apps/admin/.env.local carries NEXT_PUBLIC_MOCK=1 for local previews, and Next loads it at
+    // build time for any variable the environment has not already set. Pinning it to 0 is what
+    // keeps the e2e build talking to the real API and the real Firebase emulator.
+    NEXT_PUBLIC_MOCK: '0',
     NEXT_PUBLIC_API_BASE_URL: API_URL,
     NEXT_PUBLIC_FIREBASE_API_KEY: FIREBASE_WEB_CONFIG.apiKey,
     NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: FIREBASE_WEB_CONFIG.authDomain,
@@ -72,6 +76,7 @@ export default async function globalSetup(): Promise<void> {
   };
 
   const webEnv = {
+    VITE_MOCK: '0',
     VITE_API_BASE_URL: API_URL,
     VITE_FIREBASE_API_KEY: FIREBASE_WEB_CONFIG.apiKey,
     VITE_FIREBASE_AUTH_DOMAIN: FIREBASE_WEB_CONFIG.authDomain,
