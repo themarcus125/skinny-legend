@@ -28,7 +28,25 @@ describe('safeDeepLink', () => {
     expect(safeDeepLink('')).toBe(DEFAULT_DEEP_LINK);
     expect(safeDeepLink('https://evil.com')).toBe(DEFAULT_DEEP_LINK);
     expect(safeDeepLink('javascript:alert(1)')).toBe(DEFAULT_DEEP_LINK);
-    expect(safeDeepLink('track')).toBe(DEFAULT_DEEP_LINK);
+    expect(safeDeepLink('leaderboard/u1')).toBe(DEFAULT_DEEP_LINK);
+  });
+
+  // The API sends iOS's vocabulary (a bare tab name, what `PushPayload.tab(from:)` parses), so
+  // the web has to speak it too — `track` lands on Track because it is mapped, not because it
+  // happens to be the fallback.
+  it('maps the bare tab names the API sends onto routes', () => {
+    expect(safeDeepLink('track')).toBe('/track');
+    expect(safeDeepLink('dashboard')).toBe('/');
+    expect(safeDeepLink('leaderboard')).toBe('/leaderboard');
+    expect(safeDeepLink('trends')).toBe('/trends');
+    expect(safeDeepLink('account')).toBe('/account');
+    expect(safeDeepLink('feed')).toBe('/feed');
+    expect(safeDeepLink('map')).toBe('/feed/map');
+  });
+
+  it('does not treat an inherited Object property as a tab name', () => {
+    expect(safeDeepLink('constructor')).toBe(DEFAULT_DEEP_LINK);
+    expect(safeDeepLink('toString')).toBe(DEFAULT_DEEP_LINK);
   });
 });
 

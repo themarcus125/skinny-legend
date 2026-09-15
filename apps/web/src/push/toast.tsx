@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router';
 import { useTranslations } from 'use-intl';
 import { cn } from '@skinny/ui';
 import { CloseGlyph } from '@/app/icons';
+import { observeServiceWorkerDeepLinks } from './deep-link';
 import { observeForegroundMessages, type PushMessage } from './messaging';
 
 /** How long a toast stays before it dismisses itself. */
@@ -66,8 +67,9 @@ export function Toast({
 }
 
 /**
- * Subscribes to foreground FCM messages and renders the most recent one. Mounted once, inside
- * the app shell, so the toast is only ever possible behind a signed-in session.
+ * Subscribes to foreground FCM messages and renders the most recent one, and to the deep links
+ * the FCM service worker forwards when a notification is tapped with the app already open.
+ * Mounted once, inside the app shell, so both are only ever possible behind a signed-in session.
  *
  * A browser with no messaging support (or a mock/preview build with no Firebase project) simply
  * never gets a callback, so this renders nothing and costs one dynamic import that resolves to
@@ -78,6 +80,17 @@ export function PushToastHost() {
   const navigate = useNavigate();
 
   useEffect(() => observeForegroundMessages(setMessage), []);
+
+  // A tap on a background notification: the worker focused this window and posted the
+  // destination, because it is not allowed to navigate a window it does not control.
+  useEffect(
+    () =>
+      observeServiceWorkerDeepLinks((path) => {
+        setMessage(null);
+        void navigate(path);
+      }),
+    [navigate],
+  );
 
   useEffect(() => {
     if (!message) return;

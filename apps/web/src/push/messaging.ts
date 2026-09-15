@@ -40,8 +40,31 @@ export const DEFAULT_DEEP_LINK = '/track';
  */
 const SAFE_PATH = /^\/(?![/\\])/;
 
+/**
+ * The API speaks iOS's vocabulary on the wire: `data.deepLink` is a bare tab name, which is what
+ * `PushPayload.tab(from:)` parses into an `AppTab` (ios/SkinnyLegend/Core/Push/PushRouter.swift).
+ * A bare name is not a path, so without this table `'track'` would fail `SAFE_PATH` and fall back
+ * — which happens to land on Track today only because Track *is* the default. Spelled out so a
+ * future `feed` link goes to Feed instead of silently to Track. Keys mirror `AppTab` plus `map`.
+ *
+ * A null prototype, so `deepLink: 'constructor'` off the wire cannot resolve to an inherited
+ * `Object.prototype` member instead of a route.
+ */
+const TAB_PATHS: Record<string, string | undefined> = Object.assign(Object.create(null), {
+  track: '/track',
+  dashboard: '/',
+  leaderboard: '/leaderboard',
+  trends: '/trends',
+  account: '/account',
+  feed: '/feed',
+  map: '/feed/map',
+});
+
 export function safeDeepLink(link: string | undefined): string {
-  return link !== undefined && SAFE_PATH.test(link) ? link : DEFAULT_DEEP_LINK;
+  if (link === undefined) return DEFAULT_DEEP_LINK;
+  const tab = TAB_PATHS[link];
+  if (tab !== undefined) return tab;
+  return SAFE_PATH.test(link) ? link : DEFAULT_DEEP_LINK;
 }
 
 /** A foreground message, reduced to what the toast renders. */

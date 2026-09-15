@@ -38,12 +38,28 @@ const config = {
 const DEFAULT_DEEP_LINK = '/track';
 
 /**
+ * The bare tab names the API sends on `data.deepLink` (iOS's vocabulary — `PushPayload.tab(from:)`
+ * parses them), mapped onto this app's routes. Mirrors `TAB_PATHS` in `src/push/messaging.ts`.
+ */
+const TAB_PATHS = {
+  track: '/track',
+  dashboard: '/',
+  leaderboard: '/leaderboard',
+  trends: '/trends',
+  account: '/account',
+  feed: '/feed',
+  map: '/feed/map',
+};
+
+/**
  * A same-origin, in-app path. `//evil.com/x` and `/\\evil.com/x` both start with `/` and both
  * resolve to a different origin, so a `deepLink` off the wire is checked twice: the shape, and
- * then the origin the browser actually resolves it to.
+ * then the origin the browser actually resolves it to. A known tab name short-circuits both.
  */
 function safeDeepLink(link) {
-  if (typeof link !== 'string' || !/^\/(?![/\\])/.test(link)) return DEFAULT_DEEP_LINK;
+  if (typeof link !== 'string') return DEFAULT_DEEP_LINK;
+  if (Object.prototype.hasOwnProperty.call(TAB_PATHS, link)) return TAB_PATHS[link];
+  if (!/^\/(?![/\\])/.test(link)) return DEFAULT_DEEP_LINK;
   try {
     return new URL(link, self.location.origin).origin === self.location.origin
       ? link
@@ -81,21 +97,28 @@ if (config.apiKey && config.projectId && config.messagingSenderId && config.appI
 }
 
 /**
- * Tapping the notification focuses the app if it is already open — navigating that tab to the
- * deep link — and otherwise opens it there. `waitUntil` keeps the worker alive for the lookup.
+ * Tapping the notification focuses the app if it is already open, and otherwise opens it at the
+ * deep link. `waitUntil` keeps the worker alive for the lookup.
+ *
+ * The focused window is NOT navigated from here. `WindowClient.navigate()` rejects with a
+ * `TypeError` unless the client is controlled by the *calling* worker, and every app window is
+ * controlled by Workbox's `/sw.js` at scope `/`, never by this worker at
+ * `/firebase-cloud-messaging-push-scope`. `postMessage` has no such rule, so the deep link is
+ * handed to the app instead and `src/push/deep-link.ts` routes it — which is also nicer: the
+ * router navigates without a full reload. `openWindow` still covers the no-window case.
  */
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   const data = event.notification.data || {};
-  const target = new URL(safeDeepLink(data.deepLink), self.location.origin).href;
+  const deepLink = safeDeepLink(data.deepLink);
+  const target = new URL(deepLink, self.location.origin).href;
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windows) => {
       for (const client of windows) {
         if (new URL(client.url).origin !== self.location.origin) continue;
-        return client.focus().then((focused) => {
-          const win = focused || client;
-          return 'navigate' in win ? win.navigate(target) : undefined;
+        return Promise.resolve(client.focus()).then((focused) => {
+          (focused || client).postMessage({ type: 'deepLink', deepLink });
         });
       }
       return clients.openWindow(target);
