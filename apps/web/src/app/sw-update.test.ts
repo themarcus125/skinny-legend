@@ -59,9 +59,9 @@ describe('checkForWorkerUpdates', () => {
     const update = vi.fn(() => Promise.resolve());
     const registration = { update } as unknown as ServiceWorkerRegistration;
     const serviceWorker = { ready: Promise.resolve(registration) } as unknown as ServiceWorkerContainer;
-    const doc: EventTarget & { visibilityState: DocumentVisibilityState } = Object.assign(new EventTarget(), {
-      visibilityState: 'visible',
-    });
+    const doc = Object.assign(new EventTarget(), { visibilityState: 'visible' }) as EventTarget & {
+      visibilityState: DocumentVisibilityState;
+    };
     const timers: Array<() => void> = [];
     const win = Object.assign(new EventTarget(), {
       setInterval: vi.fn((handler: () => void) => {
