@@ -19,6 +19,8 @@ export const queryKeys = {
   leaderboard: ['leaderboard'] as const,
   trends: ['trends'] as const,
   feed: ['feed'] as const,
+  /** The prefix every map query shares — invalidating it clears every `days` window. */
+  map: ['map'] as const,
   mapPins: (days: number) => ['map', days] as const,
   myEntries: ['entries', 'mine'] as const,
   /** One heatmap square's rows: a bounded walk of `myEntries`, cached per day (Task 11). */

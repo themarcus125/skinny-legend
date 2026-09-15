@@ -1,16 +1,16 @@
-import { useId, useRef, useState, type ReactNode } from 'react';
+import { useId, useState, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslations } from 'use-intl';
 import type { UserDto } from '@skinny/api-client';
 import { AlertBanner, Avatar, SurfaceCard, cn } from '@skinny/ui';
 import { ChevronRightGlyph } from '@/app/icons';
 import { LargeTitle } from '@/app/large-title';
-import { useModalSheet } from '@/app/use-modal-sheet';
 import { useSession } from '@/auth/session';
 import { APP_VERSION, MOMO_FUND_URL, readMockOverride, writeMockOverride } from '@/lib/app-mode';
 import { describeError, useApi } from '@/lib/api';
 import { queryKeys } from '@/lib/query';
 import { Button } from '@/ui/button';
+import { ConfirmDialog } from './confirm-dialog';
 import { FeedbackSheet } from './feedback-sheet';
 import { AccountHistory } from './history';
 import { LanguagePicker } from './language-picker';
@@ -252,57 +252,6 @@ function ActionRow({
           {hint}
         </p>
       ) : null}
-    </div>
-  );
-}
-
-/**
- * The confirmation in front of an irreversible action — iOS's `confirmationDialog`. It reuses
- * `useModalSheet` for the four things that make it modal, and is centred rather than a bottom
- * sheet because it is a question, not a form.
- */
-function ConfirmDialog({
-  title,
-  confirmLabel,
-  busy,
-  onConfirm,
-  onCancel,
-}: {
-  title: string;
-  confirmLabel: string;
-  busy: boolean;
-  onConfirm: () => void;
-  onCancel: () => void;
-}) {
-  const t = useTranslations();
-  const titleId = useId();
-  const panel = useRef<HTMLDivElement>(null);
-  useModalSheet({ panelRef: panel, onDismiss: onCancel });
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center px-6">
-      <div aria-hidden="true" onClick={onCancel} className="absolute inset-0 bg-black/40" />
-      <div
-        ref={panel}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        tabIndex={-1}
-        data-testid="confirm-dialog"
-        className="bg-background shadow-popover relative flex w-full max-w-[360px] flex-col gap-4 rounded-xl p-5 outline-none"
-      >
-        <h2 id={titleId} className="type-h3">
-          {title}
-        </h2>
-        <div className="flex flex-col gap-2">
-          <Button variant="destructive" fullWidth disabled={busy} onClick={onConfirm}>
-            {confirmLabel}
-          </Button>
-          <Button variant="secondary" fullWidth onClick={onCancel}>
-            {t('common.cancel')}
-          </Button>
-        </div>
-      </div>
     </div>
   );
 }

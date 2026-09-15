@@ -21,6 +21,20 @@ const JPEG_QUALITY = 0.9;
 /** The longest edge a converted photo keeps, matching iOS's `ImagePipeline.maxDimension`. */
 const MAX_DIMENSION = 2048;
 
+/**
+ * The longest edge an avatar keeps — `ImagePipeline.prepareAvatar`'s. It is rendered at 96 px at
+ * most (the profile sheet), so 512 covers a 3× display with room to spare and turns a 12 MP camera
+ * photo into a few tens of KB.
+ */
+export const AVATAR_MAX_DIMENSION = 512;
+
+/**
+ * The largest source file the client will even try to decode. R2 and the API would take more, but
+ * a browser decoding a 40 MP HEIC on a phone is a tab crash, and an avatar is never worth it. The
+ * code is the API's own `photo_invalid`, so the screen renders the catalog message it already has.
+ */
+export const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
+
 export interface Uploadable {
   blob: Blob;
   contentType: UploadContentType;
@@ -31,10 +45,10 @@ export interface Uploadable {
  * can do without a wasm decoder. Safari decodes HEIC natively (it is the format its own camera
  * writes), which is exactly the browser that produces them.
  */
-async function canvasToJpeg(file: Blob): Promise<Blob> {
+async function canvasToJpeg(file: Blob, maxDimension = MAX_DIMENSION): Promise<Blob> {
   const bitmap = await createImageBitmap(file);
   try {
-    const scale = Math.min(1, MAX_DIMENSION / Math.max(bitmap.width, bitmap.height));
+    const scale = Math.min(1, maxDimension / Math.max(bitmap.width, bitmap.height));
     const canvas = document.createElement('canvas');
     canvas.width = Math.max(1, Math.round(bitmap.width * scale));
     canvas.height = Math.max(1, Math.round(bitmap.height * scale));
@@ -93,6 +107,34 @@ export async function uploadWithProgress(
   const { blob, contentType } = await toUploadable(file, convert);
   const presign = await api.presign({ kind, contentType });
   await api.uploadToPresign(presign.url, blob, contentType, onProgress);
+  onProgress(1);
+  return presign.key;
+}
+
+/**
+ * The avatar case. Unlike a photo, an avatar is **always** re-encoded, whatever its type: the
+ * source is a camera roll image that will be drawn in a 40–96 px circle, so the point of the
+ * conversion is the 512 px downscale, not the format (ruling R25 only ever covered the format).
+ * A source over `MAX_UPLOAD_BYTES` is refused before `presign` is even asked for a URL.
+ */
+export async function uploadAvatar(
+  api: ApiClient,
+  file: Blob,
+  onProgress: (fraction: number) => void,
+  /** The conversion seam — injected in tests, where jsdom has no canvas to decode with. */
+  convert: (file: Blob) => Promise<Blob> = (source) => canvasToJpeg(source, AVATAR_MAX_DIMENSION),
+): Promise<string> {
+  if (file.size > MAX_UPLOAD_BYTES) {
+    throw new ApiError(0, 'photo_invalid', 'The photo is too large to process');
+  }
+  let blob: Blob;
+  try {
+    blob = await convert(file);
+  } catch {
+    throw new ApiError(0, 'photo_invalid', 'The photo could not be decoded');
+  }
+  const presign = await api.presign({ kind: 'avatar', contentType: 'image/jpeg' });
+  await api.uploadToPresign(presign.url, blob, 'image/jpeg', onProgress);
   onProgress(1);
   return presign.key;
 }

@@ -31,6 +31,12 @@ export interface VerdictSheetProps {
   onDismiss: () => void;
   /** The primary button: dismiss when nothing needs saving, otherwise `confirmEntry`. */
   onPrimary: () => void;
+  /**
+   * "Xoá" — offered only in `edit` mode, where the sheet is a correction to an entry that already
+   * exists (`AccountView`'s swipe action). A freshly created entry has no delete affordance on
+   * iOS either: abandoning that sheet already leaves the entry uncounted.
+   */
+  onDelete?: () => void;
 }
 
 /**
@@ -46,7 +52,15 @@ export interface VerdictSheetProps {
  * The state machine lives in `verdict-model.ts`; this file only renders it and reports edits
  * back through `onChange`. The `PATCH` itself belongs to the screen.
  */
-export function VerdictSheet({ state, onChange, lat, lng, onDismiss, onPrimary }: VerdictSheetProps) {
+export function VerdictSheet({
+  state,
+  onChange,
+  lat,
+  lng,
+  onDismiss,
+  onPrimary,
+  onDelete,
+}: VerdictSheetProps) {
   const t = useTranslations();
   const titleId = useId();
   const panel = useRef<HTMLDivElement>(null);
@@ -225,7 +239,7 @@ export function VerdictSheet({ state, onChange, lat, lng, onDismiss, onPrimary }
           ) : null}
         </div>
 
-        <div className="border-border border-t px-4 pt-3 pb-[max(12px,env(safe-area-inset-bottom))]">
+        <div className="border-border border-t flex flex-col gap-2 px-4 pt-3 pb-[max(12px,env(safe-area-inset-bottom))]">
           <Button
             size="lg"
             fullWidth
@@ -235,6 +249,18 @@ export function VerdictSheet({ state, onChange, lat, lng, onDismiss, onPrimary }
           >
             {primaryLabel}
           </Button>
+          {onDelete && state.mode.kind === 'edit' ? (
+            <Button
+              variant="ghost"
+              fullWidth
+              data-testid="verdict-delete"
+              disabled={state.isSaving}
+              className="text-destructive"
+              onClick={onDelete}
+            >
+              {t('common.delete')}
+            </Button>
+          ) : null}
         </div>
       </div>
     </div>

@@ -8,6 +8,7 @@ import { createMockApiClient, makeSeed } from '@skinny/api-client/mock';
 import { ThemeProvider } from '@/app/theme-provider';
 import { SessionProvider } from '@/auth/session';
 import { LocaleProvider } from '@/i18n/provider';
+import { ApiError } from '@/lib/live-client';
 import { ApiProvider } from '@/lib/api';
 import { MOCK_OVERRIDE_KEY } from '@/lib/app-mode';
 import { stubAuthPort, type StubAuth } from '@/test/session';
@@ -56,7 +57,11 @@ describe('the account screen', () => {
   it('shows my name, my rank and total, and the group-fund link', async () => {
     renderAccount();
 
-    expect(await screen.findByTestId('account-name')).toHaveTextContent('Khoa');
+    // The seed's own member row, through a real session load: give the two awaited round trips
+    // (`POST /auth/session`, then the leaderboard) room on a loaded machine.
+    expect(await screen.findByTestId('account-name', undefined, { timeout: 5000 })).toHaveTextContent(
+      'Khoa',
+    );
     // The seed's own numbers: rank 1..n and the season total for the row flagged `isMe`.
     await waitFor(() =>
       expect(screen.getByTestId('account-summary')).toHaveTextContent(/Hạng \d+ · \d+ điểm/),
@@ -102,6 +107,45 @@ describe('the account screen', () => {
     expect(sheet).toHaveTextContent('Điểm sẽ được máy chủ tính lại khi lưu.');
   });
 
+  it('deletes an entry from the edit sheet, behind a confirmation', async () => {
+    const api = makeApi();
+    const deleteEntry = vi.spyOn(api, 'deleteEntry');
+    renderAccount(api);
+
+    const rows = await screen.findAllByTestId('history-row');
+    const doomed = rows[0]!.getAttribute('data-entry-id');
+    await userEvent.click(
+      within(rows[0]!).getByRole('button', { name: 'Không đúng?' }),
+    );
+    await userEvent.click(await screen.findByTestId('verdict-delete'));
+
+    // The confirmation asks with the entry's own day, and nothing is sent until it is answered.
+    const dialog = await screen.findByTestId('confirm-dialog');
+    expect(deleteEntry).not.toHaveBeenCalled();
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Xoá' }));
+
+    await waitFor(() => expect(deleteEntry).toHaveBeenCalledWith(doomed));
+    await waitFor(() =>
+      expect(
+        screen.queryAllByTestId('history-row').some((row) => row.getAttribute('data-entry-id') === doomed),
+      ).toBe(false),
+    );
+  });
+
+  it('surfaces a failed deletion', async () => {
+    const api = makeApi();
+    vi.spyOn(api, 'deleteEntry').mockRejectedValue(new ApiError(500, 'internal', 'boom'));
+    renderAccount(api);
+
+    const rows = await screen.findAllByTestId('history-row');
+    await userEvent.click(within(rows[0]!).getByRole('button', { name: 'Không đúng?' }));
+    await userEvent.click(await screen.findByTestId('verdict-delete'));
+    const dialog = await screen.findByTestId('confirm-dialog');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Xoá' }));
+
+    expect(await screen.findByText('Không xoá được, hãy thử lại.')).toBeInTheDocument();
+  });
+
   it('pages the history from the footer button', async () => {
     renderAccount(makeApi({ historyPageSize: 2 }));
 
@@ -129,7 +173,7 @@ describe('the account screen', () => {
     expect(localStorage.getItem('skinny.locale')).toBe('en');
   });
 
-  it('choosing "Hệ thống" stores the follow-the-browser choice and tells the server the resolved one', async () => {
+  it('choosing "Hệ thống" stores the choice, follows the device and PATCHes nothing', async () => {
     const api = makeApi();
     const updateMe = vi.spyOn(api, 'updateMe');
     renderAccount(api);
@@ -138,8 +182,35 @@ describe('the account screen', () => {
     await userEvent.click(within(picker).getByRole('radio', { name: 'Hệ thống' }));
 
     expect(localStorage.getItem('skinny.locale')).toBe('system');
-    // jsdom reports `en-US`, so "follow the browser" resolves to English for the server's copy.
-    await waitFor(() => expect(updateMe).toHaveBeenCalledWith({ locale: 'en' }));
+    // Spec §5: "follow this browser" is the weaker claim, so the server's explicit `vi` stands.
+    // jsdom reports `en-US`, so the *display* follows the device immediately.
+    expect(await screen.findByText('Account')).toBeInTheDocument();
+    expect(document.documentElement.lang).toBe('en');
+    expect(updateMe).not.toHaveBeenCalled();
+  });
+
+  it('moves and selects through the language picker with the arrow keys', async () => {
+    renderAccount();
+
+    const picker = await screen.findByTestId('language-picker');
+    const [system, vietnamese] = within(picker).getAllByRole('radio');
+    // A roving tabindex: one Tab stop for the group, on the selected segment.
+    expect(vietnamese).toHaveAttribute('tabindex', '0');
+    expect(system).toHaveAttribute('tabindex', '-1');
+
+    // The arrows are exercised on the appearance picker: moving the *language* re-renders the
+    // whole catalog, so the assertion would be about translation rather than about the keyboard.
+    const theme = screen.getByTestId('theme-picker');
+    const [themeSystem, light] = within(theme).getAllByRole('radio');
+    themeSystem!.focus();
+    await userEvent.keyboard('{ArrowRight}');
+    expect(light).toHaveAttribute('aria-checked', 'true');
+    expect(light).toHaveFocus();
+    expect(localStorage.getItem('skinny.theme')).toBe('light');
+
+    // …and they wrap at the ends.
+    await userEvent.keyboard('{ArrowLeft}{ArrowLeft}');
+    expect(within(theme).getAllByRole('radio')[2]).toHaveAttribute('aria-checked', 'true');
   });
 
   it('the theme override puts .dark on <html> and persists', async () => {

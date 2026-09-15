@@ -6,7 +6,7 @@ import { AlertBanner, Avatar, ProgressBar } from '@skinny/ui';
 import { useSession } from '@/auth/session';
 import { describeError, useApi } from '@/lib/api';
 import { queryKeys } from '@/lib/query';
-import { uploadWithProgress } from '@/lib/upload';
+import { uploadAvatar } from '@/lib/upload';
 import { Button } from '@/ui/button';
 import { SheetShell } from './sheet';
 
@@ -36,11 +36,14 @@ export function ProfileEditSheet({
   user,
   avatarUrl,
   onClose,
+  convert,
 }: {
   user: UserDto;
   /** The signed URL the leaderboard row carries; `/me` only knows the storage key. */
   avatarUrl?: string | null;
   onClose: () => void;
+  /** The avatar conversion seam — injected in tests, where jsdom has no canvas to decode with. */
+  convert?: (file: Blob) => Promise<Blob>;
 }) {
   const t = useTranslations();
   const api = useApi();
@@ -81,9 +84,14 @@ export function ProfileEditSheet({
         let avatarKey: string | undefined;
         if (picked) {
           setProgress(0);
-          avatarKey = await uploadWithProgress(api, 'avatar', picked.file, (fraction) => {
-            if (alive.current) setProgress(fraction);
-          });
+          avatarKey = await uploadAvatar(
+            api,
+            picked.file,
+            (fraction) => {
+              if (alive.current) setProgress(fraction);
+            },
+            convert,
+          );
         }
         const patch: PatchMeInput = {
           ...(trimmed === user.displayName ? {} : { displayName: trimmed }),

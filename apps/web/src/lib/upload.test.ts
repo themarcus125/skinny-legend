@@ -1,7 +1,14 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ApiClient } from '@skinny/api-client';
 import { ApiError, createApiClient } from '@skinny/api-client';
-import { DIRECT_UPLOAD_TYPES, toUploadable, uploadPhoto } from './upload';
+import {
+  AVATAR_MAX_DIMENSION,
+  DIRECT_UPLOAD_TYPES,
+  MAX_UPLOAD_BYTES,
+  toUploadable,
+  uploadAvatar,
+  uploadPhoto,
+} from './upload';
 
 /**
  * A stand-in for `XMLHttpRequest` — the only browser API that reports upload progress, and the
@@ -149,5 +156,51 @@ describe('uploadPhoto', () => {
     expect(presign).toHaveBeenCalledWith({ kind: 'photo', contentType: 'image/jpeg' });
     expect(uploadToPresign.mock.calls[0]?.[1]).toBe(converted);
     expect(uploadToPresign.mock.calls[0]?.[2]).toBe('image/jpeg');
+  });
+
+  describe('avatars', () => {
+    /** 512 px covers a 96 px circle on a 3× display; the constant is the contract. */
+    it('keeps the avatar bound at 512 px', () => {
+      expect(AVATAR_MAX_DIMENSION).toBe(512);
+      expect(MAX_UPLOAD_BYTES).toBe(10 * 1024 * 1024);
+    });
+
+    it('re-encodes every avatar, a JPEG included, and presigns it as image/jpeg', async () => {
+      const converted = blob('image/jpeg');
+      const convert = vi.fn(() => Promise.resolve(converted));
+      const presign = vi.fn(() =>
+        Promise.resolve({ key: 'avatars/u1/a.jpg', url: 'https://r2.test/put', expiresAt: 'x' }),
+      );
+      const uploadToPresign = vi.fn((_u: string, _b: Blob, _c: string) => Promise.resolve());
+      const api = { presign, uploadToPresign } as unknown as ApiClient;
+
+      const key = await uploadAvatar(api, blob('image/jpeg'), () => {}, convert);
+
+      // A photo of this type would go up untouched; an avatar never does — the conversion is the
+      // downscale, not the format.
+      expect(convert).toHaveBeenCalled();
+      expect(key).toBe('avatars/u1/a.jpg');
+      expect(presign).toHaveBeenCalledWith({ kind: 'avatar', contentType: 'image/jpeg' });
+      expect(uploadToPresign.mock.calls[0]?.[1]).toBe(converted);
+    });
+
+    it('refuses a source over 10 MB as photo_invalid, before presigning', async () => {
+      const presign = vi.fn();
+      const api = { presign } as unknown as ApiClient;
+      const huge = blob('image/jpeg');
+      Object.defineProperty(huge, 'size', { value: MAX_UPLOAD_BYTES + 1 });
+
+      await expect(uploadAvatar(api, huge, () => {})).rejects.toMatchObject({
+        code: 'photo_invalid',
+      });
+      expect(presign).not.toHaveBeenCalled();
+    });
+
+    it('reports an undecodable avatar as photo_invalid rather than a canvas error', async () => {
+      const api = { presign: vi.fn() } as unknown as ApiClient;
+      await expect(
+        uploadAvatar(api, blob('image/jpeg'), () => {}, () => Promise.reject(new Error('no canvas'))),
+      ).rejects.toBeInstanceOf(ApiError);
+    });
   });
 });

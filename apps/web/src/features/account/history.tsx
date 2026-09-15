@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocale, useTranslations } from 'use-intl';
-import type { Category, HistoryEntryDto } from '@skinny/shared/wire';
+import type { Category, EntryDto, HistoryEntryDto } from '@skinny/shared/wire';
 import { CATEGORIES } from '@skinny/shared/wire';
 import { AlertBanner, CategoryChip, EmptyState, SurfaceCard, cn } from '@skinny/ui';
 import { CameraGlyph, MapPinGlyph } from '@/app/icons';
@@ -10,6 +10,7 @@ import { formatLocalDay } from '@/lib/local-day';
 import { queryKeys } from '@/lib/query';
 import { useEndSentinel } from '@/lib/use-end-sentinel';
 import { Button } from '@/ui/button';
+import { ConfirmDialog } from './confirm-dialog';
 import { VerdictSheet } from '@/features/track/verdict-sheet';
 import {
   beginSave,
@@ -62,6 +63,10 @@ export function AccountHistory() {
   const api = useApi();
   const queryClient = useQueryClient();
   const [sheet, setSheet] = useState<VerdictState | null>(null);
+  /** The entry the delete confirmation is standing over; null while nothing is being deleted. */
+  const [deleting, setDeleting] = useState<EntryDto | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteErrorKey, setDeleteErrorKey] = useState<string | null>(null);
   const alive = useRef(true);
   useEffect(() => {
     alive.current = true;
@@ -99,7 +104,7 @@ export function AccountHistory() {
       queryKeys.leaderboard,
       queryKeys.trends,
       queryKeys.feed,
-      ['map'],
+      queryKeys.map,
     ]) {
       void queryClient.invalidateQueries({ queryKey: key });
     }
@@ -119,6 +124,33 @@ export function AccountHistory() {
         placeSource: entry.placeSource,
       }),
     );
+  };
+
+  /**
+   * `DELETE /entries/:id` — a soft delete on the server (the row goes `rejected`, spec §6), and the
+   * iOS swipe action's counterpart. It is behind the same `ConfirmDialog` the sign-out row uses:
+   * the entry's own day is the question, "Xoá" the answer.
+   */
+  const confirmDelete = () => {
+    const entry = deleting;
+    if (!entry) return;
+    setIsDeleting(true);
+    setDeleteErrorKey(null);
+    void api
+      .deleteEntry(entry.id)
+      .then(() => {
+        if (!alive.current) return;
+        setIsDeleting(false);
+        setDeleting(null);
+        setSheet(null);
+        invalidateScoring();
+      })
+      .catch((error: unknown) => {
+        if (!alive.current) return;
+        setIsDeleting(false);
+        setDeleting(null);
+        setDeleteErrorKey(describeError(error));
+      });
   };
 
   const primary = () => {
@@ -165,6 +197,14 @@ export function AccountHistory() {
         />
       ) : null}
 
+      {deleteErrorKey ? (
+        <AlertBanner
+          tone="destructive"
+          title={t('account.deleteFailed')}
+          description={t(deleteErrorKey)}
+        />
+      ) : null}
+
       {entries.length === 0 && history.isPending ? (
         <div
           data-testid="history-skeleton"
@@ -183,7 +223,10 @@ export function AccountHistory() {
 
       {days.map((day) => (
         <section key={day.date} data-testid="history-day" data-date={day.date} className="flex flex-col gap-1.5">
+          {/* One stop for a screen reader: the day and its total read as a single summary rather
+              than as a heading followed by a bare number. */}
           <div
+            role="group"
             className="flex items-baseline justify-between gap-2 px-1"
             aria-label={t('account.dayPoints', { 0: formatLocalDay(day.date, locale), 1: day.points })}
           >
@@ -234,6 +277,19 @@ export function AccountHistory() {
           lng={null}
           onDismiss={() => setSheet(null)}
           onPrimary={primary}
+          // `VerdictState.entry` is the row the sheet was opened over — its id and day are all the
+          // deletion needs, so there is no second copy of the entry to keep in sync.
+          onDelete={() => setDeleting(sheet.entry)}
+        />
+      ) : null}
+
+      {deleting ? (
+        <ConfirmDialog
+          title={formatLocalDay(deleting.localDate, locale)}
+          confirmLabel={t('common.delete')}
+          busy={isDeleting}
+          onCancel={() => setDeleting(null)}
+          onConfirm={confirmDelete}
         />
       ) : null}
     </>

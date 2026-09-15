@@ -12,16 +12,19 @@ import { ChoiceGroup, SettingRow } from './settings-row';
  * "Ngôn ngữ" — Hệ thống / Tiếng Việt / English. Port of the `Picker` in
  * `ios/SkinnyLegend/Features/Account/AccountView.swift`.
  *
- * The rule for *what to store and what to send* is not re-implemented here: it is Task 6's
- * `reconcileLocale`, the same function `SessionProvider` runs on every session load, so there is
- * exactly one implementation of ruling R18 in the app. Picking a language here therefore behaves
- * like a session load that found that choice already stored.
+ * What is stored and what is sent follows spec §5 / ruling R18, and the two halves are deliberately
+ * asymmetric:
  *
- * The one input that is not read from storage is `isFreshInstall`. A member who explicitly picks
- * "Hệ thống" is making the fresh install's claim on purpose — "follow this browser" — so the
- * choice is stored as `"system"` and the device-resolved language is pushed to the server, which
- * needs a concrete language for push and AI copy. Reading the real storage flag instead would
- * make branch (2) adopt the server's value and silently turn "Hệ thống" back into "Tiếng Việt".
+ * - An **explicit** `vi`/`en` is this browser's source of truth, so it is stored and — when the
+ *   server disagrees — pushed. That decision is not re-implemented here: it is Task 6's
+ *   `reconcileLocale` branch (1), the same function `SessionProvider` runs on every session load,
+ *   so there is exactly one implementation of the rule in the app.
+ * - **"Hệ thống"** stores `"system"` and sends nothing. "Follow this browser" is the weaker claim
+ *   (`reconcileLocale` branch (2) has a stored `"system"` *adopt* the server's value rather than
+ *   overwrite it): the console or another device may have set an explicit language deliberately,
+ *   and a member who merely stopped pinning one here has not asked to change what the server uses
+ *   for push and AI copy. The display still follows the device immediately, because that is a
+ *   local concern — `LocaleProvider` resolves `"system"` against `navigator.language` on the spot.
  */
 export function LanguagePicker() {
   const t = useTranslations();
@@ -34,16 +37,19 @@ export function LanguagePicker() {
 
   const onChange = useCallback(
     (next: LocaleChoice) => {
-      const { store, push } = reconcileLocale({
+      // Storage and the rendered catalog flip first: the language is this browser's preference,
+      // and a failed `PATCH` must not undo what the member just picked.
+      setChoice(next);
+      if (next === 'system') return;
+      const { push } = reconcileLocale({
         choice: next,
         deviceLanguage: deviceLanguage(),
         serverLocale: user?.locale ?? 'vi',
         userStatus: user?.status ?? 'active',
-        isFreshInstall: next === 'system',
+        // An explicit choice takes branch (1) whatever this is; `false` is the honest value, since
+        // the key has certainly been written by the time anyone can click.
+        isFreshInstall: false,
       });
-      // Storage and the rendered catalog flip first: the language is this browser's preference,
-      // and a failed `PATCH` must not undo what the member just picked.
-      setChoice(store);
       if (!push) return;
       void api
         .updateMe({ locale: push })

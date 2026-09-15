@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useRef, type KeyboardEvent, type ReactNode } from 'react';
 import { cn } from '@skinny/ui';
 
 /**
@@ -54,6 +54,11 @@ export interface Choice<T extends string> {
  * same semantics. Buttons rather than `<input type="radio">` so the selected segment can carry
  * the design system's fill without fighting a native control's own appearance — `aria-checked`
  * is what assistive tech reads either way.
+ *
+ * Keyboard behaviour is the one a native radio group has, which `role="radio"` promises and a bare
+ * button does not deliver: a **roving tabindex** (one Tab stop for the whole group, on the selected
+ * segment) and Left/Right — plus Up/Down and Home/End — moving *and* selecting, wrapping at the
+ * ends. Without it a three-way picker costs three Tab presses and arrow keys do nothing.
  */
 export function ChoiceGroup<T extends string>({
   label,
@@ -68,8 +73,34 @@ export function ChoiceGroup<T extends string>({
   onChange: (value: T) => void;
   testId?: string;
 }) {
+  const groupRef = useRef<HTMLDivElement>(null);
+
+  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    const deltas: Record<string, number> = {
+      ArrowRight: 1,
+      ArrowDown: 1,
+      ArrowLeft: -1,
+      ArrowUp: -1,
+    };
+    const index = options.findIndex((option) => option.value === value);
+    const delta = deltas[event.key];
+    let next: number | undefined;
+    if (delta !== undefined) next = (index + delta + options.length) % options.length;
+    else if (event.key === 'Home') next = 0;
+    else if (event.key === 'End') next = options.length - 1;
+    if (next === undefined) return;
+    const target = options[next];
+    if (!target) return;
+    event.preventDefault();
+    onChange(target.value);
+    // Selection follows focus, so focus has to follow selection: the DOM order is the option order.
+    groupRef.current?.querySelectorAll<HTMLButtonElement>('[role="radio"]')[next]?.focus();
+  };
+
   return (
     <div
+      ref={groupRef}
+      onKeyDown={onKeyDown}
       role="radiogroup"
       aria-label={label}
       data-testid={testId}
@@ -83,6 +114,7 @@ export function ChoiceGroup<T extends string>({
             type="button"
             role="radio"
             aria-checked={selected}
+            tabIndex={selected ? 0 : -1}
             data-value={option.value}
             onClick={() => onChange(option.value)}
             className={cn(
