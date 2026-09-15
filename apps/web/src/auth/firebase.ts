@@ -58,13 +58,17 @@ let sdk: Promise<FirebaseSdk> | null = null;
  * session from IndexedDB with no network round trip (and IndexedDB, unlike `localStorage`,
  * survives Safari's 7-day script-writable-storage eviction for an installed PWA). It also means
  * the popup/redirect resolver has to be passed explicitly — `getAuth` bundles one, this does not.
+ *
+ * The in-flight promise is memoised so concurrent callers share one load, but a **rejected** one
+ * is not: an offline first paint would otherwise poison every later `signInWithGoogle()` and
+ * `getIdToken()` until a full reload. The `sdk === pending` check means a retry that started
+ * before the failure landed is not clobbered by the loser's cleanup.
  */
 export function loadFirebase(): Promise<FirebaseSdk> {
-  sdk ??= (async () => {
+  if (sdk) return sdk;
+  const pending = (async (): Promise<FirebaseSdk> => {
     const [app, mod] = await Promise.all([import('firebase/app'), import('firebase/auth')]);
-    const instance = app.getApps().length
-      ? app.getApp()
-      : app.initializeApp(firebaseOptions());
+    const instance = app.getApps().length ? app.getApp() : app.initializeApp(firebaseOptions());
     return {
       mod,
       auth: mod.initializeAuth(instance, {
@@ -73,7 +77,11 @@ export function loadFirebase(): Promise<FirebaseSdk> {
       }),
     };
   })();
-  return sdk;
+  sdk = pending;
+  pending.catch(() => {
+    if (sdk === pending) sdk = null;
+  });
+  return pending;
 }
 
 /** The live port. Google is the only provider the web app offers (spec §3). */
