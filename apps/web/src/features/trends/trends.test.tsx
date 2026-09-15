@@ -1,5 +1,5 @@
 import { cloneElement, isValidElement, type ReactElement, type ReactNode } from 'react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
@@ -16,14 +16,18 @@ import { render, screen, waitFor, within } from '@/test/intl';
  * real `BarChart` still lays the bars out, so `weekly-bars.tsx`'s custom shape — the thing this
  * file asserts — is exercised by the real Recharts code path.
  */
-vi.stubGlobal(
-  'ResizeObserver',
-  class {
-    observe() {}
-    unobserve() {}
-    disconnect() {}
-  },
-);
+beforeEach(() => {
+  // Per test, not once at module scope: `vitest.setup.ts` calls `vi.unstubAllGlobals()` after
+  // every test, so a module-level stub would only survive the first one.
+  vi.stubGlobal(
+    'ResizeObserver',
+    class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    },
+  );
+});
 
 vi.mock('recharts', async () => {
   const actual = await vi.importActual<typeof import('recharts')>('recharts');
@@ -145,6 +149,33 @@ describe('the trends screen', () => {
     expect(height(bars[0]!)).toBeGreaterThan(height(averages[0]!));
   });
 
+  it('names the chart and repeats it as a table for a reader', async () => {
+    renderTrends();
+
+    // The bars are a picture; this is the summary and the numbers behind it.
+    const chart = await screen.findByRole('img', {
+      name: 'Điểm theo tuần: Bạn, Trung bình nhóm',
+    });
+    expect(chart).toBeInTheDocument();
+    const table = screen.getByTestId('weekly-bars-table');
+    expect(within(table).getAllByRole('columnheader').map((cell) => cell.textContent)).toEqual([
+      'Tuần',
+      'Bạn',
+      'Trung bình nhóm',
+    ]);
+    const rows = within(table).getAllByRole('row').slice(1);
+    expect(rows).toHaveLength(WEEKS.length);
+    expect(rows[0]).toHaveTextContent('T37');
+    expect(rows[0]).toHaveTextContent('12');
+    expect(rows[0]).toHaveTextContent('8.5');
+    expect(rows[1]).toHaveTextContent('21');
+    // The legend reads in the bars' order, mine first.
+    const legend = within(screen.getByTestId('weekly-bars-legend')).getAllByRole('listitem', {
+      hidden: true,
+    });
+    expect(legend.map((item) => item.textContent)).toEqual(['Bạn', 'Trung bình nhóm']);
+  });
+
   it('renders the active-days heatmap with one cell per returned day', async () => {
     renderTrends();
 
@@ -170,10 +201,13 @@ describe('the trends screen', () => {
   it('labels the axes in the active language', async () => {
     renderTrends(stubApi({}), 'en');
 
-    // The week number reads the same on the bar axis and in the heatmap's row gutter.
+    // The week number reads the same on the bar axis, in its hidden table and in the heatmap's
+    // row gutter, so the axis itself is what gets scoped here.
     const bars = await screen.findByTestId('weekly-bars');
-    expect(within(bars).getByText('W38')).toBeInTheDocument();
-    expect(within(bars).getByText('W37')).toBeInTheDocument();
+    const axis = bars.querySelector('svg.recharts-surface');
+    expect(axis?.textContent).toContain('W37');
+    expect(axis?.textContent).toContain('W38');
+    expect(within(screen.getByTestId('weekly-bars-table')).getByText('W38')).toBeInTheDocument();
     expect(screen.getAllByTestId('heat-week-label').map((label) => label.textContent)).toEqual([
       'W37',
       'W38',
@@ -211,6 +245,15 @@ describe('the trends screen', () => {
 
     expect(await screen.findByText('Chưa có hoạt động nào')).toBeInTheDocument();
     expect(screen.queryByTestId('heatmap')).not.toBeInTheDocument();
+  });
+
+  it('says so when there are weeks but no days behind them', async () => {
+    renderTrends(stubApi({ trends: () => Promise.resolve({ ...TRENDS, heatmap: [] }) }));
+
+    expect(await screen.findByText('Không có hoạt động')).toBeInTheDocument();
+    expect(screen.queryByTestId('heatmap')).not.toBeInTheDocument();
+    // Still a real screen: the bars and the totals are there.
+    expect(screen.getAllByTestId('week-bar')).toHaveLength(WEEKS.length);
   });
 
   it('offers a retry when the load fails', async () => {

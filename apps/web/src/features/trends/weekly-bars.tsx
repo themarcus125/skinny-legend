@@ -1,4 +1,4 @@
-import { Bar, BarChart, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { useLocale, useTranslations } from 'use-intl';
 import type { TrendsResponse } from '@skinny/shared/wire';
 import type { Locale } from '@/i18n/locale';
@@ -51,9 +51,11 @@ function weekBarShape(testId: string) {
 /**
  * Điểm theo tuần — my weekly points against the group average, the port of `TrendsView`'s
  * `weeklyBars` (ios/SkinnyLegend/Features/Trends/TrendsView.swift). Same two series, same
- * grouped-bar layout, same rounded corners; `--primary` is iOS's `Theme.primary` and `--chart-3`
- * stands in for its `Theme.info.opacity(0.45)`, so both sides of the pair stay legible when the
- * tokens flip to dark.
+ * grouped-bar layout, same rounded corners. `--primary` is iOS's `Theme.primary`; the group
+ * average takes `--info` undiluted where iOS uses `Theme.info.opacity(0.45)`, because a 45 %
+ * wash of it is invisible on the card. Measured against `--card`: `--primary` 15.5:1 light /
+ * 13.2:1 dark, `--info` 6.2:1 light (#48607F) / 8.1:1 dark (#AABCD5) — both clear of 3:1 in
+ * both themes, which `--chart-3` (Alice, 1.29:1 on the light card) was not.
  *
  * The X axis is formatted through `weekAxisLabel`, so the same catalog entry (`T%@` on iOS)
  * renders `T38` or `W38`. The Y axis is hidden: this is a phone-width PWA first, the bars are
@@ -74,8 +76,23 @@ export function WeeklyBars({ weeks }: { weeks: TrendsResponse['weeks'] }) {
     groupAvg: Math.round(week.groupAvg * 10) / 10,
   }));
 
+  const mineLabel = t('trends.mineSeries');
+  const groupLabel = t('trends.groupAverage');
+
   return (
-    <div data-testid="weekly-bars" className="h-[220px] w-full">
+    <div data-testid="weekly-bars" className="flex w-full flex-col">
+      {/*
+       * An SVG chart is a picture: the bars have geometry and no text. `role="img"` plus the
+       * card's own heading and both series names is the summary, and the visually-hidden table
+       * below is the fallback that carries the actual numbers — the reader's equivalent of
+       * hovering every bar for its tooltip. iOS gets this for free from Swift Charts' audio
+       * graph; the web has to build it.
+       */}
+      <div
+        role="img"
+        aria-label={`${t('trends.pointsByWeek')}: ${mineLabel}, ${groupLabel}`}
+        className="h-[190px] w-full"
+      >
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={data} margin={{ top: 8, right: 4, bottom: 0, left: 4 }} barGap={2}>
           <XAxis
@@ -88,20 +105,6 @@ export function WeeklyBars({ weeks }: { weeks: TrendsResponse['weeks'] }) {
           <Tooltip
             cursor={{ fill: 'var(--track)', opacity: 0.4 }}
             content={<WeekTooltip />}
-          />
-          <Legend
-            verticalAlign="bottom"
-            height={28}
-            iconType="circle"
-            iconSize={9}
-            formatter={(value: string) =>
-              // The legend is copy, so it reads from the catalog rather than the data key.
-              (
-                <span className="type-caption text-foreground-secondary">
-                  {value === 'mine' ? t('trends.mineSeries') : t('trends.groupAverage')}
-                </span>
-              )
-            }
           />
           {/*
            * No grow-in animation. It is 400 ms of motion on a chart the reader scrolled to
@@ -116,12 +119,51 @@ export function WeeklyBars({ weeks }: { weeks: TrendsResponse['weeks'] }) {
           />
           <Bar
             dataKey="groupAvg"
-            fill="var(--chart-3)"
+            fill="var(--info)"
             isAnimationActive={false}
             shape={weekBarShape('week-bar-avg')}
           />
         </BarChart>
       </ResponsiveContainer>
+      </div>
+      {/*
+       * Our own legend rather than Recharts': it renders in the bars' order (Recharts orders by
+       * its internal registration, which came out reversed), the swatches are the same tokens
+       * the bars are filled with, and it is plain DOM the hidden table can sit beside.
+       */}
+      <ul data-testid="weekly-bars-legend" aria-hidden="true" className="flex justify-center gap-4 pt-1">
+        {[
+          { label: mineLabel, color: 'var(--primary)' },
+          { label: groupLabel, color: 'var(--info)' },
+        ].map((series) => (
+          <li key={series.label} className="type-caption text-foreground-secondary flex items-center gap-1.5">
+            <span
+              className="size-2.5 shrink-0 rounded-full"
+              style={{ backgroundColor: series.color }}
+            />
+            {series.label}
+          </li>
+        ))}
+      </ul>
+      <table data-testid="weekly-bars-table" className="sr-only">
+        <caption>{t('trends.pointsByWeek')}</caption>
+        <thead>
+          <tr>
+            <th scope="col">{t('common.week')}</th>
+            <th scope="col">{mineLabel}</th>
+            <th scope="col">{groupLabel}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {data.map((week) => (
+            <tr key={week.week}>
+              <th scope="row">{week.label}</th>
+              <td>{week.mine}</td>
+              <td>{week.groupAvg}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }

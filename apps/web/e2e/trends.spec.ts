@@ -31,7 +31,9 @@ test.describe('Xu hướng', () => {
     await page.screenshot({ path: `${SHOTS}/web-trends.png`, fullPage: true });
 
     // A square with points opens the day sheet on that day's entries.
-    const scored = cells.filter({ has: page.locator('[data-points]:not([data-points="0"])') });
+    // The attributes are on the cell button itself, so this selects a scored cell rather than
+    // one that merely *contains* a scored element (it contains nothing).
+    const scored = page.locator('[data-testid="heat-cell"][data-points]:not([data-points="0"])');
     const target = (await scored.count()) > 0 ? scored.first() : cells.first();
     const date = await target.getAttribute('data-date');
     await target.click();

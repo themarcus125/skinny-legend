@@ -88,10 +88,10 @@ export function weekdayIndex(date: string): number {
 
 /**
  * `"2026-09-14"` → `"2026-W38"`, the same key `@skinny/shared/dates`' `isoWeekKey` produces on
- * the server. It is reimplemented here rather than imported because the web may only reach for
- * `@skinny/shared/wire` and `/scoring` (Task 2's contract), and `/dates` would drag `date-fns`
- * and `@date-fns/tz` into the shell for four lines of arithmetic. `axis-labels.test.ts` pins the
- * two against each other's known values.
+ * the server. `/dates` is an allowed subpath; it is reimplemented here anyway because importing
+ * it would pull `date-fns` and `@date-fns/tz` into the web bundle for four lines of arithmetic.
+ * What makes a second copy safe is the parity test: `axis-labels.test.ts` asserts this function
+ * and the server's agree day for day, so the duplication cannot drift silently.
  */
 export function isoWeekKey(date: string): string {
   const thursday = utcDay(date);

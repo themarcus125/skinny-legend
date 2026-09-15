@@ -28,9 +28,9 @@ const WeeklyBars = lazy(() => import('./weekly-bars'));
  * * **The heatmap is a CSS grid, not a chart** (plan-writer's ruling). The day grid's scale is
  *   the token ramp, and real `<button>` cells are keyboard-reachable and self-naming — where
  *   iOS has to bolt an `accessibilityChildren` overlay onto an opaque `Chart` to get the same.
- * * **No rank-over-time line.** `weeks[].rank` is shown as this week's standing in the header
- *   card instead; a five-point line over eight weeks on a phone is a sparkline of noise, and
- *   the leaderboard is one tab away.
+ * * **No rank-over-time line.** A five-point line over eight weeks on a phone is a sparkline of
+ *   noise, and the leaderboard is one tab away. `weeks[].rank` is carried by the DTO and simply
+ *   not drawn.
  */
 export function Trends() {
   const t = useTranslations();
@@ -92,7 +92,12 @@ export function Trends() {
 
             <SurfaceCard as="section" className="flex flex-col gap-3">
               <h2 className="type-label text-foreground-secondary">{t('trends.activeDays')}</h2>
-              <Heatmap heatmap={data.heatmap} onSelectDay={setDay} />
+              {data.heatmap.length === 0 ? (
+                /* Weeks but no days: the grid would be an empty box with axis headings. */
+                <p className="type-caption text-foreground-subtle">{t('trends.noActivity')}</p>
+              ) : (
+                <Heatmap heatmap={data.heatmap} onSelectDay={setDay} />
+              )}
             </SurfaceCard>
 
             <SurfaceCard as="section" className="flex flex-col gap-3">
