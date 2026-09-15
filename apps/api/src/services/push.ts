@@ -102,12 +102,15 @@ export function fakeSender(): FakeSender {
   };
 }
 
+/** True when this process points firebase-admin at the Auth Emulator (the e2e suite). */
+export const usesAuthEmulator = env.FIREBASE_AUTH_EMULATOR_HOST !== '';
+
 /**
- * FCM is only wired up in AUTH_MODE=firebase — env.ts already requires all three FIREBASE_*
- * vars in that mode (SKI-40/42 preflight ruling), so this does not re-check them ad hoc.
- * Every other mode (including every test run) falls back to the fake sender.
+ * FCM is only wired up in AUTH_MODE=firebase with a real service account — env.ts requires the
+ * FIREBASE_* vars in that mode (SKI-40/42 preflight ruling). Test mode and emulator mode (which
+ * has no credentials to sign an FCM call with) fall back to the fake sender.
  */
-export const hasFirebaseCredentials = env.AUTH_MODE === 'firebase';
+export const hasFirebaseCredentials = env.AUTH_MODE === 'firebase' && !usesAuthEmulator;
 
 export const pushSender: PushSender = hasFirebaseCredentials ? fcmSender() : fakeSender();
 

@@ -23,7 +23,7 @@ export function Component() {
   }, [session]);
 
   return (
-    <main className="flex min-h-dvh flex-col items-center justify-center gap-6 px-6">
+    <main data-testid="pending-screen" className="flex min-h-dvh flex-col items-center justify-center gap-6 px-6">
       <SurfaceCard as="section" className="w-full">
         <EmptyState
           icon={<HourglassGlyph className="size-12 text-primary" />}

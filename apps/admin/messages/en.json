@@ -74,6 +74,11 @@
     "push_failed": "Couldn't send the notification. Please try again later."
   },
   "auth": {
+    "emulatorHint": "Test mode: sign in with an Auth Emulator email and password.",
+    "emulatorEmail": "Email",
+    "emulatorPassword": "Password",
+    "emulatorSubmit": "Sign in with email",
+    "emulatorFailed": "Email sign-in failed. Check the Auth Emulator on port 9099.",
     "signInHint": "Sign in with an admin Google account.",
     "signInWithGoogle": "Sign in with Google",
     "googleFailed": "Google sign-in failed. Check the popup window and Firebase's allowed domains.",

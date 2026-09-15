@@ -8,6 +8,8 @@ const state = vi.hoisted(() => ({ failNext: true, apps: 0 }));
 
 vi.mock('./firebase-config', () => ({
   hasFirebaseConfig: true,
+  // No emulator: `loadFirebase` must not reach for `connectAuthEmulator` in these tests.
+  authEmulatorHost: '',
   firebaseOptions: () => ({
     apiKey: 'k',
     authDomain: 'd',

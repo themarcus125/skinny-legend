@@ -32,6 +32,9 @@ describe('message catalogues', () => {
       'Skinny Legend Admin',
       'Momo',
       'Google',
+      // Vietnamese borrows the word wholesale; the emulator form's field label is "Email" in
+      // both catalogues.
+      'Email',
       'Strava',
       'Tiếng Việt',
       'English',

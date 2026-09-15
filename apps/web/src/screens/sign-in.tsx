@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { useTranslations } from 'use-intl';
 import { cn } from '@skinny/ui';
 import { FlameGlyph, GoogleGlyph } from '@/app/icons';
+import { authEmulatorHost, signInWithEmulatorPassword } from '@/auth/firebase';
 import { SignInError, useSession } from '@/auth/session';
 import {
   prefersReducedMotion,
@@ -80,6 +81,29 @@ export function Component() {
     });
   }, [session]);
 
+  // The emulator-only email/password form. `authEmulatorHost` is inlined by Vite, so a build
+  // without the variable folds this whole branch away and Google stays the only path.
+  const [emulatorEmail, setEmulatorEmail] = useState('');
+  const [emulatorPassword, setEmulatorPassword] = useState('');
+  const [emulatorBusy, setEmulatorBusy] = useState(false);
+
+  const submitEmulator = useCallback(
+    (event: FormEvent) => {
+      event.preventDefault();
+      setSignInError(null);
+      setEmulatorBusy(true);
+      void signInWithEmulatorPassword(emulatorEmail, emulatorPassword)
+        .catch((error: unknown) => {
+          console.error('[auth] emulator sign-in failed', error);
+          setSignInError('auth.emulatorFailed');
+        })
+        .finally(() => {
+          setEmulatorBusy(false);
+        });
+    },
+    [emulatorEmail, emulatorPassword],
+  );
+
   const enterSampleData = useCallback(() => {
     writeMockOverride(true);
     window.location.reload();
@@ -150,10 +174,55 @@ export function Component() {
       </div>
 
       <div className="flex flex-col gap-3 px-6 pb-[calc(env(safe-area-inset-bottom)+2.5rem)]">
-        <Button size="lg" fullWidth onClick={signIn} disabled={session.isWorking}>
+        <Button
+          size="lg"
+          fullWidth
+          onClick={signIn}
+          disabled={session.isWorking}
+          data-testid="google-sign-in"
+        >
           <GoogleGlyph className="size-5" />
           {t('auth.google')}
         </Button>
+
+        {authEmulatorHost !== '' && (
+          <form
+            data-testid="emulator-form"
+            className="flex flex-col gap-2"
+            onSubmit={submitEmulator}
+          >
+            <input
+              data-testid="emulator-email"
+              type="email"
+              autoComplete="username"
+              aria-label={t('auth.emulatorEmail')}
+              placeholder={t('auth.emulatorEmail')}
+              className="type-body h-12 rounded-xl bg-surface-2 px-4 text-foreground"
+              value={emulatorEmail}
+              onChange={(event) => setEmulatorEmail(event.target.value)}
+            />
+            <input
+              data-testid="emulator-password"
+              type="password"
+              autoComplete="current-password"
+              aria-label={t('auth.emulatorPassword')}
+              placeholder={t('auth.emulatorPassword')}
+              className="type-body h-12 rounded-xl bg-surface-2 px-4 text-foreground"
+              value={emulatorPassword}
+              onChange={(event) => setEmulatorPassword(event.target.value)}
+            />
+            <Button
+              type="submit"
+              variant="ghost"
+              fullWidth
+              disabled={emulatorBusy}
+              data-testid="emulator-submit"
+              className={onVideo ? 'text-white' : undefined}
+            >
+              {t('auth.emulatorSubmit')}
+            </Button>
+          </form>
+        )}
 
         {signInError && (
           <p role="alert" className="type-caption text-center text-destructive">

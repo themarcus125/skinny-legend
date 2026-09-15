@@ -1,0 +1,6 @@
+logs/
+test-results/
+playwright-report/
+.processes.json
+.r2-keys.log
+.fixtures/

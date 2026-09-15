@@ -74,6 +74,11 @@
     "push_failed": "Gửi thông báo thất bại. Vui lòng thử lại sau."
   },
   "auth": {
+    "emulatorHint": "Chế độ kiểm thử: đăng nhập bằng email và mật khẩu của Auth Emulator.",
+    "emulatorEmail": "Email",
+    "emulatorPassword": "Mật khẩu",
+    "emulatorSubmit": "Đăng nhập bằng email",
+    "emulatorFailed": "Đăng nhập bằng email thất bại. Kiểm tra Auth Emulator ở cổng 9099.",
     "signInHint": "Đăng nhập bằng tài khoản Google quản trị.",
     "signInWithGoogle": "Đăng nhập với Google",
     "googleFailed": "Đăng nhập Google thất bại. Kiểm tra cửa sổ popup và tên miền được phép trong Firebase.",

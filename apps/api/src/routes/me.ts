@@ -5,6 +5,7 @@ import { db } from '../db.js';
 import { authenticate, requireActive, type AuthEnv } from '../middleware/auth.js';
 import { ApiError } from '../errors.js';
 import { validate } from '../validate.js';
+import { ownedKeyPrefix } from '../services/storage.js';
 
 /**
  * The DB rows carry `Date`s where the wire carries ISO strings. `c.json` would serialise
@@ -35,7 +36,7 @@ meRoutes.patch('/', validate('json', patchMe), async (c) => {
   const patch = c.req.valid('json');
   // Presigned avatar keys are always minted under the caller's own prefix; anything
   // else would let a member point their profile at another member's upload.
-  if (patch.avatarKey !== undefined && !patch.avatarKey.startsWith(`avatars/${me.id}/`)) {
+  if (patch.avatarKey !== undefined && !patch.avatarKey.startsWith(ownedKeyPrefix('avatars', me.id))) {
     throw new ApiError(403, 'forbidden', 'Avatar does not belong to you');
   }
   const [user] = await db.update(schema.users).set(patch).where(eq(schema.users.id, me.id)).returning();

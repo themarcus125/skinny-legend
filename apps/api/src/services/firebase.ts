@@ -7,6 +7,11 @@ import { env } from '../env.js';
  */
 export function firebaseApp(): App {
   if (getApps().length === 0) {
+    // With FIREBASE_AUTH_EMULATOR_HOST set, firebase-admin talks to the emulator and accepts
+    // its unsigned tokens; a service account would be both unnecessary and unavailable.
+    if (env.FIREBASE_AUTH_EMULATOR_HOST !== '') {
+      return initializeApp({ projectId: env.FIREBASE_PROJECT_ID });
+    }
     return initializeApp({
       credential: cert({
         projectId: env.FIREBASE_PROJECT_ID,

@@ -39,7 +39,17 @@ const restrictedImports = [
 ];
 
 export default tseslint.config(
-  { ignores: ['node_modules/**', 'dist/**', 'dev-dist/**', 'playwright-report/**', 'test-results/**'] },
+  {
+    // `dist-mock/` is the gitignored VITE_MOCK demo build; it stays on disk and is not source.
+    ignores: [
+      'node_modules/**',
+      'dist/**',
+      'dist-mock/**',
+      'dev-dist/**',
+      'playwright-report/**',
+      'test-results/**',
+    ],
+  },
   js.configs.recommended,
   {
     // The build scripts are Node ESM, not browser code.

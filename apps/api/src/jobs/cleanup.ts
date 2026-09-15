@@ -1,9 +1,11 @@
 import { isNotNull } from 'drizzle-orm';
 import { schema } from '@skinny/shared';
 import { db } from '../db.js';
+import { env } from '../env.js';
 import { storage } from '../services/storage.js';
 
-const PREFIXES = ['photos/', 'thumbs/', 'avatars/', 'feedback/'];
+// The prefix keeps an e2e run's sweep inside "e2e/" and a production sweep out of it.
+const PREFIXES = ['photos/', 'thumbs/', 'avatars/', 'feedback/'].map((p) => `${env.STORAGE_KEY_PREFIX}${p}`);
 const MAX_AGE_MS = 24 * 60 * 60 * 1000;
 
 export async function cleanupOrphans(now = new Date()): Promise<{ deleted: string[] }> {

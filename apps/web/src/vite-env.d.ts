@@ -15,6 +15,11 @@ interface ImportMetaEnv {
   readonly VITE_FIREBASE_APP_ID?: string;
   readonly VITE_FIREBASE_MESSAGING_SENDER_ID?: string;
   readonly VITE_FIREBASE_VAPID_KEY?: string;
+  /**
+   * Host:port of a Firebase Auth Emulator, e.g. `localhost:9099`. Set only by the end-to-end
+   * suite's build; empty everywhere else, which is what keeps the email/password form out.
+   */
+  readonly VITE_FIREBASE_AUTH_EMULATOR_HOST?: string;
   /** Busts the persisted query cache when a new build ships; the Pages commit sha. */
   readonly VITE_BUILD_ID?: string;
   /** A custom domain in front of the R2 bucket, when the thumbnails are not on `*.r2.dev`. */

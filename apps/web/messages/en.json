@@ -77,6 +77,10 @@
     "push_failed": "Sending the notification failed, please try again later."
   },
   "auth": {
+    "emulatorEmail": "Email",
+    "emulatorPassword": "Password",
+    "emulatorSubmit": "Sign in with email",
+    "emulatorFailed": "Email sign-in failed. Check the Auth Emulator on port 9099.",
     "title": "Sign in",
     "wordmark": "Operation\nSkinny Legend",
     "google": "Sign in with Google",

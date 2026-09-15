@@ -74,7 +74,7 @@ export function MembersTable({
             // Approve/reactivate stay available — those can't strand the account.
             const actions = availableActions(user).filter((action) => !(isSelf && action.key === 'disable'));
             return (
-              <TableRow key={user.id}>
+              <TableRow key={user.id} data-testid="member-row" data-user-id={user.id}>
                 <TableCell>
                   <span className="flex items-center gap-3">
                     <span
@@ -87,7 +87,9 @@ export function MembersTable({
                   </span>
                 </TableCell>
                 <TableCell>
-                  <Badge variant={STATUS_TONE[statusVariant(user.status)]}>{t(USER_STATUS_LABELS[user.status])}</Badge>
+                  <Badge data-testid="member-status" variant={STATUS_TONE[statusVariant(user.status)]}>
+                    {t(USER_STATUS_LABELS[user.status])}
+                  </Badge>
                 </TableCell>
                 <TableCell>
                   <Select
@@ -97,6 +99,7 @@ export function MembersTable({
                     onValueChange={(role) => onPatch(user.id, { role: role as Role })}
                   >
                     <SelectTrigger
+                      data-testid="member-role"
                       size="sm"
                       className="w-40"
                       aria-label={t('members.roleOf', { name: user.displayName })}
@@ -120,6 +123,7 @@ export function MembersTable({
                   {actions.map((action) => (
                     <Button
                       key={action.key}
+                      data-testid={`member-action-${action.key}`}
                       size="sm"
                       variant={action.confirm ? 'outline' : 'default'}
                       className={

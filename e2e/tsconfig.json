@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "target": "ES2023",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "lib": ["ES2023", "DOM"],
+    "types": ["node"],
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "verbatimModuleSyntax": true
+  },
+  "include": [
+    "src",
+    "specs",
+    "test",
+    "global-setup.ts",
+    "global-teardown.ts",
+    "playwright.config.ts",
+    "vitest.config.ts"
+  ]
+}

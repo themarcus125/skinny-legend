@@ -158,5 +158,21 @@
   "pwa.crashBody": {
     "vi": "Ứng dụng vừa có bản mới hoặc phần này chưa tải xong. Tải lại để tiếp tục.",
     "en": "A new version just shipped, or this part didn't finish loading. Reload to carry on."
+  },
+  "auth.emulatorEmail": {
+    "vi": "Email",
+    "en": "Email"
+  },
+  "auth.emulatorPassword": {
+    "vi": "Mật khẩu",
+    "en": "Password"
+  },
+  "auth.emulatorSubmit": {
+    "vi": "Đăng nhập bằng email",
+    "en": "Sign in with email"
+  },
+  "auth.emulatorFailed": {
+    "vi": "Đăng nhập bằng email thất bại. Kiểm tra Auth Emulator ở cổng 9099.",
+    "en": "Email sign-in failed. Check the Auth Emulator on port 9099."
   }
 }

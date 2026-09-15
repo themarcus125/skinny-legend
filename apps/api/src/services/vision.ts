@@ -53,7 +53,7 @@ export async function classifyPhoto(
 ): Promise<Verdict> {
   const f = deps.fetch ?? fetch;
   const model = deps.model ?? env.VISION_MODEL;
-  const timeoutMs = deps.timeoutMs ?? 8000;
+  const timeoutMs = deps.timeoutMs ?? 12000;
   const locale = deps.locale ?? 'vi';
   const started = Date.now();
   const fail = (raw: string): Verdict => ({ categories: [], healthy: null, confidence: 0, reason: '', model, latencyMs: Date.now() - started, raw, failed: true });
@@ -69,6 +69,11 @@ export async function classifyPhoto(
       body: JSON.stringify({
         model,
         temperature: 0,
+        // The default model (qwen) is a thinking model: left alone it streams ~700 reasoning
+        // tokens per verdict and blows the timeout. Disabling reasoning takes a call from ~19s
+        // to ~2s, and the verdict JSON is short enough that 300 output tokens is plenty.
+        reasoning: { effort: 'none', exclude: true },
+        max_tokens: 300,
         messages: [
           { role: 'system', content: systemPrompt(locale) },
           { role: 'user', content: [{ type: 'image_url', image_url: { url: `data:image/jpeg;base64,${image.toString('base64')}` } }] },
