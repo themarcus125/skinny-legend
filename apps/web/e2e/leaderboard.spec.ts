@@ -35,6 +35,20 @@ test.describe('Xếp hạng', () => {
     await expect(page.getByTestId('history-footer')).toBeVisible();
     await page.screenshot({ path: `${SHOTS}/web-member.png`, fullPage: true });
 
+    // SKI-134: a history row's location is the way onto the map, with that entry selected.
+    const place = page.getByTestId('history-place').first();
+    await expect(place).toBeVisible();
+    await expect(place).toHaveAccessibleName(/^Xem .+ trên bản đồ$/);
+    const entryId = await place.getAttribute('data-entry-id');
+    await place.click();
+    await expect(page).toHaveURL(new RegExp(`/feed/map\\?entry=${entryId}$`));
+    await expect(page.getByTestId('cluster-sheet')).toBeVisible();
+    await expect(
+      page.locator(`[data-testid="pin-card"][data-entry-id="${entryId}"]`),
+    ).toBeVisible();
+
+    await page.goBack();
+    await expect(page).toHaveURL(/\/leaderboard\/[\w-]+$/);
     await page.getByRole('button', { name: 'Quay lại' }).click();
     await expect(page).toHaveURL(/\/leaderboard$/);
   });

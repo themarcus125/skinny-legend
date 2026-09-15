@@ -112,22 +112,13 @@ describe('the group feed on Trang chủ', () => {
   });
 
   it('leaves a row with no location untappable', async () => {
+    // The seed's own first entry with its place stripped — a real `FeedEntryDto`, minus a place.
+    const page = await seeded().feed();
     renderFeed(
       stubApi({
         feed: () =>
           Promise.resolve({
-            entries: [
-              {
-                id: 'e1',
-                localDate: SEED_DAY,
-                takenAt: `${SEED_DAY}T02:00:00.000Z`,
-                categories: ['exercise' as const],
-                photoUrl: 'https://example.test/p.jpg',
-                thumbUrl: null,
-                placeName: null,
-                user: { id: 'u1', displayName: 'Khoa', avatarUrl: null },
-              },
-            ],
+            entries: [{ ...page.entries[0]!, placeName: null }],
             nextCursor: null,
           }),
       }),
