@@ -61,8 +61,13 @@ export async function createEmulatorAccount(opts: {
 }
 
 /** Signs an existing emulator account in and returns its ID token (used by `api.spec.ts`). */
-export async function emulatorIdToken(opts: { host: string; email: string; password: string }): Promise<string> {
-  const response = await fetch(emulatorUrls(opts.host, 'skinny-legend').signIn, {
+export async function emulatorIdToken(opts: {
+  host: string;
+  email: string;
+  password: string;
+  projectId?: string;
+}): Promise<string> {
+  const response = await fetch(emulatorUrls(opts.host, opts.projectId ?? 'skinny-legend').signIn, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email: opts.email, password: opts.password, returnSecureToken: true }),

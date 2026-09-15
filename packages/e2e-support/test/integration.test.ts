@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { isPortFree } from '../src/net.js';
 import { clearEmulatorUsers, createEmulatorAccount, emulatorIdToken } from '../src/emulator.js';
 import { databaseUrlFor, ensureDatabase, migrateDatabase, resetDatabase, seedDatabase } from '../src/database.js';
@@ -8,17 +8,13 @@ const HOST = 'localhost:9099';
 const PROJECT_ID = 'skinny-legend';
 const ADMIN_URL = 'postgres://skinny:skinny@localhost:5432/skinny';
 
-let up = false;
-
-beforeAll(async () => {
-  // `docker compose up -d db auth-emulator` has to be running; otherwise this file is skipped
-  // rather than failed, so `pnpm test` stays green on a machine with no Docker.
-  up = !(await isPortFree(9099)) && !(await isPortFree(5432));
-});
+// `docker compose up -d db auth-emulator` has to be running; otherwise these cases report as
+// skipped rather than failed, so `pnpm test` stays green on a machine with no Docker. The probe
+// is top-level (not in `beforeAll`) because `it.skipIf` is evaluated during collection.
+const up = !(await isPortFree(9099)) && !(await isPortFree(5432));
 
 describe('e2e-support against real infrastructure', () => {
-  it('creates and clears emulator accounts', async () => {
-    if (!up) return;
+  it.skipIf(!up)('creates and clears emulator accounts', async () => {
     await clearEmulatorUsers({ host: HOST, projectId: PROJECT_ID });
     const account = await createEmulatorAccount({
       host: HOST,
@@ -37,10 +33,9 @@ describe('e2e-support against real infrastructure', () => {
     ).rejects.toThrow();
   });
 
-  it(
+  it.skipIf(!up)(
     'creates, migrates, seeds and resets skinny_e2e_support',
     async () => {
-      if (!up) return;
       const url = await ensureDatabase(ADMIN_URL, 'skinny_e2e_support');
       expect(url).toBe(databaseUrlFor(ADMIN_URL, 'skinny_e2e_support'));
       await migrateDatabase(url);

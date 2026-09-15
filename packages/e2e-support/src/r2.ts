@@ -36,6 +36,20 @@ export function trackedR2Keys(logPath?: string): string[] {
   ];
 }
 
+/**
+ * A sweep is only ever allowed inside one run's own folder. An empty prefix would list and delete
+ * the entire bucket (`''.startsWith('')` is true for every key), and a prefix without a trailing
+ * slash would reach sideways — `e2e` also matches `e2efoo/photo.jpg`. Both are rejected before a
+ * single S3 call is made.
+ */
+export function assertSweepPrefix(prefix: string): void {
+  if (!prefix || !prefix.endsWith('/')) {
+    throw new Error(
+      `refusing to sweep R2 with prefix ${JSON.stringify(prefix)}: it must be non-empty and end with "/"`,
+    );
+  }
+}
+
 export function r2Client(config: R2Config): S3Client {
   return new S3Client({
     region: 'auto',
@@ -53,12 +67,17 @@ export async function cleanupR2({
   config,
   prefix,
   logPath,
+  client: injected,
 }: {
   config: R2Config;
   prefix: string;
   logPath?: string;
+  /** Test seam: a stand-in S3 client, so the sweep can be exercised without real credentials. */
+  client?: Pick<S3Client, 'send'>;
 }): Promise<string[]> {
-  const client = r2Client(config);
+  // Before any network call: a bad prefix must never reach ListObjectsV2 or DeleteObject.
+  assertSweepPrefix(prefix);
+  const client = injected ?? r2Client(config);
   const keys = new Set(trackedR2Keys(logPath));
   let ContinuationToken: string | undefined;
   do {

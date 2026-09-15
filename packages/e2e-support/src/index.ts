@@ -16,4 +16,4 @@ export {
   type EmulatorUrls,
 } from './emulator.js';
 export { createMember, type CreateMemberOptions, type Member } from './members.js';
-export { cleanupR2, r2Client, trackR2Key, trackedR2Keys, type R2Config } from './r2.js';
+export { assertSweepPrefix, cleanupR2, r2Client, trackR2Key, trackedR2Keys, type R2Config } from './r2.js';

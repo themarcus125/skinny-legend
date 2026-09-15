@@ -47,8 +47,8 @@ export async function ensureDatabase(adminUrl: string, database: string): Promis
   try {
     const rows = await admin`select 1 from pg_database where datname = ${database}`;
     // CREATE DATABASE cannot be parameterised or run inside a transaction; the name is a
-    // repo constant, never user input.
-    if (rows.length === 0) await admin.unsafe(`create database "${database}"`);
+    // repo constant, never user input. Quote-escaped all the same.
+    if (rows.length === 0) await admin.unsafe(`create database "${database.replaceAll('"', '""')}"`);
   } finally {
     await admin.end();
   }
