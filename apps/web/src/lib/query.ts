@@ -10,6 +10,21 @@ import { del, get, set } from 'idb-keyval';
 export const PERSIST_MAX_AGE = 1000 * 60 * 60 * 24;
 const PERSIST_KEY = 'skinny.query-cache';
 
+/**
+ * Every server-state key the app uses, in one place: a screen and the code that invalidates it
+ * after a mutation have to spell the same key, and a typo is otherwise a silent no-op.
+ */
+export const queryKeys = {
+  dashboard: ['dashboard'] as const,
+  leaderboard: ['leaderboard'] as const,
+  trends: ['trends'] as const,
+  feed: ['feed'] as const,
+  mapPins: (days: number) => ['map', days] as const,
+  myEntries: ['entries', 'mine'] as const,
+  userEntries: (id: string) => ['entries', 'user', id] as const,
+  me: ['me'] as const,
+};
+
 export function makeQueryClient(): QueryClient {
   return new QueryClient({
     defaultOptions: {

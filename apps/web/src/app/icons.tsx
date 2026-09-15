@@ -128,3 +128,12 @@ export function LockGlyph(props: GlyphProps) {
     </Glyph>
   );
 }
+
+/** The disclosure chevron on a card that pushes another screen (`chevron.right` on iOS). */
+export function ChevronRightGlyph(props: GlyphProps) {
+  return (
+    <Glyph strokeWidth={2.25} {...props}>
+      <path d="m9 5 7 7-7 7" />
+    </Glyph>
+  );
+}

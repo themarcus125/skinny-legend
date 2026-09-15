@@ -1,0 +1,128 @@
+import type { ReactElement, ReactNode } from 'react';
+import { describe, expect, it } from 'vitest';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { MemoryRouter } from 'react-router';
+import type { ApiClient } from '@skinny/api-client';
+import { ApiError } from '@skinny/api-client';
+import { createMockApiClient, makeSeed } from '@skinny/api-client/mock';
+import { filledDots } from '@skinny/ui';
+import { ApiProvider } from '@/lib/api';
+import { render, screen, within } from '@/test/intl';
+import { Overview } from './overview';
+
+/** The fixed day the whole plan pins its fixtures to, so every number below is deterministic. */
+const SEED_DAY = '2026-09-14';
+
+function mockApi(): ApiClient {
+  return createMockApiClient({ seed: makeSeed(SEED_DAY) });
+}
+
+/** An `ApiClient` whose `dashboard()` always rejects — the error-banner path. */
+function failingApi(error: Error): ApiClient {
+  return { dashboard: () => Promise.reject(error) } as unknown as ApiClient;
+}
+
+function renderOverview(ui: ReactElement, { api = mockApi() }: { api?: ApiClient } = {}) {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
+  const Wrapper = ({ children }: { children: ReactNode }) => (
+    <QueryClientProvider client={queryClient}>
+      <ApiProvider client={api}>
+        <MemoryRouter>{children}</MemoryRouter>
+      </ApiProvider>
+    </QueryClientProvider>
+  );
+  return render(ui, { wrapper: Wrapper });
+}
+
+/**
+ * The dots are derived from the streak, not fetched: the rulebook pays the bonus every seven
+ * days, so a streak that is an exact multiple of the cycle shows a full row (the bonus day
+ * itself), never an empty one. Mirrors `StreakCounterTests` on iOS.
+ */
+describe('streak dots derivation', () => {
+  it('matches the Swift cases', () => {
+    expect(filledDots(0)).toBe(0);
+    expect(filledDots(7)).toBe(7);
+    expect(filledDots(8)).toBe(1);
+    expect(filledDots(14)).toBe(7);
+  });
+});
+
+describe('Overview', () => {
+  it('shows today points, the delta, the rank and seven streak dots', async () => {
+    renderOverview(<Overview />);
+
+    expect(await screen.findByTestId('today-points')).toHaveTextContent('5');
+    // The seed's yesterday matches today, so the delta reads as the "same as yesterday" caption.
+    expect(screen.getByTestId('delta')).toHaveTextContent('Bằng hôm qua');
+    expect(screen.getByTestId('rank')).toHaveTextContent('3');
+    expect(screen.getByText('/ 5')).toBeInTheDocument();
+    expect(screen.getByText('trong nhóm')).toBeInTheDocument();
+    expect(screen.getAllByTestId('streak-dot')).toHaveLength(7);
+  });
+
+  it('lights every dot on a seven-day streak and names the previous best', async () => {
+    renderOverview(<Overview />);
+
+    await screen.findByTestId('streak-counter');
+    const lit = screen.getAllByTestId('streak-dot').filter((dot) => dot.dataset.filled === 'true');
+    expect(lit).toHaveLength(7);
+    expect(screen.getByText('ngày liên tiếp')).toBeInTheDocument();
+    expect(screen.getByText('Dài nhất: 7 ngày')).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: '7 trên 7 ngày của chuỗi hiện tại' })).toBeInTheDocument();
+  });
+
+  it('renders one checklist row per category, ticking the caps already hit today', async () => {
+    renderOverview(<Overview />);
+
+    const rows = await screen.findAllByTestId('checklist-row');
+    expect(rows).toHaveLength(3);
+    expect(rows.map((row) => row.dataset.category)).toEqual(['exercise', 'meal', 'group']);
+    // The seed has the two daily caps hit and the weekly group cap still open.
+    expect(rows.map((row) => row.dataset.done)).toEqual(['true', 'true', 'false']);
+    expect(within(rows[0]!).getByText('đã đủ hôm nay')).toBeInTheDocument();
+    expect(within(rows[2]!).getByText('+3')).toBeInTheDocument();
+  });
+
+  it('shows the challenge total on the accent card and links to the group feed', async () => {
+    renderOverview(<Overview />);
+
+    const total = await screen.findByTestId('challenge-total');
+    expect(total).toHaveTextContent('43');
+    expect(total.closest('[data-accent="true"]')).not.toBeNull();
+    expect(screen.getByText('Thưởng chuỗi: +5')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Nhật ký nhóm' })).toHaveAttribute('href', '/feed');
+  });
+
+  it('shows the empty caption when nothing has been tracked today', async () => {
+    const api = mockApi();
+    const dashboard = await api.dashboard();
+    const empty: ApiClient = {
+      ...api,
+      dashboard: () =>
+        Promise.resolve({ ...dashboard, today: { points: 0, categories: [] }, deltaVsYesterday: -5 }),
+    };
+    renderOverview(<Overview />, { api: empty });
+
+    expect(await screen.findByTestId('today-empty')).toHaveTextContent(
+      'Chưa ghi nhận hoạt động nào hôm nay.',
+    );
+    expect(screen.getByTestId('delta')).toHaveTextContent('-5 so với hôm qua');
+    expect(screen.queryByTestId('category-chip')).toBeNull();
+  });
+
+  it('renders a skeleton while the dashboard is loading', () => {
+    renderOverview(<Overview />);
+    expect(screen.getByTestId('overview-skeleton')).toBeInTheDocument();
+  });
+
+  it('renders a retryable error banner when the dashboard call fails', async () => {
+    renderOverview(<Overview />, { api: failingApi(new ApiError(500, 'internal', 'boom')) });
+
+    const banner = await screen.findByRole('alert');
+    expect(banner).toHaveTextContent('Máy chủ gặp sự cố, hãy thử lại sau.');
+    expect(within(banner).getByRole('button', { name: 'Thử lại' })).toBeInTheDocument();
+  });
+});
