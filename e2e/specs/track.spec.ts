@@ -124,14 +124,17 @@ test('a photo upload produces a verdict, points, and a fetchable R2 object', asy
   expect(pointsAfter).toBeGreaterThanOrEqual(pointsBefore);
   expect(stored.length).toBeGreaterThan(0);
   await expect(page.getByTestId('today-empty')).toHaveCount(0);
+  // Since SKI-134 the group log is the tail of Trang chủ, and its rows render chips of their
+  // own — so the Today card's chips are addressed inside the card that holds `today-points`,
+  // not by test id across the whole screen.
+  const todayCard = page.locator('section').filter({ has: page.getByTestId('today-points') });
   for (const { category } of stored) {
     await expect(page.locator(`[data-testid="checklist-row"][data-category="${category}"]`)).toHaveAttribute(
       'data-done',
       /^(true|false)$/,
     );
-    // The Today card is the only place the overview renders chips (screens/overview.tsx:115).
     await expect(
-      page.locator(`[data-testid="category-chip"][data-category="${category}"]`),
+      todayCard.locator(`[data-testid="category-chip"][data-category="${category}"]`),
     ).toBeVisible();
   }
 });
