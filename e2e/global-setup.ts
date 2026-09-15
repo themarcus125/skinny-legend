@@ -21,7 +21,7 @@ import {
   WEB_URL,
 } from './src/config.js';
 import { preflight } from './src/preflight.js';
-import { runOnce, startService } from './src/processes.js';
+import { runOnce, startService, stopServices } from './src/processes.js';
 
 const run = promisify(execFile);
 
@@ -93,28 +93,53 @@ export default async function globalSetup(): Promise<void> {
     await runOnce('web', 'pnpm', ['--filter', '@skinny/web', 'build'], ROOT, webEnv);
   }
 
-  await startService({
-    name: 'api',
-    command: 'pnpm',
-    args: ['exec', 'node', 'dist/index.js'],
-    cwd: join(ROOT, 'apps/api'),
-    env: apiEnv,
-    port: PORTS.api,
-  });
-  await startService({
-    name: 'admin',
-    command: 'pnpm',
-    args: ['exec', 'next', 'start', '-p', String(PORTS.admin)],
-    cwd: join(ROOT, 'apps/admin'),
-    env: adminEnv,
-    port: PORTS.admin,
-  });
-  await startService({
-    name: 'web',
-    command: 'pnpm',
-    args: ['exec', 'vite', 'preview', '--port', String(PORTS.web), '--strictPort'],
-    cwd: join(ROOT, 'apps/web'),
-    env: webEnv,
-    port: PORTS.web,
-  });
+  installSignalHandlers();
+
+  // A half-started stack must not outlive this process: Playwright skips globalTeardown when
+  // globalSetup throws, so the cleanup has to happen right here.
+  try {
+    await startService({
+      name: 'api',
+      command: 'pnpm',
+      args: ['exec', 'node', 'dist/index.js'],
+      cwd: join(ROOT, 'apps/api'),
+      env: apiEnv,
+      port: PORTS.api,
+      identity: { path: '/health', marker: '"ok":true' },
+    });
+    await startService({
+      name: 'admin',
+      command: 'pnpm',
+      args: ['exec', 'next', 'start', '-p', String(PORTS.admin)],
+      cwd: join(ROOT, 'apps/admin'),
+      env: adminEnv,
+      port: PORTS.admin,
+      identity: { path: '/', marker: 'Skinny Legend Admin' },
+    });
+    await startService({
+      name: 'web',
+      command: 'pnpm',
+      args: ['exec', 'vite', 'preview', '--port', String(PORTS.web), '--strictPort'],
+      cwd: join(ROOT, 'apps/web'),
+      env: webEnv,
+      port: PORTS.web,
+      identity: { path: '/', marker: '<title>Skinny Legend</title>' },
+    });
+  } catch (error) {
+    await stopServices();
+    throw error;
+  }
+}
+
+let handlersInstalled = false;
+
+/** Ctrl-C during setup or a run stops the stack before this process leaves. */
+function installSignalHandlers(): void {
+  if (handlersInstalled) return;
+  handlersInstalled = true;
+  for (const signal of ['SIGINT', 'SIGTERM'] as const) {
+    process.once(signal, () => {
+      void stopServices().finally(() => process.exit(1));
+    });
+  }
 }

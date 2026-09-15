@@ -13,7 +13,7 @@ export default async function globalTeardown(): Promise<void> {
   if (process.env.E2E_REUSE === '1') {
     console.log('[e2e] E2E_REUSE=1: leaving the api/admin/web processes running');
   } else {
-    stopServices();
+    await stopServices();
   }
 
   try {

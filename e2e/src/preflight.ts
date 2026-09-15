@@ -32,7 +32,7 @@ export async function preflight(): Promise<string[]> {
       if (name === 'emulator') continue;
       if (!(await isPortFree(port, 'localhost'))) {
         failures.push(
-          `Port ${port} (${name}) is in use — stop what is on it, or re-run with E2E_REUSE=1 to use it as is.`,
+          `Port ${port} (${name}) is in use — stop what is on it, or re-run with E2E_REUSE=1 to reuse a previous run's ${name} (a listener that does not answer as ${name} is rejected).`,
         );
       }
     }
