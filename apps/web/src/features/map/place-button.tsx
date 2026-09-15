@@ -2,9 +2,16 @@ import { useNavigate } from 'react-router';
 import { useTranslations } from 'use-intl';
 import { MapPinGlyph } from '@/app/icons';
 
+/**
+ * The search param a location tap carries. It lives here rather than in `map.tsx` because this
+ * button ships in the Trang chủ and member-detail chunks, and importing it from the map screen
+ * would drag Leaflet into both of them.
+ */
+export const ENTRY_PARAM = 'entry';
+
 /** Where a location tap lands, with the entry it should select. */
 export function mapHref(entryId: string): string {
-  return `/feed/map?entry=${encodeURIComponent(entryId)}`;
+  return `/feed/map?${ENTRY_PARAM}=${encodeURIComponent(entryId)}`;
 }
 
 /**

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import L from 'leaflet';
 import { MapContainer, Marker, TileLayer, useMap } from 'react-leaflet';
-import { useNavigate, useSearchParams } from 'react-router';
+import { useNavigate, useNavigationType, useSearchParams } from 'react-router';
 import { useTranslations } from 'use-intl';
 import { AlertBanner, EmptyState, initials } from '@skinny/ui';
 import { ChevronRightGlyph, CloseGlyph, MapPinGlyph } from '@/app/icons';
@@ -13,6 +13,7 @@ import { queryKeys } from '@/lib/query';
 import { Button } from '@/ui/button';
 import { ClusterList } from './cluster-list';
 import { CLUSTER_RADIUS_M, clusterBounds, clusterPins, type MapCluster } from './clusterer';
+import { ENTRY_PARAM } from './place-button';
 import { MapPinCard } from './pin-card';
 
 /** Spec §7: the map covers the last 30 days, the same window `MapModel.load` defaults to. */
@@ -28,13 +29,27 @@ const INITIAL_ZOOM = 12;
  */
 const FOCUS_ZOOM = 15;
 
-/** The search param a location tap carries — see `features/map/place-button.tsx`. */
-export const ENTRY_PARAM = 'entry';
 
 /** The marker's avatar diameter, matching iOS's `ClusterPin`. */
 const MARKER_SIZE = 36;
 /** The 36px avatar plus its 4px ring — what Leaflet has to anchor. */
 const MARKER_BOX = MARKER_SIZE + 8;
+
+/**
+ * Whether the reader got here from somewhere inside the app, so "Quay lại" can undo that step
+ * instead of guessing a destination.
+ *
+ * The map is reached from a location on Trang chủ **and** from one on a member's history, so a
+ * hardcoded target is wrong for one of them. A `PUSH`/`REPLACE` navigation type means this
+ * screen was pushed over another of ours. On a cold `POP` — a deep link, a reload, a pasted
+ * address — the browser's history entry may still be ours: React Router stamps `idx` on
+ * `history.state`, and anything past 0 is a step of ours to go back to.
+ */
+export function canGoBack(navigationType: string, historyState: unknown): boolean {
+  if (navigationType !== 'POP') return true;
+  const idx = (historyState as { idx?: unknown } | null | undefined)?.idx;
+  return typeof idx === 'number' && idx > 0;
+}
 
 /**
  * Escapes text destined for a `divIcon`'s `html`.
@@ -141,6 +156,7 @@ export function MapScreen() {
   const t = useTranslations();
   const api = useApi();
   const navigate = useNavigate();
+  const navigationType = useNavigationType();
   const [searchParams] = useSearchParams();
   const entryId = searchParams.get(ENTRY_PARAM);
   const [selected, setSelected] = useState<MapCluster | null>(null);
@@ -194,7 +210,9 @@ export function MapScreen() {
             size="sm"
             variant="ghost"
             aria-label={t('common.back')}
-            onClick={() => void navigate('/')}
+            onClick={() =>
+              void (canGoBack(navigationType, window.history.state) ? navigate(-1) : navigate('/'))
+            }
           >
             <ChevronRightGlyph className="size-4 rotate-180" />
           </Button>

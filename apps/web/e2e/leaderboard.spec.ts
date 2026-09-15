@@ -47,8 +47,15 @@ test.describe('Xếp hạng', () => {
       page.locator(`[data-testid="pin-card"][data-entry-id="${entryId}"]`),
     ).toBeVisible();
 
-    await page.goBack();
+    // The sheet is modal over the toolbar, so it goes before the back button is reachable.
+    await page.getByRole('button', { name: 'Đóng' }).click();
+    await expect(page.getByTestId('cluster-sheet')).toBeHidden();
+
+    // "Quay lại" undoes the step that got here, so it lands back on the member, not on Home.
+    await page.getByRole('button', { name: 'Quay lại' }).click();
     await expect(page).toHaveURL(/\/leaderboard\/[\w-]+$/);
+    await expect(page.getByTestId('member-name')).toBeVisible();
+
     await page.getByRole('button', { name: 'Quay lại' }).click();
     await expect(page).toHaveURL(/\/leaderboard$/);
   });

@@ -45,7 +45,7 @@ const SAFE_PATH = /^\/(?![/\\])/;
  * `PushPayload.tab(from:)` parses into an `AppTab` (ios/SkinnyLegend/Core/Push/PushRouter.swift).
  * A bare name is not a path, so without this table `'track'` would fail `SAFE_PATH` and fall back
  * — which happens to land on Track today only because Track *is* the default. Spelled out so a
- * future `feed` link goes to Feed instead of silently to Track. Keys mirror `AppTab` plus `map`.
+ * future `feed` link goes to the group log instead of silently to Track. Keys mirror `AppTab` plus `map`.
  *
  * A `Map`, not an object literal: a lookup of `'constructor'` off the wire must miss, not resolve
  * to an inherited `Object.prototype` member.
@@ -56,7 +56,8 @@ const TAB_PATHS = new Map<string, string>([
   ['leaderboard', '/leaderboard'],
   ['trends', '/trends'],
   ['account', '/account'],
-  ['feed', '/feed'],
+  // The group log folded into Trang chủ (SKI-134); `/feed` would only redirect here anyway.
+  ['feed', '/'],
   ['map', '/feed/map'],
 ]);
 

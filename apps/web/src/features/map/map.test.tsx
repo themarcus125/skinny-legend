@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter } from 'react-router';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router';
 import type { ApiClient } from '@skinny/api-client';
 import type { MapPinDto } from '@skinny/shared/wire';
 import { ApiProvider } from '@/lib/api';
@@ -58,7 +58,8 @@ vi.mock('react-leaflet', () => ({
   useMap: () => map,
 }));
 
-const { MapScreen, clusterMarkerHtml, escapeHtml } = await import('./map');
+const { MapScreen, canGoBack, clusterMarkerHtml, escapeHtml } = await import('./map');
+const { PlaceButton } = await import('./place-button');
 const { clusterPins, CLUSTER_RADIUS_M } = await import('./clusterer');
 
 const pin = (id: string, lat: number, lng: number, name = 'Linh'): MapPinDto => ({
@@ -323,5 +324,66 @@ describe('the group map', () => {
     });
     expect(html).not.toContain('<script>');
     expect(html).toContain('&lt;');
+  });
+});
+
+/**
+ * SKI-134 review: the map is reached from a location on Trang chủ *and* from one in a member's
+ * history, so "Quay lại" cannot hardcode a destination — it has to undo the step that got here.
+ */
+describe('the map back button', () => {
+  it('goes back when the screen was pushed, and home when it was not', () => {
+    expect(canGoBack('PUSH', null)).toBe(true);
+    expect(canGoBack('REPLACE', null)).toBe(true);
+    // A cold landing: a deep link, a reload, a pasted address.
+    expect(canGoBack('POP', null)).toBe(false);
+    expect(canGoBack('POP', {})).toBe(false);
+    expect(canGoBack('POP', { idx: 0 })).toBe(false);
+    // React Router stamps `idx`; anything past 0 is a step of ours to return to.
+    expect(canGoBack('POP', { idx: 2 })).toBe(true);
+    expect(canGoBack('POP', { idx: 'two' })).toBe(false);
+  });
+
+  function renderRouted(initial: string) {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    });
+    const Here = () => <span data-testid="here">{useLocation().pathname}</span>;
+    return render(
+      <QueryClientProvider client={queryClient}>
+        <ApiProvider client={stubApi(() => Promise.resolve(PINS))}>
+          <MemoryRouter initialEntries={[initial]}>
+            <Here />
+            <Routes>
+              <Route
+                path="/leaderboard/:userId"
+                element={<PlaceButton entryId="b" placeName="Hồ bơi Lam Sơn" testId="history-place" />}
+              />
+              <Route path="/" element={<span data-testid="home" />} />
+              <Route path="/feed/map" element={<MapScreen />} />
+            </Routes>
+          </MemoryRouter>
+        </ApiProvider>
+      </QueryClientProvider>,
+    );
+  }
+
+  it('returns to the member page the reader came from, not to Trang chủ', async () => {
+    renderRouted('/leaderboard/u1');
+    await userEvent.click(screen.getByTestId('history-place'));
+    expect(await screen.findByRole('heading', { level: 1, name: 'Bản đồ' })).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Quay lại' }));
+    expect(screen.getByTestId('here')).toHaveTextContent('/leaderboard/u1');
+    expect(screen.queryByTestId('home')).not.toBeInTheDocument();
+  });
+
+  it('falls back to Trang chủ when the map is the first screen of the session', async () => {
+    renderRouted('/feed/map');
+    await screen.findAllByTestId('map-marker');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Quay lại' }));
+    expect(screen.getByTestId('here')).toHaveTextContent('/');
+    expect(screen.getByTestId('home')).toBeInTheDocument();
   });
 });
