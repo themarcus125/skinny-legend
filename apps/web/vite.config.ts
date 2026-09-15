@@ -4,7 +4,7 @@ import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
-import { isThumbnailHost, thumbnailCacheKey } from './src/lib/thumbnail-cache';
+import { isThumbnailHost, thumbnailCacheKey } from './src/lib/thumbnail-cache.ts';
 
 /**
  * The version Account shows and `POST /feedback` carries, taken from `package.json` so there is
