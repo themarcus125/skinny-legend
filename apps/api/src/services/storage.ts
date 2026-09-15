@@ -18,7 +18,7 @@ export type UploadKind = 'photo' | 'avatar' | 'feedback';
 const PREFIX: Record<UploadKind | 'thumb', string> = { photo: 'photos', thumb: 'thumbs', avatar: 'avatars', feedback: 'feedback' };
 
 export function newKey(kind: UploadKind | 'thumb', userId: string, ext = 'jpg'): string {
-  return `${PREFIX[kind]}/${userId}/${randomUUID()}.${ext}`;
+  return `${env.STORAGE_KEY_PREFIX}${PREFIX[kind]}/${userId}/${randomUUID()}.${ext}`;
 }
 
 function r2(): Storage {
