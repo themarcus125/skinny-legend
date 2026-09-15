@@ -269,6 +269,8 @@
     "installBody": "Mở trình đơn Chia sẻ của Safari rồi chọn “Thêm vào MH chính” để nhận nhắc nhở.",
     "installDismiss": "Đã hiểu",
     "updateAvailable": "Đã có bản cập nhật mới.",
-    "updateAction": "Tải lại ngay"
+    "updateAction": "Tải lại ngay",
+    "crashTitle": "Cần tải lại ứng dụng",
+    "crashBody": "Ứng dụng vừa có bản mới hoặc phần này chưa tải xong. Tải lại để tiếp tục."
   }
 }

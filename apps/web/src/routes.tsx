@@ -1,5 +1,6 @@
 import { createBrowserRouter, type RouteObject } from 'react-router';
 import { AppShell } from '@/app/shell';
+import { RouteError } from '@/app/route-error';
 import { SessionGate } from '@/app/session-gate';
 
 /**
@@ -15,6 +16,13 @@ import { SessionGate } from '@/app/session-gate';
 export const routes: RouteObject[] = [
   {
     element: <SessionGate />,
+    /*
+     * Every screen is a `lazy()` chunk, and after a deploy the old chunk names 404 (the new
+     * worker has already cleaned the precache) — without this, React Router's unstyled English
+     * default error page takes the screen. `RouteError` is branded and localised, and reloads
+     * once by itself for exactly that failure.
+     */
+    errorElement: <RouteError />,
     children: [
       // Outside the shell: no tab bar until a member is active.
       { path: '/sign-in', lazy: () => import('@/screens/sign-in') },

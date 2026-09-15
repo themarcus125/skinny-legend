@@ -9,6 +9,7 @@ import { ApiProvider } from '@/lib/api';
 import { attachPersistence } from '@/lib/persist';
 import { makeQueryClient } from '@/lib/query';
 import { createRouter } from '@/routes';
+import { reloadOnWorkerTakeover } from '@/app/sw-update';
 import './index.css';
 
 const queryClient = makeQueryClient();
@@ -42,5 +43,11 @@ function render() {
  * `attachPersistence` never rejects, so the boot always reaches `render`, IndexedDB or not. It is
  * a `.then` rather than a top-level `await` so the entry chunk carries no module-level await for
  * the build target to down-level.
+ * It also carries its own one-second cap (`RESTORE_TIMEOUT_MS`), so a store that never answers
+ * cannot hold the boot on a blank page.
  */
 void attachPersistence(queryClient).then(render);
+
+// An update that claims this page has already invalidated its lazy chunks; reload before the
+// member finds out by tapping one. Guarded so a first install does not flash (see sw-update.ts).
+reloadOnWorkerTakeover();

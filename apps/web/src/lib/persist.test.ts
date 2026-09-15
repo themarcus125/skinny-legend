@@ -7,11 +7,14 @@ import type { PersistedClient } from '@tanstack/query-persist-client-core';
  * library. `store.fail` flips every call to a rejection, which is what a private-mode Safari or a
  * webview with storage blocked looks like from the app's side.
  */
-const store = { map: new Map<string, unknown>(), fail: false };
+const store = { map: new Map<string, unknown>(), fail: false, hang: false };
 
 vi.mock('idb-keyval', () => ({
   get: vi.fn((key: string) => {
     if (store.fail) return Promise.reject(new DOMException('blocked', 'InvalidStateError'));
+    // `hang` is the store that neither resolves nor rejects — an IDB request a locked-down
+    // webview never answers. The boot has to survive it.
+    if (store.hang) return new Promise<unknown>(() => undefined);
     return Promise.resolve(store.map.get(key));
   }),
   set: vi.fn((key: string, value: unknown) => {
@@ -26,9 +29,8 @@ vi.mock('idb-keyval', () => ({
   }),
 }));
 
-const { PERSIST_KEY, PERSIST_MAX_AGE_MS, attachPersistence, createIdbPersister } = await import(
-  './persist'
-);
+const { PERSIST_KEY, PERSIST_MAX_AGE_MS, RESTORE_TIMEOUT_MS, attachPersistence, createIdbPersister } =
+  await import('./persist');
 const { makeQueryClient, queryKeys } = await import('./query');
 
 function snapshot(timestamp: number, queries: PersistedClient['clientState']['queries']) {
@@ -62,6 +64,7 @@ function dehydratedDashboard() {
 beforeEach(() => {
   store.map.clear();
   store.fail = false;
+  store.hang = false;
 });
 
 describe('createIdbPersister', () => {
@@ -117,6 +120,25 @@ describe('attachPersistence', () => {
 
     await expect(attachPersistence(client)).resolves.toBeUndefined();
     expect(client.getQueryCache().getAll()).toHaveLength(0);
+  });
+
+  it('gives up on a store that never answers, so the boot still paints', async () => {
+    store.hang = true;
+    const client = makeQueryClient();
+
+    vi.useFakeTimers();
+    try {
+      const settled = vi.fn();
+      const restore = attachPersistence(client, RESTORE_TIMEOUT_MS).then(settled);
+      await vi.advanceTimersByTimeAsync(RESTORE_TIMEOUT_MS - 1);
+      expect(settled).not.toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(2);
+      await restore;
+      expect(settled).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+      store.hang = false;
+    }
   });
 
   it('never persists mutations — a write needs a connection', async () => {

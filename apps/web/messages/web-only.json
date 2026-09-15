@@ -138,5 +138,13 @@
   "account.feedbackSent": {
     "vi": "Đã gửi góp ý",
     "en": "Feedback sent"
+  },
+  "pwa.crashTitle": {
+    "vi": "Cần tải lại ứng dụng",
+    "en": "The app needs to reload"
+  },
+  "pwa.crashBody": {
+    "vi": "Ứng dụng vừa có bản mới hoặc phần này chưa tải xong. Tải lại để tiếp tục.",
+    "en": "A new version just shipped, or this part didn't finish loading. Reload to carry on."
   }
 }

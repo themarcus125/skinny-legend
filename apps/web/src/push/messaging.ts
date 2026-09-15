@@ -47,22 +47,22 @@ const SAFE_PATH = /^\/(?![/\\])/;
  * — which happens to land on Track today only because Track *is* the default. Spelled out so a
  * future `feed` link goes to Feed instead of silently to Track. Keys mirror `AppTab` plus `map`.
  *
- * A null prototype, so `deepLink: 'constructor'` off the wire cannot resolve to an inherited
- * `Object.prototype` member instead of a route.
+ * A `Map`, not an object literal: a lookup of `'constructor'` off the wire must miss, not resolve
+ * to an inherited `Object.prototype` member.
  */
-const TAB_PATHS: Record<string, string | undefined> = Object.assign(Object.create(null), {
-  track: '/track',
-  dashboard: '/',
-  leaderboard: '/leaderboard',
-  trends: '/trends',
-  account: '/account',
-  feed: '/feed',
-  map: '/feed/map',
-});
+const TAB_PATHS = new Map<string, string>([
+  ['track', '/track'],
+  ['dashboard', '/'],
+  ['leaderboard', '/leaderboard'],
+  ['trends', '/trends'],
+  ['account', '/account'],
+  ['feed', '/feed'],
+  ['map', '/feed/map'],
+]);
 
 export function safeDeepLink(link: string | undefined): string {
   if (link === undefined) return DEFAULT_DEEP_LINK;
-  const tab = TAB_PATHS[link];
+  const tab = TAB_PATHS.get(link);
   if (tab !== undefined) return tab;
   return SAFE_PATH.test(link) ? link : DEFAULT_DEEP_LINK;
 }

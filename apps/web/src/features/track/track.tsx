@@ -169,7 +169,7 @@ export function Track({ onTracked }: TrackProps) {
         queryKeys.leaderboard,
         queryKeys.trends,
         queryKeys.myEntries,
-        ['map'],
+        queryKeys.map,
       ]) {
         void queryClient.invalidateQueries({ queryKey: key });
       }

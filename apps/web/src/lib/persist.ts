@@ -56,16 +56,31 @@ export function createIdbPersister(key = PERSIST_KEY): Persister {
 }
 
 /**
+ * How long the boot waits for the restore before painting anyway. A store that never answers —
+ * a Safari private window that blocks on `open`, a webview whose IDB request neither resolves nor
+ * rejects — would otherwise hold the app on a blank page forever.
+ */
+export const RESTORE_TIMEOUT_MS = 1000;
+
+/**
  * Restores the last snapshot into `client` and keeps writing new ones. Resolves once the restore
- * has finished (or failed), so `main.tsx` can await it before the first paint and a cold, offline
- * launch paints last-known data instead of a row of spinners.
+ * has finished (or failed, or run out of time), so `main.tsx` can await it before the first paint
+ * and a cold, offline launch paints last-known data instead of a row of spinners.
+ *
+ * `persistQueryClient`'s restore cannot be cancelled, so one that beats the timeout by a hair still
+ * hydrates afterwards. That is harmless: `hydrate` only overwrites a query whose persisted
+ * `dataUpdatedAt` is newer than what is already in memory, so a fetch that has landed in the
+ * meantime keeps the screen.
  *
  * Mutations are never dehydrated: a write needs a connection (spec §5), and replaying a queued
  * upload hours later would post a photo the member has forgotten about. Auth and push state are
  * not in the query cache at all — the session lives in `src/auth/session.tsx` and the push
  * registration in `localStorage` — so neither rides along here.
  */
-export async function attachPersistence(client: QueryClient): Promise<void> {
+export async function attachPersistence(
+  client: QueryClient,
+  timeoutMs = RESTORE_TIMEOUT_MS,
+): Promise<void> {
   try {
     const [, restored] = persistQueryClient({
       queryClient: client,
@@ -74,7 +89,10 @@ export async function attachPersistence(client: QueryClient): Promise<void> {
       buster: buster(),
       dehydrateOptions: { shouldDehydrateMutation: () => false },
     });
-    await restored;
+    await Promise.race([
+      restored,
+      new Promise<void>((resolve) => setTimeout(resolve, timeoutMs)),
+    ]);
   } catch {
     /* an unavailable store must never block the boot */
   }

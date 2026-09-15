@@ -269,6 +269,8 @@
     "installBody": "Open Safari's Share menu and choose “Add to Home Screen” to get reminders.",
     "installDismiss": "Got it",
     "updateAvailable": "A new version is available.",
-    "updateAction": "Reload now"
+    "updateAction": "Reload now",
+    "crashTitle": "The app needs to reload",
+    "crashBody": "A new version just shipped, or this part didn't finish loading. Reload to carry on."
   }
 }
