@@ -16,7 +16,7 @@ import { render, screen, waitFor, within } from '@/test/intl';
  * selection sheet, fit-once, refresh-without-reset) assertable in jsdom. The clustering itself
  * has its own unit tests in `clusterer.test.ts`.
  */
-const map = { invalidateSize: vi.fn(), fitBounds: vi.fn() };
+const map = { invalidateSize: vi.fn(), fitBounds: vi.fn(), setView: vi.fn() };
 
 vi.mock('react-leaflet', () => ({
   MapContainer: ({ children }: { children?: ReactNode }) => (
@@ -84,14 +84,18 @@ function stubApi(mapPins: () => Promise<MapPinDto[]>): ApiClient {
   return { mapPins: (_days: number) => mapPins() } as unknown as ApiClient;
 }
 
-function renderMap(api: ApiClient) {
+function renderMap(api: ApiClient, entry?: string) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
   const Wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={queryClient}>
       <ApiProvider client={api}>
-        <MemoryRouter initialEntries={['/feed/map']}>{children}</MemoryRouter>
+        <MemoryRouter
+          initialEntries={[entry ? `/feed/map?entry=${encodeURIComponent(entry)}` : '/feed/map']}
+        >
+          {children}
+        </MemoryRouter>
       </ApiProvider>
     </QueryClientProvider>
   );
@@ -101,6 +105,7 @@ function renderMap(api: ApiClient) {
 beforeEach(() => {
   map.invalidateSize.mockClear();
   map.fitBounds.mockClear();
+  map.setView.mockClear();
 });
 
 describe('the group map', () => {
@@ -255,6 +260,56 @@ describe('the group map', () => {
     await waitFor(() => {
       expect(calls).toBeGreaterThan(1);
     });
+  });
+
+  /**
+   * SKI-134: the map is no longer reached from a toolbar button over the feed but from a
+   * location on a row, which hands the entry id over in `?entry=`.
+   */
+  it('centres on the entry from the search param and opens its card, keeping the other pins', async () => {
+    renderMap(stubApi(() => Promise.resolve(PINS)), 'b');
+
+    // The sheet opens by itself on the cluster holding that entry.
+    const sheet = await screen.findByTestId('cluster-sheet');
+    expect(within(sheet).getByTestId('pin-card')).toHaveAttribute('data-entry-id', 'b');
+    expect(within(sheet).getByTestId('pin-name')).toHaveTextContent('Trang');
+
+    // Centred on it rather than fitted to everything — and every other pin is still drawn.
+    await waitFor(() => {
+      expect(map.setView).toHaveBeenCalledTimes(1);
+    });
+    expect(map.setView.mock.calls[0]![0]).toEqual([10.78, 106.71]);
+    expect(map.fitBounds).not.toHaveBeenCalled();
+    expect(screen.getAllByTestId('map-marker')).toHaveLength(2);
+
+    // One-shot: dismissing it is final, and a refetch must not shove it back up.
+    await userEvent.click(screen.getByRole('button', { name: 'Đóng' }));
+    expect(screen.queryByTestId('cluster-sheet')).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Tải lại' }));
+    await waitFor(() => {
+      expect(screen.getAllByTestId('map-marker')).toHaveLength(2);
+    });
+    expect(screen.queryByTestId('cluster-sheet')).not.toBeInTheDocument();
+  });
+
+  it('opens the whole cluster when the entry shares a place with others', async () => {
+    renderMap(stubApi(() => Promise.resolve(PINS)), 'a2');
+
+    const sheet = await screen.findByTestId('cluster-sheet');
+    expect(within(sheet).getByTestId('cluster-list')).toBeInTheDocument();
+    const cards = within(sheet).getAllByTestId('pin-card');
+    expect(cards.map((card) => card.getAttribute('data-entry-id'))).toContain('a2');
+  });
+
+  it('ignores an entry id the map does not know and fits every pin as usual', async () => {
+    renderMap(stubApi(() => Promise.resolve(PINS)), 'nope');
+
+    await screen.findAllByTestId('map-marker');
+    await waitFor(() => {
+      expect(map.fitBounds).toHaveBeenCalledTimes(1);
+    });
+    expect(map.setView).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('cluster-sheet')).not.toBeInTheDocument();
   });
 
   it('escapes member-supplied text before it reaches the divIcon HTML', () => {

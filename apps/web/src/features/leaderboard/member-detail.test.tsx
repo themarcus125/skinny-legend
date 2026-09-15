@@ -21,7 +21,12 @@ const seeded = (historyPageSize?: number) =>
 
 function Location() {
   const location = useLocation();
-  return <span data-testid="pathname">{location.pathname}</span>;
+  return (
+    <>
+      <span data-testid="pathname">{location.pathname}</span>
+      <span data-testid="href">{`${location.pathname}${location.search}`}</span>
+    </>
+  );
 }
 
 function renderMember(api: ApiClient, userId = MEMBER_ID) {
@@ -34,6 +39,7 @@ function renderMember(api: ApiClient, userId = MEMBER_ID) {
         <MemoryRouter initialEntries={[`/leaderboard/${userId}`]}>
           <Routes>
             <Route path="/leaderboard" element={<span data-testid="board-route" />} />
+            <Route path="/feed/map" element={<span data-testid="map-route" />} />
             <Route path="/leaderboard/:userId" element={<>{children}</>} />
           </Routes>
           <Location />
@@ -60,6 +66,38 @@ describe('the member detail screen', () => {
     expect(within(rows[0]!).getByTestId('history-day')).toHaveTextContent('Thứ Hai, 14/09');
     expect(within(rows[1]!).getByTestId('history-place')).toHaveTextContent('Hồ bơi Lam Sơn');
     expect(within(rows[1]!).getAllByTestId('category-chip').length).toBeGreaterThan(0);
+  });
+
+  /**
+   * SKI-134: a history row's place is the way onto the map, carrying its entry id so the map
+   * centres there and opens that card. A row with no place stays plain text with no button
+   * semantics — there is nothing to point the map at.
+   */
+  it('opens the map from a history row location, carrying the entry id', async () => {
+    renderMember(seeded());
+    const card = await screen.findByTestId('history-card');
+    const place = within(card).getAllByTestId('history-place')[0]!;
+    const entryId = place.dataset.entryId!;
+
+    expect(place.tagName).toBe('BUTTON');
+    expect(place).toHaveAccessibleName(`Xem ${place.textContent} trên bản đồ`);
+
+    await userEvent.click(place);
+    expect(screen.getByTestId('href')).toHaveTextContent(
+      `/feed/map?entry=${encodeURIComponent(entryId)}`,
+    );
+    expect(screen.getByTestId('map-route')).toBeInTheDocument();
+  });
+
+  it('leaves a history row with no location free of button semantics', async () => {
+    renderMember(seeded());
+    const card = await screen.findByTestId('history-card');
+    const rows = within(card).getAllByTestId('history-row');
+    const placeless = rows.filter((row) => within(row).queryByTestId('history-place') === null);
+    expect(placeless.length).toBeGreaterThan(0);
+    for (const row of placeless) {
+      expect(within(row).queryByRole('button')).not.toBeInTheDocument();
+    }
   });
 
   it('is a single page terminal state when the whole history fits', async () => {
