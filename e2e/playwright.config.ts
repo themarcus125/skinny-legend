@@ -1,5 +1,5 @@
 import { defineConfig, devices } from '@playwright/test';
-import { E2E_DIR, R2_KEY_LOG, WEB_URL } from './src/config.js';
+import { E2E_DIR, R2_KEY_LOG, TIMEZONE, WEB_URL } from './src/config.js';
 
 // The R2 key log is read by global teardown, which runs in its own process.
 process.env.E2E_R2_KEY_LOG = R2_KEY_LOG;
@@ -30,7 +30,15 @@ export default defineConfig({
   projects: [
     {
       name: 'e2e',
-      use: { ...devices['Desktop Chrome'], locale: 'vi-VN', viewport: { width: 1280, height: 900 } },
+      use: {
+        ...devices['Desktop Chrome'],
+        locale: 'vi-VN',
+        // The fixtures' EXIF timestamp has no offset, so the browser reads it as local wall clock.
+        // Pinning the context's zone is what makes a UTC CI runner agree with an ICT laptop about
+        // which calendar day the photo was taken on.
+        timezoneId: TIMEZONE,
+        viewport: { width: 1280, height: 900 },
+      },
     },
   ],
 });

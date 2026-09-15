@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import type { Member } from '@skinny/e2e-support';
-import { FIXTURES, WEB_URL } from '../src/config.js';
+import { FIXTURE_DATE, FIXTURES, WEB_URL } from '../src/config.js';
 import { member, query, resetAll, settleVerdict, signInWeb, uploadPhoto } from '../src/helpers.js';
 
 test.describe.configure({ mode: 'serial' });
@@ -58,8 +58,11 @@ test('the home feed groups both members entries under a day heading', async ({ p
   await expect(page.getByTestId('feed-section')).toBeVisible();
   await expect(page.getByTestId('feed-day')).toHaveCount(1);
   await expect(page.getByTestId('feed-row')).toHaveCount(2);
+  // The heading's day is the fixtures' EXIF day, not the wall clock's: both entries were made
+  // from photos global setup dated `FIXTURE_DATE` (today, unless `E2E_FIXTURE_DATE` says
+  // otherwise), and the API's `localDate` comes straight from that `takenAt`.
   const day = await page.getByTestId('feed-day').first().getAttribute('data-date');
-  expect(day).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  expect(day).toBe(FIXTURE_DATE);
 
   // Both members' entries are in the group's log, each row addressed by its own entry id.
   const entries = await query<LocatedEntry>(

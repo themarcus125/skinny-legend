@@ -24,11 +24,41 @@ export const LOG_DIR = join(E2E_DIR, 'logs');
 export const R2_KEY_LOG = join(E2E_DIR, '.r2-keys.log');
 export const PROCESS_FILE = join(E2E_DIR, '.processes.json');
 
+/**
+ * The suite's own timezone. Pinned on the Playwright project too, so `exifr`'s wall-clock parse
+ * (apps/web/src/lib/exif.ts) yields the same calendar day on a UTC CI runner and an ICT laptop.
+ */
+export const TIMEZONE = 'Asia/Ho_Chi_Minh';
+
+/** Today's calendar date in `TIMEZONE`, as `YYYY-MM-DD`. */
+function todayInTimezone(now = new Date()): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: TIMEZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(now);
+}
+
+/**
+ * The EXIF `DateTimeOriginal` date global setup bakes into the generated fixtures, and therefore
+ * the `localDate` every entry made from one lands on. Defaults to today so the dashboard's Today
+ * card is populated; `E2E_FIXTURE_DATE=YYYY-MM-DD` overrides it, which is how the suite proves its
+ * expectations come from the fixture rather than the wall clock.
+ */
+export const FIXTURE_DATE = process.env.E2E_FIXTURE_DATE ?? todayInTimezone();
+
+/** True on a normal run; false when `E2E_FIXTURE_DATE` points the fixtures at another day. */
+export const FIXTURE_IS_TODAY = FIXTURE_DATE === todayInTimezone();
+
+/** Generated per run by `scripts/make-fixtures.mjs`; gitignored, never committed. */
+export const FIXTURES_DIR = join(E2E_DIR, '.fixtures');
+
 export const FIXTURES = {
-  exercise: join(E2E_DIR, 'fixtures/exercise.jpg'),
-  meal: join(E2E_DIR, 'fixtures/meal.jpg'),
-  group: join(E2E_DIR, 'fixtures/group.jpg'),
-  noExif: join(E2E_DIR, 'fixtures/no-exif.jpg'),
+  exercise: join(FIXTURES_DIR, 'exercise.jpg'),
+  meal: join(FIXTURES_DIR, 'meal.jpg'),
+  group: join(FIXTURES_DIR, 'group.jpg'),
+  noExif: join(FIXTURES_DIR, 'no-exif.jpg'),
 } as const;
 
 /** The secrets every run needs, from the root .env (loaded by global-setup) or the shell. */

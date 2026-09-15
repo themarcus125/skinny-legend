@@ -1,6 +1,6 @@
 import { expect, test, type APIRequestContext } from '@playwright/test';
 import type { Member } from '@skinny/e2e-support';
-import { API_URL, FIXTURES, WEB_URL } from '../src/config.js';
+import { API_URL, FIXTURE_IS_TODAY, FIXTURES, WEB_URL } from '../src/config.js';
 import { apiToken, member, query, resetAll, settleVerdict, signInWeb, uploadPhoto } from '../src/helpers.js';
 
 test.describe.configure({ mode: 'serial' });
@@ -118,24 +118,32 @@ test('a photo upload produces a verdict, points, and a fetchable R2 object', asy
     'select category from entry_categories where entry_id = $1',
     [entry!.id],
   );
-  await page.goto(`${WEB_URL}/`);
-  await expect(page.getByTestId('today-points')).toHaveText(/^\d+$/);
-  const pointsAfter = Number(await page.getByTestId('today-points').innerText());
-  expect(pointsAfter).toBeGreaterThanOrEqual(pointsBefore);
   expect(stored.length).toBeGreaterThan(0);
-  await expect(page.getByTestId('today-empty')).toHaveCount(0);
-  // Since SKI-134 the group log is the tail of Trang chủ, and its rows render chips of their
-  // own — so the Today card's chips are addressed inside the card that holds `today-points`,
-  // not by test id across the whole screen.
-  const todayCard = page.locator('section').filter({ has: page.getByTestId('today-points') });
-  for (const { category } of stored) {
-    await expect(page.locator(`[data-testid="checklist-row"][data-category="${category}"]`)).toHaveAttribute(
-      'data-done',
-      /^(true|false)$/,
-    );
-    await expect(
-      todayCard.locator(`[data-testid="category-chip"][data-category="${category}"]`),
-    ).toBeVisible();
+  await page.goto(`${WEB_URL}/`);
+
+  // The Today card is a *dashboard* view of `localDate = today`, and the entry's `localDate` comes
+  // from the fixture's EXIF day. On a normal run those are the same day and the card must show the
+  // entry; under `E2E_FIXTURE_DATE` they are deliberately not, and the card is correctly empty —
+  // so the day-scoped assertions are the ones that stand down, never the entry-scoped ones above.
+  if (FIXTURE_IS_TODAY) {
+    await expect(page.getByTestId('today-points')).toHaveText(/^\d+$/);
+    const pointsAfter = Number(await page.getByTestId('today-points').innerText());
+    // Exactly the scorer's number, not "no worse than before": `>=` is `0 >= 0` after every reset
+    // and would stay green if the entry's points were dropped on the floor.
+    expect(pointsAfter).toBe(pointsBefore + scored!.points);
+    await expect(page.getByTestId('today-empty')).toHaveCount(0);
+    // Since SKI-134 the group log is the tail of Trang chủ, and its rows render chips of their
+    // own — so the Today card's chips are addressed inside the card that holds `today-points`,
+    // not by test id across the whole screen.
+    const todayCard = page.locator('section').filter({ has: page.getByTestId('today-points') });
+    for (const { category } of stored) {
+      await expect(
+        page.locator(`[data-testid="checklist-row"][data-category="${category}"]`),
+      ).toHaveAttribute('data-done', /^(true|false)$/);
+      await expect(
+        todayCard.locator(`[data-testid="category-chip"][data-category="${category}"]`),
+      ).toBeVisible();
+    }
   }
 });
 

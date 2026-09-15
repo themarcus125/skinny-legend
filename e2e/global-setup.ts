@@ -10,8 +10,11 @@ import {
   API_URL,
   DATABASE_NAME,
   DATABASE_URL,
+  E2E_DIR,
   EMULATOR_HOST,
   FIREBASE_WEB_CONFIG,
+  FIXTURE_DATE,
+  FIXTURES_DIR,
   PORTS,
   PROCESS_FILE,
   PROJECT_ID,
@@ -37,6 +40,16 @@ export default async function globalSetup(): Promise<void> {
   if (!reuse && existsSync(PROCESS_FILE)) rmSync(PROCESS_FILE);
   writeFileSync(R2_KEY_LOG, '', 'utf8');
   process.env.E2E_R2_KEY_LOG = R2_KEY_LOG;
+
+  // The photo fixtures are generated, never committed: their EXIF `DateTimeOriginal` decides the
+  // `localDate` of every entry the suite creates, and a committed file would date every future run
+  // to the day it was written — emptying the dashboard's Today card the morning after. Runs on a
+  // reused stack too, so `E2E_FIXTURE_DATE` takes effect without a rebuild.
+  await run(
+    process.execPath,
+    [join(E2E_DIR, 'scripts/make-fixtures.mjs'), '--out', FIXTURES_DIR, '--date', FIXTURE_DATE],
+    { cwd: E2E_DIR },
+  );
 
   // CI brings its own Postgres service and emulator container; locally compose owns both.
   if (process.env.CI !== 'true') {
