@@ -1,8 +1,16 @@
+import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
+
+/**
+ * The version Account shows and `POST /feedback` carries, taken from `package.json` so there is
+ * one number to bump — the web's answer to iOS's `CFBundleShortVersionString`.
+ */
+const APP_VERSION: string = (createRequire(import.meta.url)('./package.json') as { version: string })
+  .version;
 
 /** Light-theme `--background` from `@skinny/ui/styles/tokens.css`. */
 const THEME_COLOR = '#EDECF1';
@@ -83,6 +91,7 @@ export default defineConfig({
       },
     }),
   ],
+  define: { 'import.meta.env.VITE_APP_VERSION': JSON.stringify(APP_VERSION) },
   resolve: { alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) } },
   server: { port: 5173 },
   preview: { port: 4173 },

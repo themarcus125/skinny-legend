@@ -118,5 +118,13 @@
   "common.close": {
     "vi": "Đóng",
     "en": "Close"
+  },
+  "account.capped": {
+    "vi": "Đã đủ giới hạn",
+    "en": "Limit reached"
+  },
+  "account.feedbackSent": {
+    "vi": "Đã gửi góp ý",
+    "en": "Feedback sent"
   }
 }

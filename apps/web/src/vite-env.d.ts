@@ -5,6 +5,8 @@ interface ImportMetaEnv {
   /** `'1'` swaps the live client for `@skinny/api-client/mock`. Previews and e2e set it. */
   readonly VITE_MOCK?: string;
   readonly VITE_API_BASE_URL?: string;
+  /** The build version shown in Account and sent with feedback; injected from package.json. */
+  readonly VITE_APP_VERSION?: string;
   /** Dev only: sent as `x-test-uid` when the API runs with `AUTH_MODE=test` (ruling R17). */
   readonly VITE_TEST_UID?: string;
   readonly VITE_FIREBASE_API_KEY?: string;

@@ -244,7 +244,16 @@
     "history": "Lịch sử hoạt động",
     "historyEmpty": "Chưa có hoạt động nào",
     "historyLoadFailed": "Không tải được lịch sử.",
-    "profileLoadFailed": "Không tải được hồ sơ."
+    "profileLoadFailed": "Không tải được hồ sơ.",
+    "rankPoints": "Hạng {0} · {1} điểm",
+    "profileOf": "Hồ sơ của {0}",
+    "saveFailed": "Không lưu được, hãy thử lại.",
+    "deleteFailed": "Không xoá được, hãy thử lại.",
+    "historyEmptyBody": "Ghi nhận hoạt động đầu tiên ở tab Ghi nhận.",
+    "notConfirmed": "Chưa xác nhận",
+    "dayPoints": "{0}: {1} điểm",
+    "capped": "Đã đủ giới hạn",
+    "feedbackSent": "Đã gửi góp ý"
   },
   "push": {
     "enableFailed": "Không bật được thông báo, hãy thử lại.",

@@ -244,7 +244,16 @@
     "history": "Activity history",
     "historyEmpty": "No activity yet",
     "historyLoadFailed": "Couldn't load your history.",
-    "profileLoadFailed": "Couldn't load your profile."
+    "profileLoadFailed": "Couldn't load your profile.",
+    "rankPoints": "Rank {0} · {1} points",
+    "profileOf": "{0}'s profile",
+    "saveFailed": "Couldn't save, please try again.",
+    "deleteFailed": "Couldn't delete, please try again.",
+    "historyEmptyBody": "Track your first activity from the Track tab.",
+    "notConfirmed": "Not confirmed",
+    "dayPoints": "{0}: {1} points",
+    "capped": "Limit reached",
+    "feedbackSent": "Feedback sent"
   },
   "push": {
     "enableFailed": "Couldn't turn on notifications, please try again.",

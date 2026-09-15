@@ -1,4 +1,4 @@
-import type { ApiClient, UploadContentType } from '@skinny/api-client';
+import type { ApiClient, UploadContentType, UploadKind } from '@skinny/api-client';
 import { ApiError } from './live-client';
 
 /**
@@ -74,20 +74,35 @@ export async function toUploadable(
 
 /**
  * Convert → presign → PUT, reporting a 0…1 fraction the whole way, and answering with the R2
- * key `POST /entries` needs. The PUT itself is `ApiClient.uploadToPresign` (an
+ * key the caller's `POST`/`PATCH` needs. The PUT itself is `ApiClient.uploadToPresign` (an
  * `XMLHttpRequest`, the only browser API that reports upload progress), so mock mode resolves
  * it in memory instead of trying to reach `mock://upload/…`.
+ *
+ * `kind` is what the API scopes the key by — `photo` for an entry, `avatar` for the profile
+ * picture (Task 12), `feedback` for a screenshot. Ruling R25's conversion applies to all three:
+ * a HEIC avatar would be just as unreadable in the leaderboard as a HEIC entry photo.
  */
-export async function uploadPhoto(
+export async function uploadWithProgress(
   api: ApiClient,
+  kind: UploadKind,
   file: Blob,
   onProgress: (fraction: number) => void,
   /** The R25 conversion seam — injected in tests, where jsdom has no canvas to decode with. */
   convert?: (file: Blob) => Promise<Blob>,
 ): Promise<string> {
   const { blob, contentType } = await toUploadable(file, convert);
-  const presign = await api.presign({ kind: 'photo', contentType });
+  const presign = await api.presign({ kind, contentType });
   await api.uploadToPresign(presign.url, blob, contentType, onProgress);
   onProgress(1);
   return presign.key;
+}
+
+/** The entry-photo case, which is the one every Track call site wants. */
+export function uploadPhoto(
+  api: ApiClient,
+  file: Blob,
+  onProgress: (fraction: number) => void,
+  convert?: (file: Blob) => Promise<Blob>,
+): Promise<string> {
+  return uploadWithProgress(api, 'photo', file, onProgress, convert);
 }

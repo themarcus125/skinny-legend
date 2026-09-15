@@ -68,3 +68,19 @@ export function writeMockOverride(value: boolean, storage?: Storage): void {
     // A full or blocked quota must not take the sign-in screen down with it.
   }
 }
+
+/**
+ * The group fund, opened from Account. Port of `AppMode.momoFundURL`
+ * (`ios/SkinnyLegend/App/AppMode.swift`) — the same Momo page both clients link to.
+ */
+export const MOMO_FUND_URL = 'https://quy.momo.vn/v2/GZqk7REIhy?cover=f131';
+
+/**
+ * The build's version string, for the Account row and the `appVersion` field on `POST
+ * /feedback`. Port of `AppMode.appVersion`, which reads `CFBundleShortVersionString`.
+ *
+ * `VITE_APP_VERSION` is injected from `package.json` at build time (`vite.config.ts`); a dev
+ * server or a test run with nothing injected falls back to the same literal rather than
+ * rendering `undefined` at a member.
+ */
+export const APP_VERSION: string = import.meta.env.VITE_APP_VERSION ?? '0.0.1';

@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { screen } from '@/test/intl';
+import { LocaleProvider } from '@/i18n/provider';
 import { makeUser, renderApp, stubApi, stubAuthPort } from '@/test/session';
 import { THEME_STORAGE_KEY } from './theme';
 import { ThemeProvider } from './theme-provider';
@@ -15,8 +16,20 @@ function renderRoute(path: string, signedIn = false) {
   return renderApp({
     path,
     auth: stubAuthPort(signedIn),
-    client: stubApi({ session: () => Promise.resolve(makeUser()) }),
-    outer: (children) => <ThemeProvider>{children}</ThemeProvider>,
+    client: stubApi({
+      session: () => Promise.resolve(makeUser()),
+      // `/account` renders the language picker, which reads the locale context, and the header,
+      // which reads this member's leaderboard row — both stubbed so the route mounts for real.
+      updateMe: () => Promise.resolve(makeUser()),
+      leaderboard: () => Promise.resolve([]),
+      myEntries: () => Promise.resolve({ entries: [], nextCursor: null }),
+    }),
+    // The same nesting as `main.tsx`: theme outermost, then the locale provider the pickers read.
+    outer: (children) => (
+      <ThemeProvider>
+        <LocaleProvider>{children}</LocaleProvider>
+      </ThemeProvider>
+    ),
   });
 }
 
@@ -35,6 +48,10 @@ beforeEach(() => {
   root().className = '';
   root().style.colorScheme = '';
   localStorage.clear();
+  // The tree now carries a real `LocaleProvider` (as `main.tsx` does), and jsdom's
+  // `navigator.language` is `en-US` — so say which language this browser reads, or the shell
+  // renders in English and the Vietnamese assertions below stop matching.
+  localStorage.setItem('skinny.locale', 'vi');
 });
 
 afterEach(() => {
