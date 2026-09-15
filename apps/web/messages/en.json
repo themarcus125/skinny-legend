@@ -192,6 +192,7 @@
   },
   "feed": {
     "title": "Group feed",
+    "viewOnMap": "View on map",
     "emptyTitle": "No activity yet",
     "today": "today",
     "entryCount": "{0} entries",

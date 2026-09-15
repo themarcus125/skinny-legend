@@ -192,6 +192,7 @@
   },
   "feed": {
     "title": "Nhật ký nhóm",
+    "viewOnMap": "Xem bản đồ",
     "emptyTitle": "Chưa có hoạt động nào",
     "today": "hôm nay",
     "entryCount": "{0} mục ghi",

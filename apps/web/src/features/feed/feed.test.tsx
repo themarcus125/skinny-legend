@@ -92,8 +92,8 @@ describe('the group feed on Trang chủ', () => {
     expect(within(rows[0]!).getAllByTestId('category-chip').length).toBeGreaterThan(0);
     expect(screen.getAllByTestId('feed-place').length).toBeGreaterThan(0);
 
-    // The map is reached from a location now, never from a toolbar button over the feed.
-    expect(screen.queryByRole('link', { name: 'Bản đồ' })).not.toBeInTheDocument();
+    // Beside the heading, a link to the whole map — next to the per-row location buttons.
+    expect(screen.getByRole('link', { name: 'Xem bản đồ' })).toHaveAttribute('href', '/feed/map');
   });
 
   it('opens the tapped location on the map, carrying its entry id', async () => {

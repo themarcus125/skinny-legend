@@ -1,9 +1,10 @@
 import { useCallback } from 'react';
 import { useInfiniteQuery } from '@tanstack/react-query';
+import { Link } from 'react-router';
 import { useLocale, useTranslations } from 'use-intl';
 import type { FeedEntryDto } from '@skinny/shared/wire';
 import { AlertBanner, Avatar, CategoryChip, EmptyState, SurfaceCard } from '@skinny/ui';
-import { PhotoStackGlyph } from '@/app/icons';
+import { MapPinGlyph, PhotoStackGlyph } from '@/app/icons';
 import { PlaceButton } from '@/features/map/place-button';
 import { describeError, useApi } from '@/lib/api';
 import { formatLocalDay } from '@/lib/local-day';
@@ -79,9 +80,20 @@ export function FeedSection() {
 
   return (
     <section data-testid="feed-section" className="flex flex-col gap-3.5 pt-2">
-      <h2 data-testid="feed-heading" className="type-h2 font-heading px-0.5">
-        {t('feed.title')}
-      </h2>
+      <div className="flex items-center justify-between gap-3 px-0.5">
+        <h2 data-testid="feed-heading" className="type-h2 font-heading">
+          {t('feed.title')}
+        </h2>
+        {/* A `Link`, not a button: the map is a route, so it deep-links like any address. */}
+        <Link
+          to="/feed/map"
+          data-testid="feed-map-link"
+          className="type-caption text-primary inline-flex h-8 shrink-0 items-center gap-1.5 rounded-sm px-2"
+        >
+          <MapPinGlyph className="size-4" />
+          {t('feed.viewOnMap')}
+        </Link>
+      </div>
 
       {error ? (
         <AlertBanner
