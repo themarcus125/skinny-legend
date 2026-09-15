@@ -114,9 +114,11 @@ test('correcting the category recalculates the points', async ({ page, request }
   // disable the primary (`canSave`), which is a different behaviour than the one under test.
   const unselected = page.locator('[data-testid="category-chip"][data-selected="false"]');
   await expect(unselected.first()).toBeVisible();
-  const chip = unselected.first();
-  const category = await chip.getAttribute('data-category');
+  const category = await unselected.first().getAttribute('data-category');
   expect(category).toBeTruthy();
+  // Addressed by category, never as "the first unselected chip": that locator stops matching the
+  // moment the chip is selected and silently re-resolves to a different one.
+  const chip = page.locator(`[data-testid="category-chip"][data-category="${category}"]`);
 
   const pointsBefore = Number(await page.getByTestId('verdict-points').innerText());
   await chip.click();
