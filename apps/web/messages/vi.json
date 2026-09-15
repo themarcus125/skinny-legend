@@ -3,7 +3,7 @@
     "appName": "Skinny Legend"
   },
   "nav": {
-    "overview": "Tổng quan",
+    "overview": "Trang chủ",
     "track": "Ghi nhận",
     "leaderboard": "Xếp hạng",
     "trends": "Xu hướng",
@@ -96,7 +96,7 @@
     "disabledBody": "Tài khoản của bạn đã bị khoá. Liên hệ quản trị viên."
   },
   "overview": {
-    "title": "Tổng quan",
+    "title": "Trang chủ",
     "greeting": "Chào {0}!",
     "greetingFallback": "Chào bạn!",
     "todayPoints": "Điểm hôm nay",
@@ -123,7 +123,6 @@
     "challengeTotal": "Tổng điểm thử thách",
     "totalOf": "Tổng điểm: {0}",
     "totalWithBonus": "Tổng điểm: {0} (thưởng chuỗi {1})",
-    "feedCard": "Nhật ký nhóm",
     "empty": "Chưa ghi nhận hoạt động nào hôm nay.",
     "loadFailed": "Không tải được dữ liệu."
   },
@@ -197,6 +196,7 @@
   },
   "map": {
     "title": "Bản đồ",
+    "openPlace": "Xem {0} trên bản đồ",
     "empty": "Chưa có địa điểm nào được chia sẻ.",
     "loadFailed": "Không tải được bản đồ."
   },

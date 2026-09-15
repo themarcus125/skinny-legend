@@ -16,13 +16,13 @@ describe('TabBar', () => {
     const labels = within(nav)
       .getAllByRole('link')
       .map((link) => link.textContent);
-    expect(labels).toEqual(['Tổng quan', 'Xếp hạng', 'Xu hướng', 'Tài khoản']);
+    expect(labels).toEqual(['Trang chủ', 'Xếp hạng', 'Xu hướng', 'Tài khoản']);
   });
 
   it('marks the current destination for assistive tech', () => {
     renderAt('/trends');
     expect(screen.getByRole('link', { name: 'Xu hướng' })).toHaveAttribute('aria-current', 'page');
-    expect(screen.getByRole('link', { name: 'Tổng quan' })).not.toHaveAttribute('aria-current');
+    expect(screen.getByRole('link', { name: 'Trang chủ' })).not.toHaveAttribute('aria-current');
   });
 
   it('keeps the camera bubble outside the nav, pointing at /track', () => {

@@ -40,7 +40,7 @@ describe('safeDeepLink', () => {
     expect(safeDeepLink('leaderboard')).toBe('/leaderboard');
     expect(safeDeepLink('trends')).toBe('/trends');
     expect(safeDeepLink('account')).toBe('/account');
-    expect(safeDeepLink('feed')).toBe('/feed');
+    expect(safeDeepLink('feed')).toBe('/');
     expect(safeDeepLink('map')).toBe('/feed/map');
   });
 

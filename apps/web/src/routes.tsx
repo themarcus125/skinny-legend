@@ -1,4 +1,4 @@
-import { createBrowserRouter, type RouteObject } from 'react-router';
+import { Navigate, createBrowserRouter, type RouteObject } from 'react-router';
 import { AppShell } from '@/app/shell';
 import { RouteError } from '@/app/route-error';
 import { SessionGate } from '@/app/session-gate';
@@ -36,10 +36,14 @@ export const routes: RouteObject[] = [
           { path: 'leaderboard', lazy: () => import('@/screens/leaderboard') },
           { path: 'leaderboard/:userId', lazy: () => import('@/screens/member') },
           { path: 'trends', lazy: () => import('@/screens/trends') },
-          { path: 'feed', lazy: () => import('@/screens/feed') },
+          /*
+           * The group log folded into Trang chủ (SKI-134), so `/feed` is now a stale address:
+           * old links, the push deep link and any bookmark land on the screen that holds it.
+           */
+          { path: 'feed', element: <Navigate to="/" replace /> },
           { path: 'feed/map', lazy: () => import('@/screens/map') },
           { path: 'account', lazy: () => import('@/screens/account') },
-          // An unknown path inside the app is a stale link, not a crash: land on Tổng quan.
+          // An unknown path inside the app is a stale link, not a crash: land on Trang chủ.
           { path: '*', lazy: () => import('@/screens/overview') },
         ],
       },

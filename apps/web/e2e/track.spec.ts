@@ -12,7 +12,7 @@ const SHOTS = resolve(import.meta.dirname, '../../../.superpowers/sdd/2026-09-14
 const PHOTO = resolve(import.meta.dirname, 'fixtures/entry.jpg');
 
 test.describe('Ghi nhận', () => {
-  test('tracks a photo, shows the verdict sheet and lands back on Tổng quan', async ({ page }) => {
+  test('tracks a photo, shows the verdict sheet and lands back on Trang chủ', async ({ page }) => {
     await page.goto('/track');
     await expect(page.getByRole('heading', { level: 1, name: 'Ghi nhận' })).toBeVisible();
     await expect(page.getByRole('button', { name: /Chụp ảnh/ })).toBeVisible();
@@ -30,7 +30,7 @@ test.describe('Ghi nhận', () => {
     await page.screenshot({ path: `${SHOTS}/web-track-verdict.png` });
 
     // "Xong" dismisses an already-tracked entry without a PATCH; the screen then celebrates
-    // briefly and hands over to Tổng quan with the dashboard refetched.
+    // briefly and hands over to Trang chủ with the dashboard refetched.
     const primary = page.getByTestId('verdict-primary');
     await expect(primary).toHaveText('Xong');
     await primary.click();
@@ -38,7 +38,7 @@ test.describe('Ghi nhận', () => {
     await expect(sheet).toBeHidden();
     await expect(page.getByText(/Đã ghi nhận \+\d+ điểm!/)).toBeVisible();
     await expect(page).toHaveURL(/\/$/);
-    await expect(page.getByRole('heading', { level: 1, name: 'Tổng quan' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'Trang chủ' })).toBeVisible();
     await expect(page.getByTestId('today-points')).toBeVisible();
   });
 });

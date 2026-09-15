@@ -16,7 +16,8 @@ describe('deepLinkFromMessage', () => {
 
   it('maps the API/iOS tab vocabulary onto a route', () => {
     expect(deepLinkFromMessage(message({ type: 'deepLink', deepLink: 'track' }))).toBe('/track');
-    expect(deepLinkFromMessage(message({ type: 'deepLink', deepLink: 'feed' }))).toBe('/feed');
+    // `feed` is the group log, which is Trang chủ since SKI-134 — not a redirect hop.
+    expect(deepLinkFromMessage(message({ type: 'deepLink', deepLink: 'feed' }))).toBe('/');
   });
 
   it('falls back for an off-origin or missing link rather than trusting it', () => {

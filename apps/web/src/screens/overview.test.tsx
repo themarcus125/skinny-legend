@@ -18,16 +18,29 @@ function mockApi(): ApiClient {
   return createMockApiClient({ seed: makeSeed(SEED_DAY) });
 }
 
-/** An `ApiClient` whose `dashboard()` always rejects — the error-banner path. */
+/**
+ * The mock client is a class, so a plain spread drops every prototype method — which used to be
+ * harmless when only `dashboard()` was read off the copy, and is not now that Trang chủ also
+ * calls `feed()`. This keeps the prototype and layers the overrides on top.
+ */
+function withOverrides(api: ApiClient, overrides: Partial<ApiClient>): ApiClient {
+  return Object.assign(Object.create(Object.getPrototypeOf(api) as object) as ApiClient, api, overrides);
+}
+
+/**
+ * An `ApiClient` whose `dashboard()` always rejects — the error-banner path. Its `feed()` is the
+ * seed's, deliberately: the two halves of Trang chủ are separate queries and the failing one
+ * must not take the other down with it.
+ */
 function failingApi(error: Error): ApiClient {
-  return { dashboard: () => Promise.reject(error) } as unknown as ApiClient;
+  return withOverrides(mockApi(), { dashboard: () => Promise.reject(error) });
 }
 
 /** The seed's dashboard with a few fields overridden — the branches the fixture does not cover. */
 async function patchedApi(patch: (dashboard: DashboardDto) => DashboardDto): Promise<ApiClient> {
   const api = mockApi();
   const dashboard = patch(await api.dashboard());
-  return { ...api, dashboard: () => Promise.resolve(dashboard) };
+  return withOverrides(api, { dashboard: () => Promise.resolve(dashboard) });
 }
 
 function renderOverview(ui: ReactElement, { api = mockApi() }: { api?: ApiClient } = {}) {
@@ -100,7 +113,7 @@ describe('Overview', () => {
     expect(within(rows[2]!).getByTestId('checklist-mark').querySelector('svg')).toBeNull();
   });
 
-  it('shows the challenge total on the accent card and links to the group feed', async () => {
+  it('shows the challenge total on the accent card, with the feed folded in below', async () => {
     renderOverview(<Overview />);
 
     const total = await screen.findByTestId('challenge-total');
@@ -108,7 +121,8 @@ describe('Overview', () => {
     expect(total.closest('[data-accent="true"]')).not.toBeNull();
     expect(screen.getByText('Thưởng chuỗi: +5')).toBeInTheDocument();
     expect(screen.getByLabelText('Tổng điểm: 43 (thưởng chuỗi 5)')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Nhật ký nhóm' })).toHaveAttribute('href', '/feed');
+    // The "Nhật ký nhóm" card that used to link to /feed is gone: the feed is on this screen.
+    expect(screen.queryByRole('link', { name: 'Nhật ký nhóm' })).not.toBeInTheDocument();
   });
 
   it('shows the empty caption and a negative delta when nothing was tracked today', async () => {
@@ -146,8 +160,47 @@ describe('Overview', () => {
   it('renders a retryable error banner when the dashboard call fails', async () => {
     renderOverview(<Overview />, { api: failingApi(new ApiError(500, 'internal', 'boom')) });
 
-    const banner = await screen.findByRole('alert');
-    expect(banner).toHaveTextContent('Máy chủ gặp sự cố, hãy thử lại sau.');
-    expect(within(banner).getByRole('button', { name: 'Thử lại' })).toBeInTheDocument();
+    const banner = await screen.findByText('Không tải được dữ liệu.');
+    expect(banner.closest('[role="alert"]')).toHaveTextContent('Máy chủ gặp sự cố, hãy thử lại sau.');
+    expect(
+      within(banner.closest('[role="alert"]')!).getByRole('button', { name: 'Thử lại' }),
+    ).toBeInTheDocument();
+  });
+});
+
+/**
+ * SKI-134: the group log lives under the dashboard cards, and the two are separate queries so
+ * that one failing never blanks the other.
+ */
+describe('Trang chủ with the feed folded in', () => {
+  it('renders the feed section under the dashboard cards', async () => {
+    renderOverview(<Overview />);
+
+    expect(await screen.findByTestId('challenge-total')).toBeInTheDocument();
+    const feed = screen.getByTestId('feed-section');
+    expect(feed).toBeInTheDocument();
+    expect(await screen.findAllByTestId('feed-row')).not.toHaveLength(0);
+    // Order on the page: the dashboard first, the log after it.
+    expect(
+      screen.getByTestId('challenge-total').compareDocumentPosition(feed) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it('keeps the feed on screen when the dashboard call fails', async () => {
+    renderOverview(<Overview />, { api: failingApi(new ApiError(500, 'internal', 'boom')) });
+
+    expect(await screen.findByText('Không tải được dữ liệu.')).toBeInTheDocument();
+    expect(await screen.findAllByTestId('feed-row')).not.toHaveLength(0);
+    expect(screen.queryByTestId('today-points')).not.toBeInTheDocument();
+  });
+
+  it('keeps the dashboard on screen when the feed call fails', async () => {
+    const api = withOverrides(mockApi(), { feed: () => Promise.reject(new Error('boom')) });
+    renderOverview(<Overview />, { api });
+
+    expect(await screen.findByTestId('today-points')).toHaveTextContent('5');
+    expect(await screen.findByText('Không tải được nhật ký nhóm.')).toBeInTheDocument();
+    expect(screen.queryByTestId('feed-row')).not.toBeInTheDocument();
   });
 });

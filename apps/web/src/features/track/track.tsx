@@ -26,7 +26,7 @@ import {
   type VerdictState,
 } from './verdict-model';
 
-/** How long the celebration banner stays up before the screen hands over to Tổng quan. */
+/** How long the celebration banner stays up before the screen hands over to Trang chủ. */
 const CELEBRATION_MS = 1_800;
 
 type Phase =

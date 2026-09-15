@@ -13,11 +13,11 @@ test.describe('the shell', () => {
   test('boots in mock mode with the tab bar and the camera bubble', async ({ page }) => {
     await page.goto('/');
 
-    await expect(page.getByRole('heading', { level: 1, name: 'Tổng quan' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'Trang chủ' })).toBeVisible();
 
     const nav = page.getByRole('navigation', { name: 'Điều hướng chính' });
     await expect(nav.getByRole('link')).toHaveText([
-      'Tổng quan',
+      'Trang chủ',
       'Xếp hạng',
       'Xu hướng',
       'Tài khoản',

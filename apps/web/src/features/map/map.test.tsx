@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter } from 'react-router';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router';
 import type { ApiClient } from '@skinny/api-client';
 import type { MapPinDto } from '@skinny/shared/wire';
 import { ApiProvider } from '@/lib/api';
@@ -16,7 +16,7 @@ import { render, screen, waitFor, within } from '@/test/intl';
  * selection sheet, fit-once, refresh-without-reset) assertable in jsdom. The clustering itself
  * has its own unit tests in `clusterer.test.ts`.
  */
-const map = { invalidateSize: vi.fn(), fitBounds: vi.fn() };
+const map = { invalidateSize: vi.fn(), fitBounds: vi.fn(), setView: vi.fn() };
 
 vi.mock('react-leaflet', () => ({
   MapContainer: ({ children }: { children?: ReactNode }) => (
@@ -58,7 +58,8 @@ vi.mock('react-leaflet', () => ({
   useMap: () => map,
 }));
 
-const { MapScreen, clusterMarkerHtml, escapeHtml } = await import('./map');
+const { MapScreen, canGoBack, clusterMarkerHtml, escapeHtml } = await import('./map');
+const { PlaceButton } = await import('./place-button');
 const { clusterPins, CLUSTER_RADIUS_M } = await import('./clusterer');
 
 const pin = (id: string, lat: number, lng: number, name = 'Linh'): MapPinDto => ({
@@ -84,14 +85,18 @@ function stubApi(mapPins: () => Promise<MapPinDto[]>): ApiClient {
   return { mapPins: (_days: number) => mapPins() } as unknown as ApiClient;
 }
 
-function renderMap(api: ApiClient) {
+function renderMap(api: ApiClient, entry?: string) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
   const Wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={queryClient}>
       <ApiProvider client={api}>
-        <MemoryRouter initialEntries={['/feed/map']}>{children}</MemoryRouter>
+        <MemoryRouter
+          initialEntries={[entry ? `/feed/map?entry=${encodeURIComponent(entry)}` : '/feed/map']}
+        >
+          {children}
+        </MemoryRouter>
       </ApiProvider>
     </QueryClientProvider>
   );
@@ -101,6 +106,7 @@ function renderMap(api: ApiClient) {
 beforeEach(() => {
   map.invalidateSize.mockClear();
   map.fitBounds.mockClear();
+  map.setView.mockClear();
 });
 
 describe('the group map', () => {
@@ -257,6 +263,56 @@ describe('the group map', () => {
     });
   });
 
+  /**
+   * SKI-134: the map is no longer reached from a toolbar button over the feed but from a
+   * location on a row, which hands the entry id over in `?entry=`.
+   */
+  it('centres on the entry from the search param and opens its card, keeping the other pins', async () => {
+    renderMap(stubApi(() => Promise.resolve(PINS)), 'b');
+
+    // The sheet opens by itself on the cluster holding that entry.
+    const sheet = await screen.findByTestId('cluster-sheet');
+    expect(within(sheet).getByTestId('pin-card')).toHaveAttribute('data-entry-id', 'b');
+    expect(within(sheet).getByTestId('pin-name')).toHaveTextContent('Trang');
+
+    // Centred on it rather than fitted to everything — and every other pin is still drawn.
+    await waitFor(() => {
+      expect(map.setView).toHaveBeenCalledTimes(1);
+    });
+    expect(map.setView.mock.calls[0]![0]).toEqual([10.78, 106.71]);
+    expect(map.fitBounds).not.toHaveBeenCalled();
+    expect(screen.getAllByTestId('map-marker')).toHaveLength(2);
+
+    // One-shot: dismissing it is final, and a refetch must not shove it back up.
+    await userEvent.click(screen.getByRole('button', { name: 'Đóng' }));
+    expect(screen.queryByTestId('cluster-sheet')).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Tải lại' }));
+    await waitFor(() => {
+      expect(screen.getAllByTestId('map-marker')).toHaveLength(2);
+    });
+    expect(screen.queryByTestId('cluster-sheet')).not.toBeInTheDocument();
+  });
+
+  it('opens the whole cluster when the entry shares a place with others', async () => {
+    renderMap(stubApi(() => Promise.resolve(PINS)), 'a2');
+
+    const sheet = await screen.findByTestId('cluster-sheet');
+    expect(within(sheet).getByTestId('cluster-list')).toBeInTheDocument();
+    const cards = within(sheet).getAllByTestId('pin-card');
+    expect(cards.map((card) => card.getAttribute('data-entry-id'))).toContain('a2');
+  });
+
+  it('ignores an entry id the map does not know and fits every pin as usual', async () => {
+    renderMap(stubApi(() => Promise.resolve(PINS)), 'nope');
+
+    await screen.findAllByTestId('map-marker');
+    await waitFor(() => {
+      expect(map.fitBounds).toHaveBeenCalledTimes(1);
+    });
+    expect(map.setView).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('cluster-sheet')).not.toBeInTheDocument();
+  });
+
   it('escapes member-supplied text before it reaches the divIcon HTML', () => {
     expect(escapeHtml('<img src=x onerror=alert(1)>')).toBe('&lt;img src=x onerror=alert(1)&gt;');
     // The initials are the only member-supplied thing interpolated into HTML; the label goes on
@@ -268,5 +324,66 @@ describe('the group map', () => {
     });
     expect(html).not.toContain('<script>');
     expect(html).toContain('&lt;');
+  });
+});
+
+/**
+ * SKI-134 review: the map is reached from a location on Trang chủ *and* from one in a member's
+ * history, so "Quay lại" cannot hardcode a destination — it has to undo the step that got here.
+ */
+describe('the map back button', () => {
+  it('goes back when the screen was pushed, and home when it was not', () => {
+    expect(canGoBack('PUSH', null)).toBe(true);
+    expect(canGoBack('REPLACE', null)).toBe(true);
+    // A cold landing: a deep link, a reload, a pasted address.
+    expect(canGoBack('POP', null)).toBe(false);
+    expect(canGoBack('POP', {})).toBe(false);
+    expect(canGoBack('POP', { idx: 0 })).toBe(false);
+    // React Router stamps `idx`; anything past 0 is a step of ours to return to.
+    expect(canGoBack('POP', { idx: 2 })).toBe(true);
+    expect(canGoBack('POP', { idx: 'two' })).toBe(false);
+  });
+
+  function renderRouted(initial: string) {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    });
+    const Here = () => <span data-testid="here">{useLocation().pathname}</span>;
+    return render(
+      <QueryClientProvider client={queryClient}>
+        <ApiProvider client={stubApi(() => Promise.resolve(PINS))}>
+          <MemoryRouter initialEntries={[initial]}>
+            <Here />
+            <Routes>
+              <Route
+                path="/leaderboard/:userId"
+                element={<PlaceButton entryId="b" placeName="Hồ bơi Lam Sơn" testId="history-place" />}
+              />
+              <Route path="/" element={<span data-testid="home" />} />
+              <Route path="/feed/map" element={<MapScreen />} />
+            </Routes>
+          </MemoryRouter>
+        </ApiProvider>
+      </QueryClientProvider>,
+    );
+  }
+
+  it('returns to the member page the reader came from, not to Trang chủ', async () => {
+    renderRouted('/leaderboard/u1');
+    await userEvent.click(screen.getByTestId('history-place'));
+    expect(await screen.findByRole('heading', { level: 1, name: 'Bản đồ' })).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Quay lại' }));
+    expect(screen.getByTestId('here')).toHaveTextContent('/leaderboard/u1');
+    expect(screen.queryByTestId('home')).not.toBeInTheDocument();
+  });
+
+  it('falls back to Trang chủ when the map is the first screen of the session', async () => {
+    renderRouted('/feed/map');
+    await screen.findAllByTestId('map-marker');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Quay lại' }));
+    expect(screen.getByTestId('here')).toHaveTextContent('/');
+    expect(screen.getByTestId('home')).toBeInTheDocument();
   });
 });

@@ -1,11 +1,10 @@
 import { useCallback } from 'react';
 import { useInfiniteQuery } from '@tanstack/react-query';
-import { Link } from 'react-router';
 import { useLocale, useTranslations } from 'use-intl';
 import type { FeedEntryDto } from '@skinny/shared/wire';
 import { AlertBanner, Avatar, CategoryChip, EmptyState, SurfaceCard } from '@skinny/ui';
-import { MapPinGlyph, PhotoStackGlyph } from '@/app/icons';
-import { LargeTitle } from '@/app/large-title';
+import { PhotoStackGlyph } from '@/app/icons';
+import { PlaceButton } from '@/features/map/place-button';
 import { describeError, useApi } from '@/lib/api';
 import { formatLocalDay } from '@/lib/local-day';
 import { queryKeys } from '@/lib/query';
@@ -41,17 +40,21 @@ export function groupByDay(entries: FeedEntryDto[]): FeedDay[] {
 }
 
 /**
- * Nhật ký nhóm — the group log. Port of `FeedView`
- * (ios/SkinnyLegend/Features/Feed/FeedView.swift): every member's confirmed entries newest
- * first, each row a photo over the author, their category chips and the place *name* — never
- * coordinates, which live only on the map (spec §8 step 7).
+ * Nhật ký nhóm — the group log, now the tail of Trang chủ rather than a screen of its own.
+ * Port of `FeedView` (ios/SkinnyLegend/Features/Feed/FeedView.swift): every member's confirmed
+ * entries newest first, each row a photo over the author, their category chips and the place
+ * *name* — never coordinates, which live only on the map (spec §8 step 7).
+ *
+ * It owns its **own** query, which is the point of it being a section rather than markup the
+ * dashboard renders: the two fail and retry independently, so a feed the server chokes on still
+ * leaves today's points on the screen, and a failed dashboard still shows the group's log.
  *
  * iOS renders one flat `LazyVStack`; the web groups the same order under a day heading, which is
  * what `LocalDay.display` is already doing per row there and reads better in a narrow column.
  * Paging is the footer sentinel plus "Tải thêm" (`useEndSentinel`), the web's stand-in for
  * `FeedModel.loadNextPageIfNeeded(after:)`.
  */
-export function Feed() {
+export function FeedSection() {
   const t = useTranslations();
   const locale = useLocale();
   const api = useApi();
@@ -74,94 +77,88 @@ export function Feed() {
   const sentinel = useEndSentinel(hasMore && !isFetchingNextPage, onReachEnd);
 
   return (
-    <>
-      <LargeTitle title={t('feed.title')}>
-        {/*
-         * iOS puts "Bản đồ" in the navigation bar's toolbar; the large title's trailing slot is
-         * the same place. A `Link`, not a button: the map is a route, so it deep-links and
-         * opens in a new tab like any other address.
-         */}
-        <Link
-          to="/feed/map"
-          data-testid="feed-map-link"
-          className="type-caption text-primary inline-flex h-8 items-center gap-1.5 rounded-sm px-3"
+    <section data-testid="feed-section" className="flex flex-col gap-3.5 pt-2">
+      <h2 data-testid="feed-heading" className="type-h2 font-heading px-0.5">
+        {t('feed.title')}
+      </h2>
+
+      {error ? (
+        <AlertBanner
+          tone="destructive"
+          title={t('feed.loadFailed')}
+          description={t(describeError(error))}
+          action={
+            <Button size="sm" variant="secondary" onClick={() => void feed.refetch()}>
+              {t('common.retry')}
+            </Button>
+          }
+        />
+      ) : null}
+
+      {entries.length === 0 && isPending ? (
+        <div data-testid="feed-skeleton" aria-busy="true" className="flex flex-col gap-3.5">
+          {[0, 1, 2].map((index) => (
+            <div key={index} className="bg-surface-2 h-[300px] animate-pulse rounded-xl" />
+          ))}
+        </div>
+      ) : null}
+
+      {entries.length === 0 && !isPending && !error ? (
+        <EmptyState
+          icon={<PhotoStackGlyph className="size-8" />}
+          title={t('feed.emptyTitle')}
+          description={t('feed.empty')}
+        />
+      ) : null}
+
+      {days.map((day) => (
+        <div
+          key={day.date}
+          data-testid="feed-day"
+          data-date={day.date}
+          className="flex flex-col gap-3"
         >
-          <MapPinGlyph className="size-4" />
-          {t('map.title')}
-        </Link>
-      </LargeTitle>
+          <h3 data-testid="feed-day-heading" className="type-h3 text-foreground-secondary px-0.5">
+            {formatLocalDay(day.date, locale)}
+          </h3>
+          {day.entries.map((entry) => (
+            <FeedRow key={entry.id} entry={entry} />
+          ))}
+        </div>
+      ))}
 
-      <div className="flex flex-col gap-3.5 px-4 pt-2 pb-8">
-        {error ? (
-          <AlertBanner
-            tone="destructive"
-            title={t('feed.loadFailed')}
-            description={t(describeError(error))}
-            action={
-              <Button size="sm" variant="secondary" onClick={() => void feed.refetch()}>
-                {t('common.retry')}
-              </Button>
-            }
-          />
-        ) : null}
-
-        {entries.length === 0 && isPending ? (
-          <div data-testid="feed-skeleton" aria-busy="true" className="flex flex-col gap-3.5">
-            {[0, 1, 2].map((index) => (
-              <div key={index} className="bg-surface-2 h-[300px] animate-pulse rounded-xl" />
-            ))}
-          </div>
-        ) : null}
-
-        {entries.length === 0 && !isPending && !error ? (
-          <EmptyState
-            icon={<PhotoStackGlyph className="size-8" />}
-            title={t('feed.emptyTitle')}
-            description={t('feed.empty')}
-          />
-        ) : null}
-
-        {days.map((day) => (
-          <section key={day.date} data-testid="feed-day" data-date={day.date} className="flex flex-col gap-3">
-            <h2 data-testid="feed-day-heading" className="type-h3 text-foreground-secondary px-0.5">
-              {formatLocalDay(day.date, locale)}
-            </h2>
-            {day.entries.map((entry) => (
-              <FeedRow key={entry.id} entry={entry} />
-            ))}
-          </section>
-        ))}
-
-        {/*
-         * Rendered whenever a page has landed, so `data-has-more` is the assertable terminal
-         * state of a short feed as well as the paging affordance of a long one. The button is
-         * the keyboard and no-IntersectionObserver path to the same `fetchNextPage`.
-         */}
-        {entries.length > 0 ? (
-          <div
-            ref={sentinel}
-            data-testid="feed-footer"
-            data-has-more={hasMore ? 'true' : 'false'}
-            className="flex justify-center py-1"
-          >
-            {hasMore ? (
-              <Button size="sm" variant="secondary" disabled={isFetchingNextPage} onClick={onReachEnd}>
-                {isFetchingNextPage ? t('common.loading') : t('common.loadMore')}
-              </Button>
-            ) : null}
-          </div>
-        ) : null}
-      </div>
-    </>
+      {/*
+       * Rendered whenever a page has landed, so `data-has-more` is the assertable terminal
+       * state of a short feed as well as the paging affordance of a long one. The button is
+       * the keyboard and no-IntersectionObserver path to the same `fetchNextPage`.
+       */}
+      {entries.length > 0 ? (
+        <div
+          ref={sentinel}
+          data-testid="feed-footer"
+          data-has-more={hasMore ? 'true' : 'false'}
+          className="flex justify-center py-1"
+        >
+          {hasMore ? (
+            <Button
+              size="sm"
+              variant="secondary"
+              disabled={isFetchingNextPage}
+              onClick={onReachEnd}
+            >
+              {isFetchingNextPage ? t('common.loading') : t('common.loadMore')}
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
+    </section>
   );
 }
 
-/** React Router 7's lazy-route convention. */
-export const Component = Feed;
-
 /**
  * One entry, `FeedRow`'s anatomy: the photo full-bleed across the card, then the author's avatar
- * and name, the category chips, and the place name when there is one.
+ * and name, the category chips, and the place name when there is one — the place being the tap
+ * target that opens this entry on the map.
  */
 function FeedRow({ entry }: { entry: FeedEntryDto }) {
   const t = useTranslations();
@@ -187,13 +184,7 @@ function FeedRow({ entry }: { entry: FeedEntryDto }) {
             ))}
           </div>
           {entry.placeName ? (
-            <p
-              data-testid="feed-place"
-              className="type-caption text-foreground-secondary flex items-center gap-1 truncate"
-            >
-              <MapPinGlyph className="size-3.5 shrink-0" />
-              <span className="truncate">{entry.placeName}</span>
-            </p>
+            <PlaceButton entryId={entry.id} placeName={entry.placeName} testId="feed-place" />
           ) : null}
         </div>
       </div>
