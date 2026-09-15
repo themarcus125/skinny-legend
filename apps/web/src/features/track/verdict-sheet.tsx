@@ -3,6 +3,7 @@ import { useTranslations } from 'use-intl';
 import { AlertBanner, CategoryChip, SurfaceCard, cn } from '@skinny/ui';
 import { CATEGORIES } from '@skinny/shared/wire';
 import { CloseGlyph, QuestionGlyph, SparklesGlyph } from '@/app/icons';
+import { PhotoButton } from '@/app/photo-viewer';
 import { useModalSheet } from '@/app/use-modal-sheet';
 import { Button } from '@/ui/button';
 import { PlaceChip } from './place-chip';
@@ -167,10 +168,11 @@ export function VerdictSheet({
           {/* Already tracked: the points are the headline, so they sit above the fold like the
               iOS sheet's. Every other state leads with the photo and the AI's reasoning. */}
           {tracked ? pointsCard : null}
-          <img
-            src={state.entry.photoUrl}
+          <PhotoButton
+            src={state.entry.thumbUrl ?? state.entry.photoUrl}
+            full={state.entry.photoUrl}
             alt={t('track.photoAlt')}
-            className="bg-surface-2 h-[200px] w-full rounded-xl object-cover"
+            className="bg-surface-2 h-[200px] w-full rounded-xl"
           />
 
           {verdict ? (

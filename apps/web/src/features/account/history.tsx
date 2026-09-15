@@ -5,6 +5,7 @@ import type { Category, EntryDto, HistoryEntryDto } from '@skinny/shared/wire';
 import { CATEGORIES } from '@skinny/shared/wire';
 import { AlertBanner, CategoryChip, EmptyState, SurfaceCard, cn } from '@skinny/ui';
 import { CameraGlyph, MapPinGlyph } from '@/app/icons';
+import { PhotoButton } from '@/app/photo-viewer';
 import { describeError, useApi } from '@/lib/api';
 import { formatLocalDay } from '@/lib/local-day';
 import { queryKeys } from '@/lib/query';
@@ -319,18 +320,23 @@ function HistoryRow({
   // The whole row is the control: a member taps a row expecting its detail, and a small
   // "Không đúng?" link was the only target. The link survives as the visual cue inside it.
   return (
-    <li data-testid="history-row" data-entry-id={entry.id} className={cn(divided && 'border-border border-t')}>
+    <li
+      data-testid="history-row"
+      data-entry-id={entry.id}
+      className={cn('flex items-center gap-3 pl-4', divided && 'border-border border-t')}
+    >
+      {/* Beside the row's button, not inside it: a button cannot nest a button, and the photo
+          opens the viewer while the rest of the row opens the edit sheet. */}
+      <PhotoButton
+        src={entry.thumbUrl ?? entry.photoUrl}
+        full={entry.photoUrl}
+        className="bg-surface-2 size-[60px] rounded-2xl"
+      />
       <button
         type="button"
         onClick={onEdit}
-        className="flex w-full items-center gap-3 p-4 text-left outline-ring"
+        className="flex min-w-0 flex-1 items-center gap-3 py-4 pr-4 text-left outline-ring"
       >
-      <img
-        src={entry.thumbUrl ?? entry.photoUrl}
-        alt=""
-        aria-hidden="true"
-        className="bg-surface-2 size-[60px] shrink-0 rounded-2xl object-cover"
-      />
       <div className="flex min-w-0 flex-1 flex-col gap-1.5">
         <div className="flex flex-wrap gap-1.5">
           {entry.categories.length > 0 ? (

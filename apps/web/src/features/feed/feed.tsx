@@ -7,6 +7,7 @@ import { PhotoStackGlyph } from '@/app/icons';
 import { PlaceButton } from '@/features/map/place-button';
 import { describeError, useApi } from '@/lib/api';
 import { formatLocalDay } from '@/lib/local-day';
+import { PhotoButton } from '@/app/photo-viewer';
 import { queryKeys } from '@/lib/query';
 import { useEndSentinel } from '@/lib/use-end-sentinel';
 import { Button } from '@/ui/button';
@@ -165,11 +166,10 @@ function FeedRow({ entry }: { entry: FeedEntryDto }) {
   return (
     <SurfaceCard as="article" padding="none" className="overflow-hidden">
       <div data-testid="feed-row" data-entry-id={entry.id}>
-        <img
+        <PhotoButton
           src={entry.thumbUrl ?? entry.photoUrl}
-          alt=""
-          aria-hidden="true"
-          className="bg-surface-2 h-[200px] w-full object-cover"
+          full={entry.photoUrl}
+          className="bg-surface-2 h-[200px] w-full"
         />
         <div className="flex flex-col gap-2.5 p-4">
           <div className="flex items-center gap-2.5">

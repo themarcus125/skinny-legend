@@ -6,6 +6,7 @@ import type { HistoryEntryDto } from '@skinny/shared/wire';
 import { AlertBanner, Avatar, CategoryChip, EmptyState, SurfaceCard, cn } from '@skinny/ui';
 import { ChevronRightGlyph, TrophyGlyph } from '@/app/icons';
 import { LargeTitle } from '@/app/large-title';
+import { PhotoButton } from '@/app/photo-viewer';
 import { PlaceButton } from '@/features/map/place-button';
 import { describeError, useApi } from '@/lib/api';
 import { formatLocalDay } from '@/lib/local-day';
@@ -197,11 +198,10 @@ function MemberEntryRow({
       data-entry-id={entry.id}
       className={cn('flex items-center gap-3.5 p-4', divided && 'border-border border-t')}
     >
-      <img
+      <PhotoButton
         src={entry.thumbUrl ?? entry.photoUrl}
-        alt=""
-        aria-hidden="true"
-        className="bg-surface-2 size-[72px] shrink-0 rounded-2xl object-cover"
+        full={entry.photoUrl}
+        className="bg-surface-2 size-[72px] rounded-2xl"
       />
       <div className="flex min-w-0 flex-1 flex-col gap-1.5">
         <p data-testid="history-day" className="type-h3 font-heading">

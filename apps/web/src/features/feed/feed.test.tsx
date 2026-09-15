@@ -126,7 +126,9 @@ describe('the group feed on Trang chủ', () => {
 
     expect(await screen.findByTestId('feed-row')).toBeInTheDocument();
     expect(screen.queryByTestId('feed-place')).not.toBeInTheDocument();
-    expect(screen.queryByRole('button')).not.toBeInTheDocument();
+    // The photo is a button (it opens the viewer); nothing else in the row may be.
+    const buttons = screen.queryAllByRole('button').filter((b) => b.getAttribute('data-testid') !== 'photo-button');
+    expect(buttons).toHaveLength(0);
   });
 
   it('loads the next page when the footer sentinel comes into view', async () => {

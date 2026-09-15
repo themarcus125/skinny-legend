@@ -5,6 +5,7 @@ import type { ApiClient } from '@skinny/api-client';
 import type { HistoryEntryDto } from '@skinny/shared/wire';
 import { AlertBanner, CategoryChip, EmptyState, cn } from '@skinny/ui';
 import { CloseGlyph, MapPinGlyph, PhotoStackGlyph } from '@/app/icons';
+import { PhotoButton } from '@/app/photo-viewer';
 import { useModalSheet } from '@/app/use-modal-sheet';
 import { describeError, useApi } from '@/lib/api';
 import { formatLocalDay } from '@/lib/local-day';
@@ -114,11 +115,10 @@ export function DaySheet({ date, onDismiss }: { date: string; onDismiss: () => v
                 data-entry-id={entry.id}
                 className={cn('flex items-center gap-3.5 py-3', index > 0 && 'border-border border-t')}
               >
-                <img
+                <PhotoButton
                   src={entry.thumbUrl ?? entry.photoUrl}
-                  alt=""
-                  aria-hidden="true"
-                  className="bg-surface-2 size-[64px] shrink-0 rounded-2xl object-cover"
+                  full={entry.photoUrl}
+                  className="bg-surface-2 size-[64px] rounded-2xl"
                 />
                 <div className="flex min-w-0 flex-1 flex-col gap-1.5">
                   <div className="flex flex-wrap gap-1.5">

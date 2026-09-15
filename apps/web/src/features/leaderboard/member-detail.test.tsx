@@ -96,7 +96,9 @@ describe('the member detail screen', () => {
     const placeless = rows.filter((row) => within(row).queryByTestId('history-place') === null);
     expect(placeless.length).toBeGreaterThan(0);
     for (const row of placeless) {
-      expect(within(row).queryByRole('button')).not.toBeInTheDocument();
+      // The photo is a button (it opens the viewer); nothing else in the row may be.
+      const buttons = within(row).queryAllByRole('button').filter((b) => b.getAttribute('data-testid') !== 'photo-button');
+      expect(buttons).toHaveLength(0);
     }
   });
 

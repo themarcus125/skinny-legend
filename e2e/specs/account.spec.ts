@@ -160,9 +160,9 @@ test('a member deletes an entry and signs out', async ({ page }) => {
   await page.goto(`${WEB_URL}/track`);
   const historyRow = page.locator(`[data-testid="history-row"][data-entry-id="${entry!.id}"]`);
   await expect(historyRow).toBeVisible({ timeout: 30_000 });
-  // The row is an <li> wrapping one full-width button: a tap anywhere on it opens the verdict
-  // sheet in edit mode.
-  await historyRow.getByRole('button').click();
+  // The row is an <li> holding two buttons: the photo (opens the viewer) and the rest of the
+  // row, which opens the verdict sheet in edit mode.
+  await historyRow.getByRole('button', { name: /Không đúng/ }).click();
   await page.getByTestId('verdict-sheet').waitFor();
   await page.getByTestId('verdict-delete').click();
   await page.getByTestId('confirm-dialog').getByRole('button', { name: 'Xoá' }).click();

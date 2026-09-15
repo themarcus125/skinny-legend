@@ -75,7 +75,7 @@ describe('the activity history on Ghi nhận', () => {
 
     const rows = await screen.findAllByTestId('history-row');
     // The whole row is the button; "Không đúng?" is only the cue inside it.
-    const row = within(rows[0]!).getByRole('button');
+    const row = within(rows[0]!).getByRole('button', { name: /Không đúng\?/ });
     expect(row).toHaveTextContent('Không đúng?');
     await userEvent.click(row);
 
@@ -94,7 +94,7 @@ describe('the activity history on Ghi nhận', () => {
     const rows = await screen.findAllByTestId('history-row');
     const doomed = rows[0]!.getAttribute('data-entry-id');
     await userEvent.click(
-      within(rows[0]!).getByRole('button'),
+      within(rows[0]!).getByRole('button', { name: /Không đúng\?/ }),
     );
     await userEvent.click(await screen.findByTestId('verdict-delete'));
 
@@ -117,7 +117,7 @@ describe('the activity history on Ghi nhận', () => {
     renderAccount(api);
 
     const rows = await screen.findAllByTestId('history-row');
-    await userEvent.click(within(rows[0]!).getByRole('button'));
+    await userEvent.click(within(rows[0]!).getByRole('button', { name: /Không đúng\?/ }));
     await userEvent.click(await screen.findByTestId('verdict-delete'));
     const dialog = await screen.findByTestId('confirm-dialog');
     await userEvent.click(within(dialog).getByRole('button', { name: 'Xoá' }));
@@ -132,7 +132,7 @@ describe('the activity history on Ghi nhận', () => {
     renderAccount();
 
     const rows = await screen.findAllByTestId('history-row');
-    await userEvent.click(within(rows[0]!).getByRole('button'));
+    await userEvent.click(within(rows[0]!).getByRole('button', { name: /Không đúng\?/ }));
     await userEvent.click(await screen.findByTestId('verdict-delete'));
     expect(await screen.findByTestId('confirm-dialog')).toBeInTheDocument();
 

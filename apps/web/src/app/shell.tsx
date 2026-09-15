@@ -3,6 +3,7 @@ import { PushToastHost } from '@/push/toast';
 import { InstallHint } from './install-hint';
 import { SCROLL_CONTAINER_ATTR } from './large-title';
 import { OfflineBanner } from './offline-banner';
+import { PhotoViewerProvider } from './photo-viewer';
 import { TabBar } from './tab-bar';
 
 /**
@@ -15,6 +16,7 @@ import { TabBar } from './tab-bar';
  */
 export function AppShell() {
   return (
+    <PhotoViewerProvider>
     <div className="flex h-dvh flex-col">
       {/*
         Above the scroll container, not inside it: the strip must not slide under a screen's
@@ -35,5 +37,6 @@ export function AppShell() {
       {/* Foreground pushes: the browser shows nothing while the tab is in front. */}
       <PushToastHost />
     </div>
+    </PhotoViewerProvider>
   );
 }

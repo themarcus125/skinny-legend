@@ -2,6 +2,7 @@ import { useLocale, useTranslations } from 'use-intl';
 import type { MapPinDto } from '@skinny/shared/wire';
 import { Avatar, CategoryChip, SurfaceCard } from '@skinny/ui';
 import { MapPinGlyph } from '@/app/icons';
+import { PhotoButton } from '@/app/photo-viewer';
 import { formatLocalDay } from '@/lib/local-day';
 
 /** Avatar diameter on a pin card — `MapPinCard`'s 34. */
@@ -22,12 +23,7 @@ export function MapPinCard({ pin }: { pin: MapPinDto }) {
     <SurfaceCard as="article" padding="none" className="overflow-hidden">
       <div data-testid="pin-card" data-entry-id={pin.entryId}>
         {pin.thumbUrl ? (
-          <img
-            src={pin.thumbUrl}
-            alt=""
-            aria-hidden="true"
-            className="bg-surface-2 aspect-video w-full object-cover"
-          />
+          <PhotoButton src={pin.thumbUrl} className="bg-surface-2 aspect-video w-full" />
         ) : null}
         <div className="flex flex-col gap-2.5 p-4">
           <div className="flex items-center gap-2.5">
