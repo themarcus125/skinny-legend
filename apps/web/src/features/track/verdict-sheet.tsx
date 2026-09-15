@@ -55,16 +55,46 @@ export function VerdictSheet({ state, onChange, lat, lng, onDismiss, onPrimary }
   const mustSave = needsSave(state);
   const warnings = capWarnings(state, t);
 
+  /**
+   * `onDismiss` is a fresh arrow on every render of the screen above, so it can never be a
+   * dependency of anything that touches focus — that is what made every keystroke in the place
+   * field yank focus back to the panel. The listener reads it through a ref instead.
+   */
+  const dismissRef = useRef(onDismiss);
+  useEffect(() => {
+    dismissRef.current = onDismiss;
+  }, [onDismiss]);
+
+  /**
+   * Modality, once, on mount: move focus into the panel, remember where it came from so it can
+   * go back on dismissal, and stop the page behind from scrolling. iOS Safari in particular
+   * will happily scroll the document under a fixed overlay, which reads as a broken sheet.
+   *
+   * A native `<dialog>` would give all three for free, but jsdom implements neither
+   * `showModal()` nor its focus behaviour, so the sheet would be untestable.
+   */
+  useEffect(() => {
+    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    panel.current?.focus();
+    const body = document.body;
+    const previousOverflow = body.style.overflow;
+    body.style.overflow = 'hidden';
+    return () => {
+      body.style.overflow = previousOverflow;
+      // Back to the button that opened the sheet: a keyboard or screen-reader user otherwise
+      // lands at the top of the document with no idea where they were.
+      opener?.focus();
+    };
+  }, []);
+
   // Escape closes, and Tab cycles inside the panel: a modal that leaks focus to the tab bar
-  // behind it is not modal. A native <dialog> would give both for free, but jsdom implements
-  // neither `showModal()` nor its focus behaviour, so the sheet would be untestable.
+  // behind it is not modal.
   useEffect(() => {
     const node = panel.current;
-    node?.focus();
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         event.preventDefault();
-        onDismiss();
+        dismissRef.current();
         return;
       }
       if (event.key !== 'Tab' || !node) return;
@@ -84,7 +114,7 @@ export function VerdictSheet({ state, onChange, lat, lng, onDismiss, onPrimary }
     };
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
-  }, [onDismiss]);
+  }, []);
 
   const title = verdict === null
     ? t('account.editActivity')
@@ -104,6 +134,31 @@ export function VerdictSheet({ state, onChange, lat, lng, onDismiss, onPrimary }
   const visible = state.isEditingCategories
     ? CATEGORIES
     : CATEGORIES.filter((category) => state.selected.includes(category));
+
+  /**
+   * Ruling 2: an `.edit` sheet has no real projection until its first successful save, so the
+   * card is replaced by a note rather than showing an un-capped local estimate.
+   */
+  const pointsCard =
+    state.mode.kind === 'edit' && !state.hasConfirmedProjection ? (
+      <SurfaceCard as="section">
+        <p className="type-caption text-foreground-secondary">{t('track.serverRecalc')}</p>
+      </SurfaceCard>
+    ) : (
+      <SurfaceCard as="section" className="flex items-start justify-between gap-3">
+        <div className="flex min-w-0 flex-col gap-1">
+          <p className="type-label text-foreground-subtle">
+            {tracked && !changed ? t('track.pointsEarned') : t('track.projected')}
+          </p>
+          <p className="type-caption text-foreground-secondary">
+            {tracked && !changed ? t('track.alreadyCounted') : t('track.official')}
+          </p>
+        </div>
+        <span data-testid="verdict-points" className="type-display shrink-0 text-[36px] tabular-nums">
+          {projectedPoints(state)}
+        </span>
+      </SurfaceCard>
+    );
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center">
@@ -144,7 +199,13 @@ export function VerdictSheet({ state, onChange, lat, lng, onDismiss, onPrimary }
           </button>
         </header>
 
-        <div data-scroll-container className="flex flex-col gap-4 overflow-y-auto px-4 pt-2 pb-4">
+        <div
+          data-scroll-container
+          className="flex flex-col gap-4 overflow-y-auto overscroll-contain px-4 pt-2 pb-4"
+        >
+          {/* Already tracked: the points are the headline, so they sit above the fold like the
+              iOS sheet's. Every other state leads with the photo and the AI's reasoning. */}
+          {tracked ? pointsCard : null}
           <img
             src={state.entry.photoUrl}
             alt={t('track.photoAlt')}
@@ -210,25 +271,7 @@ export function VerdictSheet({ state, onChange, lat, lng, onDismiss, onPrimary }
             onChange={(name, source) => onChange(applyPlace(state, name, source))}
           />
 
-          {state.mode.kind === 'edit' && !state.hasConfirmedProjection ? (
-            <SurfaceCard as="section">
-              <p className="type-caption text-foreground-secondary">{t('track.serverRecalc')}</p>
-            </SurfaceCard>
-          ) : (
-            <SurfaceCard as="section" className="flex items-start justify-between gap-3">
-              <div className="flex min-w-0 flex-col gap-1">
-                <p className="type-label text-foreground-subtle">
-                  {tracked && !changed ? t('track.pointsEarned') : t('track.projected')}
-                </p>
-                <p className="type-caption text-foreground-secondary">
-                  {tracked && !changed ? t('track.alreadyCounted') : t('track.official')}
-                </p>
-              </div>
-              <span data-testid="verdict-points" className="type-display shrink-0 text-[36px] tabular-nums">
-                {projectedPoints(state)}
-              </span>
-            </SurfaceCard>
-          )}
+          {tracked ? null : pointsCard}
 
           {state.errorKey ? (
             <AlertBanner tone="destructive" title={t('track.saveFailed')} description={t(state.errorKey)} />

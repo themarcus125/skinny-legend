@@ -133,4 +133,21 @@ describe('uploadPhoto', () => {
     expect(uploadToPresign.mock.calls[0]?.[0]).toBe('https://r2.test/put');
     expect(fractions.at(-1)).toBe(1);
   });
+
+  it('presigns a HEIC from iOS Safari as image/jpeg, after converting it (ruling R25)', async () => {
+    const converted = blob('image/jpeg');
+    const presign = vi.fn(() =>
+      Promise.resolve({ key: 'photos/u1/b.jpg', url: 'https://r2.test/put', expiresAt: 'x' }),
+    );
+    const uploadToPresign = vi.fn((_u: string, _b: Blob, _c: string) => Promise.resolve());
+    const api = { presign, uploadToPresign } as unknown as ApiClient;
+
+    const key = await uploadPhoto(api, blob('image/heic'), () => {}, () => Promise.resolve(converted));
+
+    expect(key).toBe('photos/u1/b.jpg');
+    // The API accepts image/heic, but R2 would then hold bytes no feed can render.
+    expect(presign).toHaveBeenCalledWith({ kind: 'photo', contentType: 'image/jpeg' });
+    expect(uploadToPresign.mock.calls[0]?.[1]).toBe(converted);
+    expect(uploadToPresign.mock.calls[0]?.[2]).toBe('image/jpeg');
+  });
 });

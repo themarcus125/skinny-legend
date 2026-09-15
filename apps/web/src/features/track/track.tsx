@@ -31,7 +31,9 @@ type Phase =
   | { kind: 'idle' }
   | { kind: 'uploading'; fraction: number }
   | { kind: 'analyzing' }
-  | { kind: 'failed'; errorKey: string };
+  // The picked file is kept so "Thử lại" can re-run the pipeline; dropping it would make the
+  // member go back to the camera for a photo the app already has.
+  | { kind: 'failed'; errorKey: string; file: File };
 
 export interface TrackProps {
   /**
@@ -59,6 +61,7 @@ export function Track({ onTracked }: TrackProps) {
   const cameraInput = useRef<HTMLInputElement>(null);
   const libraryInput = useRef<HTMLInputElement>(null);
   const alive = useRef(true);
+  const navigateTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [phase, setPhase] = useState<Phase>({ kind: 'idle' });
   const [preview, setPreview] = useState<string | null>(null);
@@ -70,6 +73,7 @@ export function Track({ onTracked }: TrackProps) {
     alive.current = true;
     return () => {
       alive.current = false;
+      if (navigateTimer.current !== null) clearTimeout(navigateTimer.current);
     };
   }, []);
 
@@ -82,9 +86,12 @@ export function Track({ onTracked }: TrackProps) {
 
   const handleFile = useCallback(
     async (file: File) => {
+      // Created here, not inside the updater: React may call an updater twice in StrictMode,
+      // which would leak the second URL.
+      const objectUrl = URL.createObjectURL(file);
       setPreview((old) => {
         if (old) URL.revokeObjectURL(old);
-        return URL.createObjectURL(file);
+        return objectUrl;
       });
       setPhase({ kind: 'uploading', fraction: 0 });
       try {
@@ -138,7 +145,7 @@ export function Track({ onTracked }: TrackProps) {
           }),
         );
       } catch (error) {
-        if (alive.current) setPhase({ kind: 'failed', errorKey: describeError(error) });
+        if (alive.current) setPhase({ kind: 'failed', errorKey: describeError(error), file });
       }
     },
     [api],
@@ -175,7 +182,7 @@ export function Track({ onTracked }: TrackProps) {
         return null;
       });
       setPhase({ kind: 'idle' });
-      setTimeout(() => {
+      navigateTimer.current = setTimeout(() => {
         // React Router 7's `navigate` returns a promise; nothing here waits on the transition.
         if (alive.current) void navigate('/');
       }, CELEBRATION_MS);
@@ -272,6 +279,16 @@ export function Track({ onTracked }: TrackProps) {
             tone="destructive"
             title={t('track.analyzeFailed')}
             description={t(phase.errorKey)}
+            action={
+              <Button
+                size="sm"
+                variant="secondary"
+                data-testid="track-retry"
+                onClick={() => void handleFile(phase.file)}
+              >
+                {t('common.retry')}
+              </Button>
+            }
           />
         ) : null}
 

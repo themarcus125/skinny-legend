@@ -148,6 +148,55 @@ describe('the Track screen', () => {
     });
   });
 
+  it('keeps focus and the text in the manual place field while typing', async () => {
+    renderTrack(createMockApiClient({ seed: makeSeed(SEED_DAY) }));
+    pick('library-input');
+    await screen.findByRole('dialog');
+
+    const field = screen.getByTestId('place-manual');
+    field.focus();
+    // Three separate keystrokes: the sheet re-renders on each one, and an effect that re-ran
+    // would pull focus back to the panel and swallow the rest of the name.
+    for (const value of ['H', 'Hồ', 'Hồ bơi']) {
+      fireEvent.change(field, { target: { value } });
+      expect(document.activeElement).toBe(field);
+    }
+    expect(field).toHaveValue('Hồ bơi');
+    expect(screen.getByTestId('verdict-primary')).toHaveTextContent('Lưu thay đổi');
+  });
+
+  it('locks the page behind the sheet and gives focus back to the opener', async () => {
+    renderTrack(createMockApiClient({ seed: makeSeed(SEED_DAY) }));
+    const library = screen.getByRole('button', { name: /Thư viện/ });
+    library.focus();
+    pick('library-input');
+
+    const sheet = await screen.findByRole('dialog');
+    expect(document.body).toHaveStyle({ overflow: 'hidden' });
+    expect(document.activeElement).toBe(sheet);
+
+    fireEvent.keyDown(document, { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(document.body.style.overflow).toBe('');
+    expect(document.activeElement).toBe(library);
+  });
+
+  it('keeps the picked photo so a failed upload can be retried', async () => {
+    const api = createMockApiClient({ seed: makeSeed(SEED_DAY) });
+    const upload = vi
+      .spyOn(api, 'uploadToPresign')
+      .mockRejectedValueOnce(Object.assign(new Error('nope'), { name: 'TypeError' }));
+    renderTrack(api);
+    pick('library-input');
+
+    const retry = await screen.findByTestId('track-retry');
+    upload.mockResolvedValue(undefined);
+    fireEvent.click(retry);
+
+    // The same file goes back through the pipeline — no second trip to the camera.
+    expect(await screen.findByRole('dialog')).toBeInTheDocument();
+  });
+
   it('surfaces an upload failure as the catalog error and keeps the screen usable', async () => {
     const api = createMockApiClient({ seed: makeSeed(SEED_DAY) });
     vi.spyOn(api, 'uploadToPresign').mockRejectedValue(

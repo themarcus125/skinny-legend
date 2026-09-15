@@ -82,8 +82,10 @@ export async function uploadPhoto(
   api: ApiClient,
   file: Blob,
   onProgress: (fraction: number) => void,
+  /** The R25 conversion seam — injected in tests, where jsdom has no canvas to decode with. */
+  convert?: (file: Blob) => Promise<Blob>,
 ): Promise<string> {
-  const { blob, contentType } = await toUploadable(file);
+  const { blob, contentType } = await toUploadable(file, convert);
   const presign = await api.presign({ kind: 'photo', contentType });
   await api.uploadToPresign(presign.url, blob, contentType, onProgress);
   onProgress(1);
