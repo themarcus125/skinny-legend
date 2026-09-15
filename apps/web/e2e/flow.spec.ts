@@ -40,7 +40,7 @@ test.describe('the member journey', () => {
 
     await page.goto('/sign-in');
     await page.getByRole('button', { name: 'Đăng nhập với Google' }).click();
-    await expect(page.getByRole('heading', { level: 1, name: 'Tổng quan' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'Trang chủ' })).toBeVisible();
 
     // Ghi nhận — the camera bubble, then a photo out of the library.
     await page.getByRole('link', { name: 'Ghi nhận' }).click();
@@ -54,7 +54,7 @@ test.describe('the member journey', () => {
     await page.getByTestId('verdict-primary').click();
     await expect(sheet).toBeHidden();
 
-    // The celebration hands over to Tổng quan with the dashboard refetched.
+    // The celebration hands over to Trang chủ with the dashboard refetched.
     await expect(page).toHaveURL(/\/$/);
     await expect(page.getByTestId('today-points')).toBeVisible();
 

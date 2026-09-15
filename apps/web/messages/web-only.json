@@ -1,4 +1,16 @@
 {
+  "nav.overview": {
+    "vi": "Trang chủ",
+    "en": "Home"
+  },
+  "overview.title": {
+    "vi": "Trang chủ",
+    "en": "Home"
+  },
+  "map.openPlace": {
+    "vi": "Xem {0} trên bản đồ",
+    "en": "See {0} on the map"
+  },
   "meta.appName": {
     "vi": "Skinny Legend",
     "en": "Skinny Legend"

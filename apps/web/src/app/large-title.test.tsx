@@ -6,7 +6,7 @@ import { COLLAPSE_THRESHOLD, LargeTitle, SCROLL_CONTAINER_ATTR } from './large-t
 function renderInScroller() {
   const result = render(
     <div {...{ [SCROLL_CONTAINER_ATTR]: true }} data-testid="scroller">
-      <LargeTitle title="Tổng quan" />
+      <LargeTitle title="Trang chủ" />
     </div>,
   );
   return { ...result, scroller: screen.getByTestId('scroller') };
@@ -22,7 +22,7 @@ function scrollTo(scroller: HTMLElement, top: number) {
 describe('LargeTitle', () => {
   it('renders the title as the page heading', () => {
     renderInScroller();
-    expect(screen.getByRole('heading', { level: 1, name: 'Tổng quan' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Trang chủ' })).toBeInTheDocument();
   });
 
   it('collapses once its scroll container passes the threshold, and expands again', () => {
@@ -38,12 +38,12 @@ describe('LargeTitle', () => {
   });
 
   it('places a leading control ahead of the title, and none by default', () => {
-    const { rerender } = render(<LargeTitle title="Tổng quan" />);
+    const { rerender } = render(<LargeTitle title="Trang chủ" />);
     const heading = () => screen.getByRole('heading', { level: 1 });
     expect(screen.queryByRole('button')).not.toBeInTheDocument();
 
     rerender(
-      <LargeTitle title="Tổng quan" leading={<button type="button">Quay lại</button>}>
+      <LargeTitle title="Trang chủ" leading={<button type="button">Quay lại</button>}>
         <span>x</span>
       </LargeTitle>,
     );

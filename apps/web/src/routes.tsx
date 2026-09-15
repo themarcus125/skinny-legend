@@ -39,7 +39,7 @@ export const routes: RouteObject[] = [
           { path: 'feed', lazy: () => import('@/screens/feed') },
           { path: 'feed/map', lazy: () => import('@/screens/map') },
           { path: 'account', lazy: () => import('@/screens/account') },
-          // An unknown path inside the app is a stale link, not a crash: land on Tổng quan.
+          // An unknown path inside the app is a stale link, not a crash: land on Trang chủ.
           { path: '*', lazy: () => import('@/screens/overview') },
         ],
       },

@@ -3,7 +3,7 @@
     "appName": "Skinny Legend"
   },
   "nav": {
-    "overview": "Overview",
+    "overview": "Home",
     "track": "Track",
     "leaderboard": "Leaderboard",
     "trends": "Trends",
@@ -92,7 +92,7 @@
     "disabledBody": "Your account has been locked. Contact an admin."
   },
   "overview": {
-    "title": "Overview",
+    "title": "Home",
     "greeting": "Hi {0}!",
     "greetingFallback": "Hi there!",
     "todayPoints": "Today's points",
@@ -119,7 +119,6 @@
     "challengeTotal": "Challenge total",
     "totalOf": "Total: {0}",
     "totalWithBonus": "Total: {0} (streak bonus {1})",
-    "feedCard": "Group feed",
     "empty": "Nothing tracked today yet.",
     "loadFailed": "Couldn't load data."
   },
@@ -193,6 +192,7 @@
   },
   "map": {
     "title": "Map",
+    "openPlace": "See {0} on the map",
     "empty": "No places shared yet.",
     "loadFailed": "Couldn't load the map."
   },

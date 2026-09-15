@@ -20,7 +20,7 @@ import { Button } from '@/ui/button';
 const PAIR_NUMBER_SIZE = 30;
 
 /**
- * Tổng quan — the dashboard. Port of `DashboardView`
+ * Trang chủ — the dashboard. Port of `DashboardView`
  * (ios/SkinnyLegend/Features/Dashboard/DashboardView.swift): today's points and the delta vs
  * yesterday, the streak counter, the rank, the "still scorable today" checklist, the accent
  * card with the challenge total, and a link into the group feed.
