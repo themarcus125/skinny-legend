@@ -81,6 +81,10 @@ test('a test send is audited and leaves the reminder log alone', async ({ page }
   const logRow = page.getByRole('row').filter({ hasText: 'Hà Thông báo' });
   await expect(logRow).toHaveCount(1, { timeout: 30_000 });
   await expect(logRow).toContainText('Vắng 1 ngày');
+  // The platform column is derived server-side from the member's registered device token, not
+  // from anything the seeded `notification_log` row carries — so the badge is the proof that the
+  // `web` token inserted above is the one the console resolved this reminder to.
+  await expect(logRow).toContainText('Web');
 
   // `TestSendForm` is a native <select>, not a combobox: pick by id, which needs no copy at all.
   await page.locator('#test-send-user').selectOption(ha.userId);

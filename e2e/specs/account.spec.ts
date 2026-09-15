@@ -187,4 +187,11 @@ test('a member deletes an entry and signs out', async ({ page }) => {
   await page.getByTestId('confirm-dialog').getByRole('button', { name: 'Đăng xuất' }).click();
   await page.waitForURL(/\/sign-in$/, { timeout: 30_000 });
   await expect(page.getByTestId('emulator-form')).toBeVisible();
+
+  // Signing out has to clear the *persisted* Firebase credential, not just the in-memory one:
+  // asking for a guarded route again must bounce back to sign-in rather than restore the session
+  // from IndexedDB.
+  await page.goto(`${WEB_URL}/account`);
+  await page.waitForURL(/\/sign-in$/, { timeout: 30_000 });
+  await expect(page.getByTestId('emulator-form')).toBeVisible();
 });

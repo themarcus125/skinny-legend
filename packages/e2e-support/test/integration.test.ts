@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { isPortFree } from '../src/net.js';
 import { clearEmulatorUsers, createEmulatorAccount, emulatorIdToken } from '../src/emulator.js';
 import { databaseUrlFor, ensureDatabase, migrateDatabase, resetDatabase, seedDatabase } from '../src/database.js';
 import { createMember } from '../src/members.js';
@@ -8,10 +7,12 @@ const HOST = 'localhost:9099';
 const PROJECT_ID = 'skinny-legend';
 const ADMIN_URL = 'postgres://skinny:skinny@localhost:5432/skinny';
 
-// `docker compose up -d db auth-emulator` has to be running; otherwise these cases report as
-// skipped rather than failed, so `pnpm test` stays green on a machine with no Docker. The probe
-// is top-level (not in `beforeAll`) because `it.skipIf` is evaluated during collection.
-const up = !(await isPortFree(9099)) && !(await isPortFree(5432));
+// Opt-in: `E2E_SUPPORT_INTEGRATION=1 pnpm --filter @skinny/e2e-support test`. These cases clear
+// the shared emulator's accounts and rewrite a database, so a port probe is the wrong gate — a
+// plain `pnpm -r test` on a laptop with the stack up would empty a concurrently running e2e
+// suite's accounts mid-flight. Without the variable they report as skipped, never failed. The
+// flag is read at the top level (not in `beforeAll`) because `it.skipIf` runs during collection.
+const up = process.env.E2E_SUPPORT_INTEGRATION === '1';
 
 describe('e2e-support against real infrastructure', () => {
   it.skipIf(!up)('creates and clears emulator accounts', async () => {
