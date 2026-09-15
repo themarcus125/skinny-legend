@@ -90,10 +90,33 @@ describe('the member detail screen', () => {
     expect(screen.queryByRole('button', { name: 'Tải thêm' })).not.toBeInTheDocument();
   });
 
+  it('lands on a not-found header for an id the board does not know', async () => {
+    renderMember(seeded(), STRANGER_ID);
+    // Terminal, not a skeleton that pulses forever: the entries endpoint answers an empty page
+    // for an unknown id, so the board is the only thing that can say the member is not there.
+    expect(await screen.findByText('Không tìm thấy dữ liệu.')).toBeInTheDocument();
+    expect(screen.queryByTestId('member-skeleton')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('history-card')).not.toBeInTheDocument();
+    expect(screen.queryByText('Thành viên này chưa có hoạt động nào.')).not.toBeInTheDocument();
+    // The back control is still the way out.
+    expect(screen.getByRole('button', { name: 'Quay lại' })).toBeInTheDocument();
+  });
+
+  it('retries the board when it is the board that failed', async () => {
+    const api = seeded();
+    const leaderboard = vi.spyOn(api, 'leaderboard').mockRejectedValueOnce(new Error('boom'));
+    renderMember(api);
+    expect(await screen.findByText('Không tải được bảng xếp hạng.')).toBeInTheDocument();
+    expect(screen.queryByTestId('member-skeleton')).not.toBeInTheDocument();
+    leaderboard.mockRestore();
+    await userEvent.click(screen.getByRole('button', { name: 'Thử lại' }));
+    expect(await screen.findByTestId('member-name')).toHaveTextContent('Linh');
+  });
+
   it('shows the empty state for a member with no activity', async () => {
     const api = seeded();
     vi.spyOn(api, 'userEntries').mockResolvedValue({ entries: [], nextCursor: null });
-    renderMember(api, STRANGER_ID);
+    renderMember(api);
     expect(await screen.findByText('Thành viên này chưa có hoạt động nào.')).toBeInTheDocument();
     expect(screen.queryByTestId('history-card')).not.toBeInTheDocument();
     expect(screen.queryByTestId('history-footer')).not.toBeInTheDocument();

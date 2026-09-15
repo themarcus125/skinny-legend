@@ -84,6 +84,17 @@ describe('<LeaderboardRow>', () => {
     expect(onClick).toHaveBeenCalledOnce();
   });
 
+  it('exposes the rank on data-rank, in both the button and the inert form', () => {
+    const { rerender } = render(
+      <LeaderboardRow rank={3} name="An" total={10} weekDelta={2} pointsLabel="điểm" />,
+    );
+    expect(screen.getByTestId('leaderboard-row').dataset.rank).toBe('3');
+    rerender(
+      <LeaderboardRow rank={3} name="An" total={10} weekDelta={2} pointsLabel="điểm" onClick={() => {}} />,
+    );
+    expect(screen.getByTestId('leaderboard-row').dataset.rank).toBe('3');
+  });
+
   it('is inert markup when there is nowhere to navigate', () => {
     render(<LeaderboardRow rank={1} name="An" total={10} weekDelta={2} pointsLabel="điểm" />);
     expect(screen.queryByRole('button')).not.toBeInTheDocument();

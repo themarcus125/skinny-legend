@@ -57,7 +57,18 @@ export function MemberDetail() {
   const sentinel = useEndSentinel(hasMore && !isFetchingNextPage, onReachEnd);
 
   const name = row?.user.displayName;
+  /**
+   * The board has landed and does not know this id. `GET /users/:id/entries` answers an empty
+   * page for an unknown member rather than a 404, so nothing else on this screen would ever say
+   * so — the header would pulse forever on a cold deep link. This is its terminal state.
+   */
+  const unknown = !board.isPending && !board.error && row === undefined;
   const error = history.error ?? board.error;
+  /** Retry whichever query failed — the banner can be standing for either of them. */
+  const retry = () => {
+    if (board.error) void board.refetch();
+    if (history.error) void history.refetch();
+  };
 
   return (
     <>
@@ -90,25 +101,30 @@ export function MemberDetail() {
               {row.total}
             </span>
           </SurfaceCard>
-        ) : (
+        ) : unknown ? (
+          <EmptyState
+            icon={<TrophyGlyph className="size-8" />}
+            title={t('errors.not_found')}
+          />
+        ) : board.error ? null : (
           <div data-testid="member-skeleton" aria-busy="true" className="bg-surface-2 h-[92px] animate-pulse rounded-xl" />
         )}
 
         {error ? (
           <AlertBanner
             tone="destructive"
-            title={t('leaderboard.memberLoadFailed')}
+            title={t(board.error ? 'leaderboard.loadFailed' : 'leaderboard.memberLoadFailed')}
             description={t(describeError(error))}
             action={
-              <Button size="sm" variant="secondary" onClick={() => void history.refetch()}>
+              <Button size="sm" variant="secondary" onClick={retry}>
                 {t('common.retry')}
               </Button>
             }
           />
         ) : null}
 
-        {entries.length > 0 ? (
-          <SurfaceCard className="overflow-hidden p-[0px]">
+        {entries.length > 0 && !unknown ? (
+          <SurfaceCard padding="none" className="overflow-hidden">
             <ul data-testid="history-card">
               {entries.map((entry, index) => (
                 <MemberEntryRow
@@ -122,11 +138,11 @@ export function MemberDetail() {
           </SurfaceCard>
         ) : null}
 
-        {entries.length === 0 && !history.isPending && !error ? (
+        {entries.length === 0 && !history.isPending && !error && !unknown ? (
           <EmptyState icon={<TrophyGlyph className="size-8" />} title={t('leaderboard.memberEmpty')} />
         ) : null}
 
-        {entries.length === 0 && history.isPending ? (
+        {entries.length === 0 && history.isPending && !unknown ? (
           <div data-testid="history-skeleton" aria-busy="true" className="bg-surface-2 h-[220px] animate-pulse rounded-xl" />
         ) : null}
 
@@ -136,7 +152,7 @@ export function MemberDetail() {
          * long one. The button is the keyboard and no-IntersectionObserver path to the same
          * `fetchNextPage` the sentinel fires.
          */}
-        {entries.length > 0 ? (
+        {entries.length > 0 && !unknown ? (
           <div
             ref={sentinel}
             data-testid="history-footer"

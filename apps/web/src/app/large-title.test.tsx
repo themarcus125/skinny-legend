@@ -36,4 +36,20 @@ describe('LargeTitle', () => {
     scrollTo(scroller, 0);
     expect(header).toHaveAttribute('data-collapsed', 'false');
   });
+
+  it('places a leading control ahead of the title, and none by default', () => {
+    const { rerender } = render(<LargeTitle title="Tổng quan" />);
+    const heading = () => screen.getByRole('heading', { level: 1 });
+    expect(screen.queryByRole('button')).not.toBeInTheDocument();
+
+    rerender(
+      <LargeTitle title="Tổng quan" leading={<button type="button">Quay lại</button>}>
+        <span>x</span>
+      </LargeTitle>,
+    );
+    const back = screen.getByRole('button', { name: 'Quay lại' });
+    expect(back).toBeInTheDocument();
+    // Ahead of the title in the reading order, which is what a back item has to be.
+    expect(back.compareDocumentPosition(heading())).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+  });
 });

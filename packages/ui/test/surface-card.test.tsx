@@ -21,6 +21,19 @@ describe('<SurfaceCard>', () => {
     expect(screen.getByTestId('surface-card').tagName).toBe('SECTION');
   });
 
+  it('drops its own inset with padding="none", for a card whose rows own the edges', () => {
+    const { rerender } = render(<SurfaceCard>Nội dung</SurfaceCard>);
+    const card = () => screen.getByTestId('surface-card');
+    expect(card().dataset.padding).toBe('default');
+    expect(card().className).toContain('p-[18px]');
+
+    rerender(<SurfaceCard padding="none">Nội dung</SurfaceCard>);
+    expect(card().dataset.padding).toBe('none');
+    expect(card().className).toContain('p-0');
+    // `cn` joins rather than merges, so the inset must be gone, not merely overridden.
+    expect(card().className).not.toContain('p-[18px]');
+  });
+
   it('appends the caller className', () => {
     render(<SurfaceCard className="mt-6">Nội dung</SurfaceCard>);
     expect(screen.getByTestId('surface-card').className).toContain('mt-6');
