@@ -15,6 +15,9 @@
   },
   "common": {
     "loading": "Loading…",
+    "pullToRefresh": "Pull down to refresh",
+    "releaseToRefresh": "Release to refresh",
+    "refreshing": "Refreshing…",
     "retry": "Try again",
     "save": "Save",
     "saveChanges": "Save changes",

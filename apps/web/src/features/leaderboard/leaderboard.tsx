@@ -4,6 +4,7 @@ import { useTranslations } from 'use-intl';
 import { AlertBanner, EmptyState, LeaderboardRow } from '@skinny/ui';
 import { TrophyGlyph } from '@/app/icons';
 import { LargeTitle } from '@/app/large-title';
+import { PullToRefresh } from '@/app/pull-to-refresh';
 import { useSession } from '@/auth/session';
 import { describeError, useApi } from '@/lib/api';
 import { queryKeys } from '@/lib/query';
@@ -32,6 +33,7 @@ export function Leaderboard() {
 
   return (
     <>
+      <PullToRefresh keys={[queryKeys.leaderboard]} />
       <LargeTitle title={t('leaderboard.title')} />
       <div className="flex flex-col gap-3 px-4 pt-2 pb-8">
         {isPending ? <LeaderboardSkeleton /> : null}

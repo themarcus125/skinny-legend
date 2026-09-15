@@ -15,6 +15,9 @@
   },
   "common": {
     "loading": "Đang tải…",
+    "pullToRefresh": "Kéo xuống để làm mới",
+    "releaseToRefresh": "Thả để làm mới",
+    "refreshing": "Đang làm mới…",
     "retry": "Thử lại",
     "save": "Lưu",
     "saveChanges": "Lưu thay đổi",

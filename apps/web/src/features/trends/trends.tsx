@@ -5,6 +5,7 @@ import { CATEGORIES } from '@skinny/shared/scoring';
 import { AlertBanner, CategoryChip, EmptyState, SurfaceCard } from '@skinny/ui';
 import { ChartGlyph, FlameGlyph } from '@/app/icons';
 import { LargeTitle } from '@/app/large-title';
+import { PullToRefresh } from '@/app/pull-to-refresh';
 import { describeError, useApi } from '@/lib/api';
 import { queryKeys } from '@/lib/query';
 import { Button } from '@/ui/button';
@@ -48,6 +49,7 @@ export function Trends() {
 
   return (
     <>
+      <PullToRefresh keys={[queryKeys.trends]} />
       <LargeTitle title={t('trends.title')} />
       <div className="flex flex-col gap-3.5 px-4 pt-2 pb-8">
         {error ? (

@@ -11,6 +11,7 @@ import {
 } from '@/app/icons';
 import { useCallback, useEffect } from 'react';
 import { LargeTitle } from '@/app/large-title';
+import { PullToRefresh } from '@/app/pull-to-refresh';
 import { useSession } from '@/auth/session';
 import { usePush } from '@/push/use-push';
 import { FeedSection } from '@/features/feed/feed';
@@ -38,6 +39,7 @@ export function Overview() {
 
   return (
     <>
+      <PullToRefresh keys={[queryKeys.dashboard, queryKeys.feed]} />
       <LargeTitle title={t('overview.title')} />
       <div className="flex flex-col gap-4 px-4 pt-2 pb-8">
         {isPending ? <OverviewSkeleton /> : null}

@@ -5,6 +5,7 @@ import { useTranslations } from 'use-intl';
 import { AlertBanner, ProgressBar, SurfaceCard } from '@skinny/ui';
 import { CameraGlyph, CloseGlyph, PhotoStackGlyph } from '@/app/icons';
 import { LargeTitle } from '@/app/large-title';
+import { PullToRefresh } from '@/app/pull-to-refresh';
 import { useSession } from '@/auth/session';
 import { describeError, useApi } from '@/lib/api';
 import { readExif } from '@/lib/exif';
@@ -217,6 +218,7 @@ export function Track({ onTracked }: TrackProps) {
 
   return (
     <>
+      <PullToRefresh keys={[queryKeys.myEntries, queryKeys.dashboard]} />
       <LargeTitle title={t('track.title')} />
       <div className="flex flex-col gap-4 px-4 pt-2 pb-8">
         <SurfaceCard as="section" className="flex flex-col gap-2">
