@@ -40,11 +40,11 @@ test('a pending member waits, an admin approves, and the member reaches the over
   await signInAdmin(adminPage, admin);
   await adminPage.goto(`${ADMIN_URL}/members`);
 
-  const row = adminPage.getByRole('row').filter({ hasText: newcomer.name });
+  const row = adminPage.locator(`[data-testid="member-row"][data-user-id="${newcomer.userId}"]`);
   await expect(row).toBeVisible();
-  await expect(row).toContainText('Chờ duyệt');
-  await row.getByRole('button', { name: 'Duyệt' }).click();
-  await expect(row).toContainText('Hoạt động');
+  await expect(row.getByTestId('member-status')).toHaveText('Chờ duyệt');
+  await row.getByTestId('member-action-approve').click();
+  await expect(row.getByTestId('member-status')).toHaveText('Hoạt động');
 
   // The pending screen's "Kiểm tra lại" re-reads GET /me, which is how the approval lands.
   await memberPage.getByRole('button', { name: 'Kiểm tra lại' }).click();
@@ -75,15 +75,15 @@ test('an admin disables a member and the member lands on the disabled screen', a
   await signInAdmin(adminPage, admin);
   await adminPage.goto(`${ADMIN_URL}/members`);
 
-  const row = adminPage.getByRole('row').filter({ hasText: target.name });
+  const row = adminPage.locator(`[data-testid="member-row"][data-user-id="${target.userId}"]`);
   await expect(row).toBeVisible();
-  await row.getByRole('button', { name: 'Khoá tài khoản' }).click();
+  await row.getByTestId('member-action-disable').click();
   // The lock action is destructive, so it goes through a confirmation dialog.
   await adminPage
     .getByRole('dialog')
     .getByRole('button', { name: 'Khoá tài khoản', exact: true })
     .click();
-  await expect(row).toContainText('Đã khoá');
+  await expect(row.getByTestId('member-status')).toHaveText('Đã khoá');
 
   const memberContext = await browser.newContext();
   const memberPage = await memberContext.newPage();
