@@ -81,4 +81,18 @@ describe('env', () => {
     const { env } = await importEnv();
     expect(env.STORAGE_KEY_PREFIX).toBe('');
   });
+
+  it('normalises a STORAGE_KEY_PREFIX without a trailing slash', async () => {
+    vi.stubEnv('AUTH_MODE', 'test');
+    vi.stubEnv('STORAGE_KEY_PREFIX', 'e2e');
+    const { env } = await importEnv();
+    expect(env.STORAGE_KEY_PREFIX).toBe('e2e/');
+  });
+
+  it('leaves a STORAGE_KEY_PREFIX that already ends in a slash alone', async () => {
+    vi.stubEnv('AUTH_MODE', 'test');
+    vi.stubEnv('STORAGE_KEY_PREFIX', 'e2e/');
+    const { env } = await importEnv();
+    expect(env.STORAGE_KEY_PREFIX).toBe('e2e/');
+  });
 });

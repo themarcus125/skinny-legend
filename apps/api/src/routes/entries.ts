@@ -10,7 +10,7 @@ import { db } from '../db.js';
 import { ApiError } from '../errors.js';
 import { validate, uuidParam } from '../validate.js';
 import { authenticate, requireActive, type AuthEnv } from '../middleware/auth.js';
-import { storage, newKey } from '../services/storage.js';
+import { storage, newKey, ownedKeyPrefix } from '../services/storage.js';
 import { classifyPhoto, type Verdict } from '../services/vision.js';
 import { makeThumbnail, normalizeImage } from '../services/thumbnail.js';
 import { loadChallenge, loadConfirmedEntries, todayLocal, type Challenge } from '../services/score.js';
@@ -94,7 +94,7 @@ export function entryRoutes(deps: EntryDeps) {
   r.post('/', validate('json', createBody), async (c) => {
     const user = c.get('user');
     const body = c.req.valid('json');
-    if (!body.photoKey.startsWith(`photos/${user.id}/`)) throw new ApiError(403, 'forbidden', 'Photo does not belong to you');
+    if (!body.photoKey.startsWith(ownedKeyPrefix('photos', user.id))) throw new ApiError(403, 'forbidden', 'Photo does not belong to you');
 
     const takenAt = new Date(body.takenAt);
     if (takenAt.getTime() - Date.now() > TAKEN_AT_FUTURE_TOLERANCE_MS) throw new ApiError(400, 'taken_at_future', 'takenAt is in the future');

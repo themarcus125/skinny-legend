@@ -17,8 +17,24 @@ export interface Storage {
 export type UploadKind = 'photo' | 'avatar' | 'feedback';
 const PREFIX: Record<UploadKind | 'thumb', string> = { photo: 'photos', thumb: 'thumbs', avatar: 'avatars', feedback: 'feedback' };
 
+/** Folders whose objects belong to exactly one member, so a route can check ownership by prefix. */
+export type OwnedFolder = 'photos' | 'avatars' | 'feedback';
+
+function folderPrefix(folder: string, userId: string): string {
+  return `${env.STORAGE_KEY_PREFIX}${folder}/${userId}/`;
+}
+
+/**
+ * The prefix every object of `folder` minted for `userId` starts with. Routes that accept a
+ * client-supplied key (entries, /me avatar, feedback screenshots) check it against this, and
+ * `newKey` builds on the same helper so a STORAGE_KEY_PREFIX can never make the two disagree.
+ */
+export function ownedKeyPrefix(folder: OwnedFolder, userId: string): string {
+  return folderPrefix(folder, userId);
+}
+
 export function newKey(kind: UploadKind | 'thumb', userId: string, ext = 'jpg'): string {
-  return `${env.STORAGE_KEY_PREFIX}${PREFIX[kind]}/${userId}/${randomUUID()}.${ext}`;
+  return `${folderPrefix(PREFIX[kind], userId)}${randomUUID()}.${ext}`;
 }
 
 function r2(): Storage {

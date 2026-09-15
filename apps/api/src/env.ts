@@ -17,7 +17,8 @@ const schema = z
     FIREBASE_AUTH_EMULATOR_HOST: z.string().default(''),
     // Prefixed onto every object key the API creates, so an e2e run's objects ("e2e/photos/…")
     // are trivially separable from production's and can be swept at teardown.
-    STORAGE_KEY_PREFIX: z.string().default(''),
+    // A non-empty value is normalised to end in "/" so "e2e" and "e2e/" behave identically.
+    STORAGE_KEY_PREFIX: z.string().default('').transform((v) => (v === '' || v.endsWith('/') ? v : `${v}/`)),
     R2_ACCOUNT_ID: z.string().default(''),
     R2_ACCESS_KEY_ID: z.string().default(''),
     R2_SECRET_ACCESS_KEY: z.string().default(''),
