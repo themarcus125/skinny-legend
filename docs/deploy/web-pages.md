@@ -21,12 +21,12 @@ this repository, then:
 | Framework preset | **None** |
 | **Root directory** | **`apps/web`** |
 | Build command | `pnpm install --frozen-lockfile && pnpm --filter @skinny/shared build && VITE_BUILD_ID=$CF_PAGES_COMMIT_SHA pnpm --filter @skinny/web build` (the prefix is the only place `VITE_BUILD_ID` can be set; see §2) |
-| Build output directory | `apps/web/dist` |
+| Build output directory | `dist` (Pages resolves it relative to the root directory, so **not** `apps/web/dist`) |
 | Node.js version | **22** — set `NODE_VERSION=22` as a build environment variable, or commit `.node-version`. Pages defaults to an older Node and the build fails on Vite 8. |
 | Production branch | `main` |
 
-The build command runs from the repo root even with the root directory set, so the `--filter`
-flags resolve against the workspace. pnpm is detected from the root `pnpm-lock.yaml` and
+The build command runs from the root directory, but pnpm walks up to the workspace root, so
+`pnpm install` installs the whole workspace and the `--filter` flags resolve against it. pnpm is detected from the root `pnpm-lock.yaml` and
 `packageManager` field; the corepack shim Pages ships needs no extra configuration.
 
 `pnpm --filter @skinny/web build` is `tsc --noEmit && vite build`: a type error fails the deploy
