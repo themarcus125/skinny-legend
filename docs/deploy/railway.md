@@ -3,31 +3,57 @@
 Railway hosts three services built from the same `apps/api/Dockerfile`, plus a Postgres
 database:
 
-| Service | Config file | Start command | Shape |
+| Service | Start command | Shape |
+| --- | --- | --- |
+| `api` | `node dist/index.js` | HTTP, health check `/health` |
+| `cleanup` | `node dist/jobs/cleanup.js` | Cron `0 3 * * 1` |
+| `notify` | `node dist/jobs/notify.js` | Cron `0 13 * * *` |
+
+## Where the settings live: the dashboard, not `railway.json`
+
+Railway has deprecated Config-as-code (`railway.json` / `railway.*.json`). Services created after
+2026-08-28 cannot opt in, and existing config files stop working on 2026-12-01. The three
+`railway*.json` files at the repo root are kept as the reference shape of each service, but
+**Railway does not read them** — every setting below is set per service, either in the
+dashboard (*service → Settings*) or with the CLI:
+
+```bash
+railway link --project <project-id> --environment <environment-id> --service <service-id>
+railway environment edit --service-config <service> deploy.startCommand "node dist/index.js"
+railway environment edit --service-config <service> deploy.healthcheckPath "/health"
+```
+
+(Project, environment and service ids are in the dashboard URL:
+`railway.com/project/<project>/service/<service>?environmentId=<environment>`.)
+
+Settings every service built from the API image needs:
+
+| Setting | `api` | `cleanup` | `notify` |
 | --- | --- | --- | --- |
-| `api` | `railway.json` (default path) | `node dist/index.js` | HTTP, health check `/health` |
-| `cleanup` | `railway.cleanup.json` | `node dist/jobs/cleanup.js` | Cron `0 3 * * 1` |
-| `notify` | `railway.notify.json` | `node dist/jobs/notify.js` | Cron `0 13 * * *` |
+| Source → Root Directory | empty | empty | empty |
+| Build → Builder | Dockerfile | Dockerfile | Dockerfile |
+| Build → Dockerfile Path | `/apps/api/Dockerfile` | same | same |
+| Build → Custom Build Command | **empty** | empty | empty |
+| Build → Watch Paths | `/apps/api/**`, `/packages/shared/**`, `/pnpm-lock.yaml` | same | same |
+| Deploy → Custom Start Command | `node dist/index.js` (or empty: the Dockerfile `CMD` is the same) | `node dist/jobs/cleanup.js` | `node dist/jobs/notify.js` |
+| Deploy → Healthcheck Path | `/health` | empty | empty |
+| Deploy → Cron Schedule | none | `0 3 * * 1` | `0 13 * * *` |
+| Deploy → Restart Policy | On Failure | Never | Never |
 
-## Config as code: which path setting to point at
+Two things bite here:
 
-Railway reads **one** config file per service, and its default path is `railway.json` at the
-repo root. That file is the API's, so:
+- **Do not start with `pnpm`.** When Railway creates a service from this monorepo it guesses
+  `pnpm --filter @skinny/api build` / `pnpm --filter @skinny/api start`. The build stage of the
+  Dockerfile has pnpm, but the runtime stage is plain `node:22-alpine`, so a `pnpm` start command
+  fails at *Deploy › Create container* with ``The executable `pnpm` could not be found``. The
+  custom build command is ignored for Dockerfile builds; clear it anyway so nobody trusts it.
+- **Do not set a Root Directory of `apps/api`.** The build context must be the repo root: the
+  image needs the workspace root `package.json`, `pnpm-lock.yaml` and `packages/shared`. With a
+  root directory the Dockerfile path stops resolving and the build fails on the missing lockfile.
 
-- **api** — leave *Settings → Config as code → "Railway config file path"* at its default
-  (`railway.json`). Nothing to set.
-- **cleanup** — set that field to `railway.cleanup.json`.
-- **notify** — set that field to `railway.notify.json`.
-
-Forgetting the path on a cron service is the classic failure: the service silently inherits the
-API's config and starts a long-running HTTP server with no cron schedule (and then fails its
-health check, because nothing is listening on the job's behalf).
-
-The Dockerfile path is declared **inside** each config file (`build.dockerfilePath`:
-`apps/api/Dockerfile`), and the build context is the repo root — the image needs the workspace
-root `package.json`, `pnpm-lock.yaml` and `packages/shared`. Do **not** set a service "Root
-Directory" of `apps/api`; that would cut the build context down and the build would fail on the
-missing lockfile.
+Railway's monorepo detection also tends to create one service per app (`admin`, `web`, ...).
+Only `api` and the two cron jobs belong on Railway; `admin` is on Vercel
+(`docs/deploy/admin-vercel.md`). Delete the extras rather than trying to make them build.
 
 ## 1. Create the project and the database
 
@@ -38,9 +64,8 @@ missing lockfile.
    (*Settings → Service name*).
 4. For the API service, *Settings → Source* → confirm the repo and the branch you deploy from
    (`main`). Leave **Root Directory** empty (see above).
-5. *Settings → Build* should show `DOCKERFILE` / `apps/api/Dockerfile` picked up from
-   `railway.json`. *Settings → Deploy* should show the start command and health check path
-   `/health` from the same file.
+5. Set the *Build* and *Deploy* fields to the `api` column of the table above. Railway pre-fills
+   `pnpm --filter ...` commands; replace them.
 
 ## 2. Environment variables on the `api` service
 
@@ -133,11 +158,11 @@ Then hand that domain to:
 
 ## 6. The two cron services
 
-For each of `cleanup` and `notify`: **New** → **GitHub Repo** → same repository → then
-*Settings → Config as code → Railway config file path* = `railway.cleanup.json` /
-`railway.notify.json`, and copy the API's variables across (the jobs use the same `env.ts`).
-Do **not** generate a domain for them; each config sets `restartPolicyType: NEVER` and a
-`cronSchedule`, so Railway runs the container to completion on schedule.
+For each of `cleanup` and `notify`: **New** → **GitHub Repo** → same repository → then set the
+service's *Build* and *Deploy* fields to its column of the table above (start command, cron
+schedule, restart policy **Never**, no health check), and copy the API's variables across (the
+jobs use the same `env.ts`). Do **not** generate a domain for them; with a cron schedule and
+restart policy *Never*, Railway runs the container to completion on schedule.
 
 - `cleanup` — `0 3 * * 1`, Mondays 03:00 UTC. Deletes R2 objects older than 24 h that no
   `entries.photo_key` / `entries.thumb_key` / `users.avatar_key` / `feedback.screenshot_key`

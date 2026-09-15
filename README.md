@@ -87,10 +87,10 @@ above also fails the boot with a message naming it.
 
 ### Weekly cleanup cron
 
-Add a second Railway service from the same image with no HTTP port. Its settings live in
-`railway.cleanup.json` at the repo root, but Railway only reads that file if the service's
-**Settings → Config as code → "Railway config file path"** is set to `railway.cleanup.json`; with
-the default path the service would pick up the API's `railway.json` (HTTP server, no cron) instead.
+Add a second Railway service from the same image with no HTTP port. Railway no longer reads
+`railway.cleanup.json` (Config-as-code is deprecated); set the service's *Build* and *Deploy*
+fields by hand as described in `docs/deploy/railway.md`, and never start it with `pnpm` — the
+runtime image has no pnpm.
 
 - Command: `node dist/jobs/cleanup.js`
 - Schedule: `0 3 * * 1` (Mondays, 03:00 UTC)
@@ -100,10 +100,8 @@ It deletes R2 objects older than 24h that no row references.
 
 ### Daily push cron
 
-Add a third Railway service from the same image with no HTTP port. Its settings live in
-`railway.notify.json` at the repo root, but Railway only reads that file if the service's
-**Settings → Config as code → "Railway config file path"** is set to `railway.notify.json`; with
-the default path the service would pick up the API's config (HTTP server, no cron) instead.
+Add a third Railway service from the same image with no HTTP port, configured the same way as
+the cleanup service (`railway.notify.json` is the reference shape only; Railway does not read it).
 
 - Command: `node dist/jobs/notify.js`
 - Schedule: `0 13 * * *` — 13:00 UTC, which is **20:00 Asia/Ho_Chi_Minh** all year (ICT has no DST)

@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "next dev -p 3001",
+    "prebuild": "pnpm --filter @skinny/shared build",
     "build": "next build",
     "start": "next start -p 3001",
     "lint": "eslint . && node scripts/lint-i18n.mjs",

@@ -12,14 +12,14 @@ Four providers, one order. Each step below links to the runbook that has the cli
 | 6 | Firebase authorized domains for the Vercel domain | [`firebase.md`](./firebase.md) §6 | 5 |
 | 6b | Cloudflare Pages project for the member PWA, env vars, `CORS_ORIGINS` and Firebase authorized domains for the Pages domain | [`web-pages.md`](./web-pages.md) | 3, 4 |
 | 7 | Promote the first admin (SQL) | [`railway.md`](./railway.md) §4 | 5, 6, plus one sign-in from the dashboard |
-| 8 | `cleanup` cron service (`railway.cleanup.json`, `0 3 * * 1`) | [`railway.md`](./railway.md) §6 | 4 |
+| 8 | `cleanup` cron service (`0 3 * * 1`) | [`railway.md`](./railway.md) §6 | 4 |
 | 9 | Apple: Sign in with Apple key + APNs key, uploaded to Firebase | [`firebase.md`](./firebase.md) §3, §5 | **SKI-42** (paid Apple Developer account) |
-| 10 | `notify` cron service (`railway.notify.json`, `0 13 * * *`) | [`railway.md`](./railway.md) §6 | 4, 9 — it refuses to boot without the `FIREBASE_*` vars, and sends fail without the APNs key |
+| 10 | `notify` cron service (`0 13 * * *`) | [`railway.md`](./railway.md) §6 | 4, 9 — it refuses to boot without the `FIREBASE_*` vars, and sends fail without the APNs key |
 | 11 | iOS release wiring: `GoogleService-Info.plist`, `GOOGLE_REVERSED_CLIENT_ID`, Release `API_BASE_URL`, `DEVELOPMENT_TEAM`, `aps-environment: production` | [`firebase.md`](./firebase.md) §2 and README "Before TestFlight" | 3, 4, SKI-42 |
 
-Config-as-code lives at the repo root: `railway.json` (API, Railway's default path),
-`railway.cleanup.json` and `railway.notify.json` (each needs its *Railway config file path*
-setting pointed at it — see [`railway.md`](./railway.md)).
+Railway has deprecated Config-as-code, so `railway.json`, `railway.cleanup.json` and
+`railway.notify.json` at the repo root are reference shapes only; each service's build and
+deploy settings are set in the dashboard or with the CLI — see [`railway.md`](./railway.md).
 
 ## What to hand back
 
