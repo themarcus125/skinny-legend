@@ -51,10 +51,25 @@ async function fillEmulatorForm(page: Page, m: Member): Promise<void> {
   await page.getByTestId('emulator-submit').click();
 }
 
+/**
+ * One bounded retry of a navigation. A long-lived `vite preview` / `next start` occasionally lets
+ * the very first request of a context hang, and a `page.goto` timeout in a sign-in helper burns
+ * the file's single retry before the test body has run at all. Two attempts, the first on
+ * `domcontentloaded` so a slow subresource cannot be what times out; a second failure is real and
+ * is rethrown.
+ */
+async function gotoTwice(page: Page, url: string): Promise<void> {
+  try {
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30_000 });
+  } catch {
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30_000 });
+  }
+}
+
 /** Opens the web sign-in screen, signs in, and waits for the app to leave /sign-in. */
 export async function signInWeb(page: Page, m: Member): Promise<void> {
   capturePresigns(page);
-  await page.goto(`${WEB_URL}/sign-in`);
+  await gotoTwice(page, `${WEB_URL}/sign-in`);
   await page.getByTestId('emulator-form').waitFor();
   await fillEmulatorForm(page, m);
   await page.waitForURL((url) => !url.pathname.startsWith('/sign-in'), { timeout: 60_000 });
@@ -63,7 +78,7 @@ export async function signInWeb(page: Page, m: Member): Promise<void> {
 /** Opens the admin console, signs in, and waits for the sidebar to replace the sign-in card. */
 export async function signInAdmin(page: Page, m: Member): Promise<void> {
   capturePresigns(page);
-  await page.goto(ADMIN_URL);
+  await gotoTwice(page, ADMIN_URL);
   await page.getByTestId('emulator-form').waitFor();
   await fillEmulatorForm(page, m);
   // Both the desktop rail and the mobile top bar render a <nav>; either one means we are in.

@@ -76,23 +76,57 @@ test('the leaderboard ranks match GET /leaderboard', async ({ page, request }) =
   for (const [index, row] of rows.entries()) {
     const element = rendered.nth(index);
     await expect(element).toHaveAttribute('data-rank', String(row.rank));
-    await expect(element).toContainText(row.user.displayName);
-    await expect(element).toContainText(String(row.total));
+    /*
+     * `toContainText(String(row.total))` would be satisfied by the rank, by the weekly delta, or
+     * by any digit anywhere else in the row — a total of 3 "passes" against a row showing someone
+     * else's score. Each number is therefore asserted on the element that owns it, with exact
+     * text; and the name goes through the row's whole-sentence aria-label, comma-bounded, so a
+     * name that is a prefix of another member's cannot satisfy it.
+     */
+    await expect(element.getByTestId('leaderboard-total')).toHaveText(String(row.total));
+    const signed = row.weekPoints >= 0 ? `+${row.weekPoints}` : String(row.weekPoints);
+    await expect(element.getByTestId('leaderboard-week-delta')).toHaveText(
+      new RegExp(`${signed.replace('+', '\\+')}$`),
+    );
+    await expect(element).toHaveAttribute('aria-label', new RegExp(`, ${row.user.displayName},`));
   }
   // Exactly one row is the signed-in member's, and it is the row the API marked.
+  const me = rows.find((row) => row.isMe)!;
   const mine = page.locator('[data-testid="leaderboard-row"][data-me="true"]');
   await expect(mine).toHaveCount(1);
-  await expect(mine).toContainText(rows.find((row) => row.isMe)!.user.displayName);
+  await expect(mine).toHaveAttribute('aria-label', new RegExp(`, ${me.user.displayName},`));
+  await expect(mine.getByTestId('leaderboard-total')).toHaveText(String(me.total));
 });
 
-test('a member detail page shows the name, the total and paged history', async ({ page }) => {
+test('a member detail page shows the name, the total and paged history', async ({
+  page,
+  request,
+}) => {
   await signInWeb(page, ha);
   await page.goto(`${WEB_URL}/leaderboard`);
-  await page.getByTestId('leaderboard-row').first().click();
-  await page.waitForURL(/\/leaderboard\/[0-9a-f-]{36}$/);
 
-  await expect(page.getByTestId('member-name')).not.toBeEmpty();
-  await expect(page.getByTestId('member-total')).toHaveText(/^\d+$/);
+  /*
+   * Which member the tapped row *is* has to be pinned before the click, or a detail page for the
+   * wrong member reads as green. The rows carry no user id of their own (adding one would be an
+   * `apps/*` change this wave may not make), so the identity comes from the API: the board is
+   * rendered in the API's order — asserted rank by rank in the test above — so the first row is
+   * the first row of `GET /leaderboard`, and the URL, the name and the total must all be that
+   * member's.
+   */
+  const token = await apiToken(ha);
+  const response = await request.get(`${API_URL}/leaderboard`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  expect(response.status()).toBe(200);
+  const top = ((await response.json()) as { leaderboard: LeaderboardRow[] }).leaderboard[0]!;
+
+  const first = page.getByTestId('leaderboard-row').first();
+  await expect(first).toHaveAttribute('data-rank', String(top.rank));
+  await first.click();
+  await page.waitForURL(`${WEB_URL}/leaderboard/${top.user.id}`);
+
+  await expect(page.getByTestId('member-name')).toHaveText(top.user.displayName);
+  await expect(page.getByTestId('member-total')).toHaveText(String(top.total));
   await expect(page.getByTestId('history-row').first()).toBeVisible();
 
   /*
