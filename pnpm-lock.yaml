@@ -312,6 +312,33 @@ importers:
         specifier: ^7.4.1
         version: 7.4.1
 
+  e2e:
+    devDependencies:
+      '@playwright/test':
+        specifier: ^1.63.0
+        version: 1.63.0
+      '@skinny/e2e-support':
+        specifier: workspace:*
+        version: link:../packages/e2e-support
+      '@types/node':
+        specifier: ^22.20.2
+        version: 22.20.2
+      dotenv:
+        specifier: ^16.4.0
+        version: 16.6.1
+      piexifjs:
+        specifier: ^1.0.6
+        version: 1.0.6
+      postgres:
+        specifier: ^3.4.0
+        version: 3.4.9
+      sharp:
+        specifier: ^0.35.4
+        version: 0.35.4(@types/node@22.20.2)
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+
   packages/api-client:
     dependencies:
       '@skinny/shared':
@@ -5856,6 +5883,9 @@ packages:
   picomatch@4.0.7:
     resolution: {integrity: sha512-qcJu88Q2IWqJsDD529JKMdwGm/dvInW4HvQnRwiH9JtihJvzGOscDtHE3x1pBKeUOTysQ8kVmLnJ2kJu7yhcGA==}
     engines: {node: '>=12'}
+
+  piexifjs@1.0.6:
+    resolution: {integrity: sha512-0wVyH0cKohzBQ5Gi2V1BuxYpxWfxF3cSqfFXfPIpl5tl9XLS5z4ogqhUCD20AbHi0h9aJkqXNJnkVev6gwh2ag==}
 
   pkce-challenge@5.0.1:
     resolution: {integrity: sha512-wQ0b/W4Fr01qtpHlqSqspcj3EhBvimsdh0KlHhH8HRZnMsEa0ea2fTULOXOS9ccQr3om+GcGRk4e+isrZWV8qQ==}
@@ -12425,6 +12455,8 @@ snapshots:
   picomatch@2.3.2: {}
 
   picomatch@4.0.7: {}
+
+  piexifjs@1.0.6: {}
 
   pkce-challenge@5.0.1: {}
 
