@@ -98,3 +98,20 @@ export async function uploadPhoto(page: Page, fixture: string): Promise<void> {
 export function apiToken(m: Member): Promise<string> {
   return emulatorIdToken({ host: EMULATOR_HOST, email: m.email, password: m.password });
 }
+
+/**
+ * Closes the open verdict sheet the way its own state allows, and waits for it to detach.
+ *
+ * A successful verdict has already tracked the entry, so the primary is a plain "Xong" that only
+ * dismisses. A real OpenRouter call may instead come back `failed` (spec §3 keeps that legal): the
+ * sheet then opens on the chip picker with the primary disabled until a category is chosen, so
+ * this picks `fallback` first. Playwright's own actionability wait covers the enabling.
+ */
+export async function settleVerdict(page: Page, fallback = 'exercise'): Promise<void> {
+  const primary = page.getByTestId('verdict-primary');
+  if (await primary.isDisabled()) {
+    await page.locator(`[data-testid="category-chip"][data-category="${fallback}"]`).click();
+  }
+  await primary.click();
+  await page.getByTestId('verdict-sheet').waitFor({ state: 'detached', timeout: 60_000 });
+}
