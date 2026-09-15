@@ -15,6 +15,10 @@ interface ImportMetaEnv {
   readonly VITE_FIREBASE_APP_ID?: string;
   readonly VITE_FIREBASE_MESSAGING_SENDER_ID?: string;
   readonly VITE_FIREBASE_VAPID_KEY?: string;
+  /** Busts the persisted query cache when a new build ships; the Pages commit sha. */
+  readonly VITE_BUILD_ID?: string;
+  /** A custom domain in front of the R2 bucket, when the thumbnails are not on `*.r2.dev`. */
+  readonly VITE_R2_PUBLIC_HOST?: string;
 }
 
 interface ImportMeta {

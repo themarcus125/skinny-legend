@@ -87,6 +87,10 @@
     "vi": "Mở trình đơn Chia sẻ của Safari rồi chọn “Thêm vào MH chính” để nhận nhắc nhở.",
     "en": "Open Safari's Share menu and choose “Add to Home Screen” to get reminders."
   },
+  "pwa.installDismiss": {
+    "vi": "Đã hiểu",
+    "en": "Got it"
+  },
   "pwa.updateAvailable": {
     "vi": "Đã có bản cập nhật mới.",
     "en": "A new version is available."

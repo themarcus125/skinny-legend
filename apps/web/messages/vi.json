@@ -267,6 +267,7 @@
   "pwa": {
     "installTitle": "Thêm vào màn hình chính",
     "installBody": "Mở trình đơn Chia sẻ của Safari rồi chọn “Thêm vào MH chính” để nhận nhắc nhở.",
+    "installDismiss": "Đã hiểu",
     "updateAvailable": "Đã có bản cập nhật mới.",
     "updateAction": "Tải lại ngay"
   }

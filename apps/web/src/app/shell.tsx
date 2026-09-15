@@ -1,6 +1,8 @@
 import { Outlet } from 'react-router';
 import { PushToastHost } from '@/push/toast';
+import { InstallHint } from './install-hint';
 import { SCROLL_CONTAINER_ATTR } from './large-title';
+import { OfflineBanner } from './offline-banner';
 import { TabBar } from './tab-bar';
 
 /**
@@ -14,12 +16,19 @@ import { TabBar } from './tab-bar';
 export function AppShell() {
   return (
     <div className="flex h-dvh flex-col">
+      {/*
+        Above the scroll container, not inside it: the strip must not slide under a screen's
+        sticky large title, and it must stay on screen for as long as the connection is down.
+      */}
+      <OfflineBanner />
       <main
         {...{ [SCROLL_CONTAINER_ATTR]: true }}
         // One clearance, not two: the bubble is now inline with the bar, so the fixed row is
         // 56px tall plus its own padding — no stacked-bubble allowance on top.
         className="flex-1 overflow-y-auto pb-[calc(env(safe-area-inset-bottom)+5rem)]"
       >
+        {/* iOS Safari only, once per member: push needs the app on the Home Screen. */}
+        <InstallHint />
         <Outlet />
       </main>
       <TabBar />

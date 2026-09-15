@@ -267,6 +267,7 @@
   "pwa": {
     "installTitle": "Add to Home Screen",
     "installBody": "Open Safari's Share menu and choose “Add to Home Screen” to get reminders.",
+    "installDismiss": "Got it",
     "updateAvailable": "A new version is available.",
     "updateAction": "Reload now"
   }
