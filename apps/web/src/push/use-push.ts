@@ -3,7 +3,7 @@ import { useLocale } from 'use-intl';
 import type { ApiClient } from '@skinny/api-client';
 import { onSignOut } from '@/auth/session';
 import { useApi } from '@/lib/api';
-import { livePushAuthorizer, livePushTokens } from './messaging';
+import { livePushAuthorizer, livePushTokens, observeForegroundMessages } from './messaging';
 import { createPushRegistrar, type PushRegistrar, type PushRegistrarState } from './registrar';
 
 /**
@@ -39,12 +39,6 @@ export function pushRegistrarFor(api: ApiClient): PushRegistrar {
   return registrar;
 }
 
-/** Test seam: drops the memoised registrar so the next `pushRegistrarFor` builds a fresh one. */
-export function resetPushRegistrar(): void {
-  instance?.unregister();
-  instance = null;
-}
-
 export interface PushView {
   state: PushRegistrarState;
   registrar: PushRegistrar;
@@ -68,8 +62,24 @@ export function usePush(override?: PushRegistrar): PushView {
     () => registrar.state,
   );
 
+  // `refresh()` also carries the in-session retry for a registration left pending, so a return
+  // to the tab is what gets a token that could not be minted at toggle time onto the server.
   useEffect(() => {
     void registrar.refresh();
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') void registrar.refresh();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    // The web has no `onTokenRefresh`. A delivered message proves the subscription is live, so
+    // it is the closest thing to FCM's `didReceiveRegistrationToken` — and it is what completes
+    // a registration whose token arrived after the toggle.
+    const stopMessages = observeForegroundMessages(() => {
+      void registrar.handleTokenRefresh();
+    });
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible);
+      stopMessages();
+    };
   }, [registrar]);
 
   // The *resolved* language — what the app is rendering in — because the server's push copy

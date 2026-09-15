@@ -67,6 +67,10 @@
     "vi": "Lịch sử hoạt động",
     "en": "Activity history"
   },
+  "push.pending": {
+    "vi": "Đang bật nhắc nhở…",
+    "en": "Turning reminders on…"
+  },
   "push.deniedExplanation": {
     "vi": "Trình duyệt đang chặn thông báo cho trang này. Bật lại trong phần cài đặt trang web của trình duyệt để nhận nhắc nhở.",
     "en": "This browser is blocking notifications for this site. Turn them back on in your browser's site settings to get reminders."

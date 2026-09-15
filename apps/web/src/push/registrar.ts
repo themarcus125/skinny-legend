@@ -98,6 +98,8 @@ class Registrar implements PushRegistrar {
    * account's token.
    */
   #generation = 0;
+  /** Re-entrancy guard for the pending retry in `refresh()`. */
+  #isRetrying = false;
 
   constructor(deps: RegistrarDeps) {
     this.#deps = deps;
@@ -129,9 +131,29 @@ class Registrar implements PushRegistrar {
   async refresh(): Promise<void> {
     const permission = await this.#readPermission();
     this.#patch({ permission, errorKey: null });
-    if (permission !== 'authorized' && this.#snapshot.isEnabled) {
-      this.#setEnabled(false);
-      this.#setPending(false);
+    if (permission !== 'authorized') {
+      if (this.#snapshot.isEnabled) {
+        this.#setEnabled(false);
+        this.#setPending(false);
+      }
+      return;
+    }
+    /*
+     * The in-session retry for a registration left pending. On iOS the FCM delegate callback is
+     * guaranteed to arrive; the web has no `onTokenRefresh`, so a token that could not be minted
+     * when the member flipped the switch would otherwise sit pending until the next reload. Every
+     * deliberate re-read of the permission — mount, a return to the tab — gets one more go.
+     *
+     * Skipped while `isBusy`, which is exactly the `enable()`-calling-`refresh()` case: that call
+     * is about to register anyway, and a retry here would double the POST.
+     */
+    if (this.#snapshot.isRegistrationPending && !this.#snapshot.isBusy && !this.#isRetrying) {
+      this.#isRetrying = true;
+      try {
+        await this.registerCurrentToken();
+      } finally {
+        this.#isRetrying = false;
+      }
     }
   }
 
@@ -241,10 +263,14 @@ class Registrar implements PushRegistrar {
    */
   async disable(): Promise<void> {
     const token = this.#snapshot.registeredToken;
+    // Only look a token up when a server row can actually exist. A registration that never got
+    // past `pending` has nothing to DELETE, and asking for the token would register the FCM
+    // service worker and mint one purely to throw it away.
+    const mayHaveRow = token !== null || (this.#snapshot.isEnabled && !this.#snapshot.isRegistrationPending);
     this.clearLocalState();
     this.#patch({ isBusy: true });
     try {
-      await this.#dropRegistration(token);
+      if (mayHaveRow) await this.#dropRegistration(token);
     } finally {
       this.#patch({ isBusy: false });
     }

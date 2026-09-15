@@ -58,11 +58,12 @@ describe('the account screen', () => {
   it('shows my name, my rank and total, and the group-fund link', async () => {
     renderAccount();
 
-    // The seed's own member row, through a real session load: give the two awaited round trips
-    // (`POST /auth/session`, then the leaderboard) room on a loaded machine.
-    expect(await screen.findByTestId('account-name', undefined, { timeout: 5000 })).toHaveTextContent(
-      'Khoa',
-    );
+    // The seed's own member row, through a real session load. `findByTestId` would resolve on
+    // the *empty* span at first paint — the element exists before either round trip lands — so
+    // the wait has to be on the content, not on the node.
+    await waitFor(() => {
+      expect(screen.getByTestId('account-name')).toHaveTextContent('Khoa');
+    });
     // The seed's own numbers: rank 1..n and the season total for the row flagged `isMe`.
     await waitFor(() =>
       expect(screen.getByTestId('account-summary')).toHaveTextContent(/Hạng \d+ · \d+ điểm/),

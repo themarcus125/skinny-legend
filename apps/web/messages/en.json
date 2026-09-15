@@ -257,6 +257,7 @@
   },
   "push": {
     "enableFailed": "Couldn't turn on notifications, please try again.",
+    "pending": "Turning reminders on…",
     "denied": "Notifications are off in Settings. Turn them back on there to get reminders.",
     "deniedExplanation": "This browser is blocking notifications for this site. Turn them back on in your browser's site settings to get reminders.",
     "openSettings": "Open Settings",

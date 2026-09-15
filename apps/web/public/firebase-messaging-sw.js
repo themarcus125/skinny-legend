@@ -37,6 +37,22 @@ const config = {
 /** Where a notification lands when the payload names nothing better. Mirrors `messaging.ts`. */
 const DEFAULT_DEEP_LINK = '/track';
 
+/**
+ * A same-origin, in-app path. `//evil.com/x` and `/\\evil.com/x` both start with `/` and both
+ * resolve to a different origin, so a `deepLink` off the wire is checked twice: the shape, and
+ * then the origin the browser actually resolves it to.
+ */
+function safeDeepLink(link) {
+  if (typeof link !== 'string' || !/^\/(?![/\\])/.test(link)) return DEFAULT_DEEP_LINK;
+  try {
+    return new URL(link, self.location.origin).origin === self.location.origin
+      ? link
+      : DEFAULT_DEEP_LINK;
+  } catch {
+    return DEFAULT_DEEP_LINK;
+  }
+}
+
 if (config.apiKey && config.projectId && config.messagingSenderId && config.appId) {
   firebase.initializeApp(config);
   const messaging = firebase.messaging();
@@ -53,16 +69,13 @@ if (config.apiKey && config.projectId && config.messagingSenderId && config.appI
     const title = data.title || (payload.notification && payload.notification.title) || '';
     const body = data.body || (payload.notification && payload.notification.body) || '';
     if (!title && !body) return;
-    const deepLink = typeof data.deepLink === 'string' && data.deepLink.startsWith('/')
-      ? data.deepLink
-      : DEFAULT_DEEP_LINK;
     self.registration.showNotification(title, {
       body,
       icon: '/icons/icon-192.png',
       badge: '/icons/icon-192.png',
       // One notification per kind: a second reminder replaces the first rather than stacking.
       tag: data.kind || 'skinny-reminder',
-      data: { deepLink },
+      data: { deepLink: safeDeepLink(data.deepLink) },
     });
   });
 }
@@ -74,10 +87,7 @@ if (config.apiKey && config.projectId && config.messagingSenderId && config.appI
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   const data = event.notification.data || {};
-  const path = typeof data.deepLink === 'string' && data.deepLink.startsWith('/')
-    ? data.deepLink
-    : DEFAULT_DEEP_LINK;
-  const target = new URL(path, self.location.origin).href;
+  const target = new URL(safeDeepLink(data.deepLink), self.location.origin).href;
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windows) => {

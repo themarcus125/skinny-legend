@@ -32,6 +32,18 @@ export const PUSH_SW_SCOPE = '/firebase-cloud-messaging-push-scope';
 /** Where a notification lands when the payload names nothing better. */
 export const DEFAULT_DEEP_LINK = '/track';
 
+/**
+ * A same-origin, in-app path. The negative lookahead is the whole point: `//evil.com/x` and
+ * `/\\evil.com/x` both start with `/` and both resolve to a **different origin** once a browser
+ * (or the router) parses them, so a `deepLink` off the wire could otherwise navigate the member
+ * away from the app. Anything that does not match falls back to `DEFAULT_DEEP_LINK`.
+ */
+const SAFE_PATH = /^\/(?![/\\])/;
+
+export function safeDeepLink(link: string | undefined): string {
+  return link !== undefined && SAFE_PATH.test(link) ? link : DEFAULT_DEEP_LINK;
+}
+
 /** A foreground message, reduced to what the toast renders. */
 export interface PushMessage {
   title: string;
@@ -62,6 +74,10 @@ export function livePushAuthorizer(): PushAuthorizing {
       // The globals first (synchronous, and true for the vast majority), then the SDK's own
       // check — which is what decides whether `getMessaging` would throw.
       if (!hasPushPrimitives()) return false;
+      // No Web Push certificate means no token can ever be minted, so this deployment cannot
+      // take push at all. That is `unsupported` — an explanation the row can show — rather than
+      // a registration that sits pending forever with nothing to complete it.
+      if (!import.meta.env.VITE_FIREBASE_VAPID_KEY) return false;
       return (await loadMessaging()) !== null;
     },
   };
@@ -104,8 +120,7 @@ export function toPushMessage(payload: MessagePayload): PushMessage | null {
   const title = data.title ?? payload.notification?.title ?? '';
   const body = data.body ?? payload.notification?.body ?? '';
   if (title === '' && body === '') return null;
-  const link = data.deepLink ?? '';
-  return { title, body, deepLink: link.startsWith('/') ? link : DEFAULT_DEEP_LINK };
+  return { title, body, deepLink: safeDeepLink(data.deepLink) };
 }
 
 /**

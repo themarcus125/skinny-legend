@@ -257,6 +257,7 @@
   },
   "push": {
     "enableFailed": "Không bật được thông báo, hãy thử lại.",
+    "pending": "Đang bật nhắc nhở…",
     "denied": "Thông báo đang tắt trong Cài đặt. Bật lại ở đó để nhận nhắc nhở.",
     "deniedExplanation": "Trình duyệt đang chặn thông báo cho trang này. Bật lại trong phần cài đặt trang web của trình duyệt để nhận nhắc nhở.",
     "openSettings": "Mở Cài đặt",

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { ReactNode } from 'react';
 import userEvent from '@testing-library/user-event';
 import type { ApiClient } from '@skinny/api-client';
@@ -37,14 +37,17 @@ class MemoryStorage implements Storage {
   }
 }
 
-function registrarFor(permission: PushPermission, granted = true): PushRegistrar {
+function registrarFor(
+  permission: PushPermission,
+  { granted = true, token = 'fcm-web-token' }: { granted?: boolean; token?: string | null } = {},
+): PushRegistrar {
   const authorizer: PushAuthorizing = {
     permission: () => Promise.resolve(permission === 'unsupported' ? 'denied' : permission),
     requestPermission: () => Promise.resolve(granted),
     isSupported: () => Promise.resolve(permission !== 'unsupported'),
   };
   const tokens: PushTokenSource = {
-    currentToken: () => Promise.resolve('fcm-web-token'),
+    currentToken: () => Promise.resolve(token),
     deleteToken: () => Promise.resolve(),
   };
   return createPushRegistrar({
@@ -66,10 +69,6 @@ function renderRow(registrar: PushRegistrar) {
   );
   return { registrar, ...render(<RemindersRow registrar={registrar} />, { wrapper: Wrapper }) };
 }
-
-beforeEach(() => {
-  vi.spyOn(console, 'error').mockImplementation(() => undefined);
-});
 
 describe('the reminders row', () => {
   it('starts off, and turning it on registers the browser', async () => {
@@ -105,6 +104,18 @@ describe('the reminders row', () => {
       expect(toggle).toHaveAttribute('aria-checked', 'false');
     });
     expect(registrar.state.registeredToken).toBeNull();
+  });
+
+  it('says so while a registration is still waiting on a token', async () => {
+    const registrar = registrarFor('authorized', { token: null });
+    await registrar.enable();
+    renderRow(registrar);
+
+    const toggle = await screen.findByRole('switch', { name: 'Nhắc nhở' });
+    // The intent is recorded, so the switch is on — but nothing can be delivered yet, and the
+    // row has to say that rather than claim reminders are working.
+    expect(toggle).toHaveAttribute('aria-checked', 'true');
+    expect(await screen.findByTestId('reminders-pending')).toHaveTextContent('Đang bật nhắc nhở');
   });
 
   it('explains a denied permission and disables the switch, with no "open settings" button', async () => {

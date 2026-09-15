@@ -62,6 +62,21 @@ export function RemindersRow({ registrar }: { registrar?: PushRegistrar }) {
           </button>
         }
       />
+      {/*
+        * The switch is already ON — the intent is recorded — but no token has reached the server
+        * yet (the push subscription is still being negotiated, or the service worker has not
+        * activated). Without this the row would claim reminders are on while nothing could be
+        * delivered. `usePush` retries in the background; this is the honest caption meanwhile.
+        */}
+      {state.isRegistrationPending && !isBlocked ? (
+        <p
+          role="status"
+          data-testid="reminders-pending"
+          className="type-caption text-foreground-secondary px-4 pb-3"
+        >
+          {t('push.pending')}
+        </p>
+      ) : null}
       {isBlocked || state.errorKey ? (
         <div className="px-4 pb-3">
           {state.errorKey ? (

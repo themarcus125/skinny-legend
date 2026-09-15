@@ -508,6 +508,55 @@ describe('the push registrar', () => {
     expect(api.tokens()).toEqual([]);
   });
 
+  it('refresh retries a registration left pending, once a token can be minted', async () => {
+    const { registrar, api } = make({ token: [null, 'fcm-token-late'] });
+    await expect(registrar.enable()).resolves.toBe(false);
+    expect(registrar.state.isRegistrationPending).toBe(true);
+    expect(api.registerCount).toBe(0);
+
+    // The web has no token callback, so the next deliberate re-read is the retry.
+    await registrar.refresh();
+
+    expect(registrar.state.isRegistrationPending).toBe(false);
+    expect(registrar.state.registeredToken).toBe('fcm-token-late');
+    expect(api.tokens()).toEqual(['fcm-token-late']);
+  });
+
+  it('a retry that still cannot mint a token stays pending without looping', async () => {
+    const { registrar, api, tokens } = make({ token: null });
+    await registrar.enable();
+    const lookups = (tokens.currentToken as unknown as { mock: { calls: unknown[] } }).mock.calls
+      .length;
+
+    await registrar.refresh();
+
+    expect(registrar.state.isRegistrationPending).toBe(true);
+    expect(registrar.state.errorKey).toBeNull();
+    expect(api.registerCount).toBe(0);
+    // Exactly one more attempt, not a refresh → register → refresh cascade.
+    expect(
+      (tokens.currentToken as unknown as { mock: { calls: unknown[] } }).mock.calls.length,
+    ).toBe(lookups + 1);
+  });
+
+  it('turning reminders off before any token existed sends nothing and mints nothing', async () => {
+    const { registrar, api, tokens } = make({ token: null });
+    await registrar.enable();
+    expect(registrar.state.isRegistrationPending).toBe(true);
+    const lookups = (tokens.currentToken as unknown as { mock: { calls: unknown[] } }).mock.calls
+      .length;
+
+    await registrar.disable();
+
+    expect(registrar.state.isEnabled).toBe(false);
+    expect(api.deleteCount).toBe(0);
+    // No second token lookup: asking for one would register the FCM service worker to mint a
+    // token purely to throw it away.
+    expect(
+      (tokens.currentToken as unknown as { mock: { calls: unknown[] } }).mock.calls.length,
+    ).toBe(lookups);
+  });
+
   it('re-registers with the new locale when the language changes while enabled', async () => {
     let locale: UserLocale = 'vi';
     const { registrar, api } = make({ locale: () => locale });
