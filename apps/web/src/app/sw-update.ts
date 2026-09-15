@@ -32,3 +32,63 @@ export function reloadOnWorkerTakeover(
     serviceWorker.removeEventListener('controllerchange', onChange);
   };
 }
+
+/** How often a resident app re-checks for a new worker even without leaving the foreground. */
+export const UPDATE_CHECK_INTERVAL_MS = 15 * 60 * 1000;
+
+/**
+ * The half `reloadOnWorkerTakeover` cannot do on its own: *finding* the update.
+ *
+ * A browser only looks for a new service worker on a navigation, or on its own 24-hour timer. An
+ * app on the iOS Home Screen does neither — it stays resident for days, and every return to it
+ * is a resume, not a load — so a deploy sat unseen until the member force-closed the app. This
+ * asks the registration to check on every return to the foreground, whenever the connection
+ * comes back, and every `intervalMs` while it stays open. When the check finds a new worker,
+ * `autoUpdate` installs it, it claims the page, and `reloadOnWorkerTakeover` reloads onto the
+ * new bundle — same route, no force-close.
+ *
+ * `update()` rejects offline and on a 404 for `sw.js`; both are the browser's business, not a
+ * reason to log or retry, so they are swallowed.
+ */
+export function checkForWorkerUpdates(
+  container: { serviceWorker?: ServiceWorkerContainer } = typeof navigator === 'undefined'
+    ? {}
+    : navigator,
+  options: {
+    intervalMs?: number;
+    document?: Pick<Document, 'visibilityState' | 'addEventListener' | 'removeEventListener'>;
+    window?: Pick<Window, 'addEventListener' | 'removeEventListener' | 'setInterval' | 'clearInterval'>;
+  } = {},
+): () => void {
+  const serviceWorker = container.serviceWorker;
+  if (!serviceWorker) return () => undefined;
+  const doc = options.document ?? document;
+  const win = options.window ?? window;
+  const intervalMs = options.intervalMs ?? UPDATE_CHECK_INTERVAL_MS;
+
+  let registration: ServiceWorkerRegistration | null = null;
+  let stopped = false;
+  const check = () => {
+    if (!registration) return;
+    void registration.update().catch(() => undefined);
+  };
+  const onVisible = () => {
+    if (doc.visibilityState === 'visible') check();
+  };
+  const timer = win.setInterval(check, intervalMs);
+  doc.addEventListener('visibilitychange', onVisible);
+  win.addEventListener('online', check);
+  void serviceWorker.ready
+    .then((ready) => {
+      if (stopped) return;
+      registration = ready;
+    })
+    .catch(() => undefined);
+
+  return () => {
+    stopped = true;
+    win.clearInterval(timer);
+    doc.removeEventListener('visibilitychange', onVisible);
+    win.removeEventListener('online', check);
+  };
+}

@@ -9,7 +9,7 @@ import { ApiProvider } from '@/lib/api';
 import { attachPersistence } from '@/lib/persist';
 import { makeQueryClient } from '@/lib/query';
 import { createRouter } from '@/routes';
-import { reloadOnWorkerTakeover } from '@/app/sw-update';
+import { checkForWorkerUpdates, reloadOnWorkerTakeover } from '@/app/sw-update';
 import './index.css';
 
 const queryClient = makeQueryClient();
@@ -51,3 +51,6 @@ void attachPersistence(queryClient).then(render);
 // An update that claims this page has already invalidated its lazy chunks; reload before the
 // member finds out by tapping one. Guarded so a first install does not flash (see sw-update.ts).
 reloadOnWorkerTakeover();
+// ...and go looking for that update on every return to the foreground: a Home Screen app never
+// navigates, so without this the browser would not notice a deploy until the app was force-closed.
+checkForWorkerUpdates();
