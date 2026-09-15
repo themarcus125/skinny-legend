@@ -1,9 +1,13 @@
 import type { FirebaseApp } from 'firebase/app';
 import type { Auth } from 'firebase/auth';
 import type { Messaging } from 'firebase/messaging';
-import { firebaseOptions, hasFirebaseConfig as isConfigured } from './firebase-config';
+import {
+  authEmulatorHost,
+  firebaseOptions,
+  hasFirebaseConfig as isConfigured,
+} from './firebase-config';
 
-export { hasFirebaseConfig } from './firebase-config';
+export { hasFirebaseConfig, authEmulatorHost } from './firebase-config';
 
 /**
  * The slice of Firebase Auth the session provider actually needs, as an interface, so
@@ -72,14 +76,16 @@ export function loadFirebase(): Promise<FirebaseSdk> {
   const pending = (async (): Promise<FirebaseSdk> => {
     const [app, mod] = await Promise.all([import('firebase/app'), import('firebase/auth')]);
     const instance = app.getApps().length ? app.getApp() : app.initializeApp(firebaseOptions());
-    return {
-      mod,
-      app: instance,
-      auth: mod.initializeAuth(instance, {
-        persistence: mod.indexedDBLocalPersistence,
-        popupRedirectResolver: mod.browserPopupRedirectResolver,
-      }),
-    };
+    const auth = mod.initializeAuth(instance, {
+      persistence: mod.indexedDBLocalPersistence,
+      popupRedirectResolver: mod.browserPopupRedirectResolver,
+    });
+    // The emulator is per-Auth-instance and `loadFirebase` memoises its promise, so this runs
+    // exactly once per page load.
+    if (authEmulatorHost !== '') {
+      mod.connectAuthEmulator(auth, `http://${authEmulatorHost}`, { disableWarnings: true });
+    }
+    return { mod, app: instance, auth };
   })();
   sdk = pending;
   pending.catch(() => {
@@ -247,4 +253,10 @@ export function mockAuthPort(storage?: Storage): AuthPort {
       return Promise.resolve(read() ? 'mock-token' : null);
     },
   };
+}
+
+/** Email/password sign-in against the Auth Emulator. Only the emulator-only form calls it. */
+export async function signInWithEmulatorPassword(email: string, password: string): Promise<void> {
+  const { auth, mod } = await loadFirebase();
+  await mod.signInWithEmailAndPassword(auth, email, password);
 }

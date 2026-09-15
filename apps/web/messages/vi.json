@@ -77,6 +77,10 @@
     "push_failed": "Gửi thông báo thất bại, hãy thử lại sau."
   },
   "auth": {
+    "emulatorEmail": "Email",
+    "emulatorPassword": "Mật khẩu",
+    "emulatorSubmit": "Đăng nhập bằng email",
+    "emulatorFailed": "Đăng nhập bằng email thất bại. Kiểm tra Auth Emulator ở cổng 9099.",
     "title": "Đăng nhập",
     "wordmark": "Operation\nSkinny Legend",
     "google": "Đăng nhập với Google",

@@ -23,6 +23,13 @@ export const hasFirebaseConfig = Boolean(
   config.apiKey && config.authDomain && config.projectId && config.appId && config.messagingSenderId,
 );
 
+/**
+ * Host:port of a Firebase Auth Emulator, e.g. "localhost:9099". Vite inlines it at build time,
+ * so a production build folds this to `''` and the emulator form and `connectAuthEmulator` call
+ * are dead code the bundler drops.
+ */
+export const authEmulatorHost: string = import.meta.env.VITE_FIREBASE_AUTH_EMULATOR_HOST ?? '';
+
 export interface FirebaseOptions {
   apiKey: string;
   authDomain: string;
