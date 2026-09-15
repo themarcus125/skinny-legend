@@ -59,6 +59,15 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
   );
 }
 
+/**
+ * The context when there is one, `null` otherwise. `SessionProvider` reconciles the language on
+ * every session load and has to work in a test tree that mounts no `LocaleProvider`; it falls
+ * back to writing the stored choice directly.
+ */
+export function useOptionalLocaleChoice(): LocaleContextValue | null {
+  return useContext(LocaleContext);
+}
+
 export function useLocaleChoice(): LocaleContextValue {
   const value = useContext(LocaleContext);
   if (!value) throw new Error('useLocaleChoice must be used inside <LocaleProvider>.');

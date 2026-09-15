@@ -1,5 +1,6 @@
 {
   "meta.appName": { "vi": "Skinny Legend", "en": "Skinny Legend" },
+  "auth.wordmark": { "vi": "Operation\nSkinny Legend", "en": "Operation\nSkinny Legend" },
   "nav.tabBar": { "vi": "Điều hướng chính", "en": "Main navigation" },
   "nav.primaryAction": { "vi": "Ghi nhận hoạt động", "en": "Track an activity" },
   "common.offline": { "vi": "Đang ngoại tuyến", "en": "Offline" },

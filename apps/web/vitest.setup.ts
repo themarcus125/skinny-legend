@@ -22,9 +22,19 @@ beforeEach(() => {
   );
 });
 
+/**
+ * jsdom implements no media pipeline, so `play()` logs "Not implemented" to the virtual console
+ * on every sign-in render. The sign-in screen already treats a rejection as "fall back to the
+ * gradient"; a resolved stub keeps the video path under test and the output readable.
+ */
+beforeEach(() => {
+  vi.spyOn(HTMLMediaElement.prototype, 'play').mockImplementation(() => Promise.resolve());
+});
+
 afterEach(() => {
   cleanup();
   localStorage.clear();
   document.documentElement.className = '';
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
 });

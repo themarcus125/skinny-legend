@@ -75,6 +75,7 @@
   },
   "auth": {
     "title": "Sign in",
+    "wordmark": "Operation\nSkinny Legend",
     "google": "Sign in with Google",
     "tagline": "Snap a photo, score points, keep your streak.",
     "sampleData": "Use sample data",

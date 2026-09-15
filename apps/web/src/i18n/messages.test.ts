@@ -35,6 +35,8 @@ describe('message catalogues', () => {
   it('never reuse the Vietnamese string as the English one', () => {
     const properNouns = new Set([
       'Skinny Legend',
+      // The sign-in wordmark, set over two lines. A brand name, identical in both languages.
+      'Operation\nSkinny Legend',
       'Momo',
       'Google',
       'Strava',

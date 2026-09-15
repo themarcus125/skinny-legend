@@ -78,6 +78,8 @@ export default tseslint.config(
         HTMLElement: 'readonly',
         MediaQueryListEvent: 'readonly',
         Storage: 'readonly',
+        HTMLMediaElement: 'readonly',
+        HTMLVideoElement: 'readonly',
       },
     },
     plugins: { 'react-hooks': reactHooks },

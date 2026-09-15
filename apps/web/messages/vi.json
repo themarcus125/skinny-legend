@@ -75,6 +75,7 @@
   },
   "auth": {
     "title": "Đăng nhập",
+    "wordmark": "Operation\nSkinny Legend",
     "google": "Đăng nhập với Google",
     "tagline": "Chụp ảnh, ghi điểm, giữ chuỗi.",
     "sampleData": "Dùng dữ liệu mẫu",

@@ -1,20 +1,23 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { RouterProvider, createMemoryRouter } from 'react-router';
-import { render, screen } from '@/test/intl';
-import { routes } from '@/routes';
+import { screen } from '@/test/intl';
+import { makeUser, renderApp, stubApi, stubAuthPort } from '@/test/session';
 import { THEME_STORAGE_KEY } from './theme';
 import { ThemeProvider } from './theme-provider';
 
 const root = () => document.documentElement;
 
-/** `/sign-in` is outside `<AppShell/>`, which is exactly why this regression was possible. */
-function renderRoute(path: string) {
-  const router = createMemoryRouter(routes, { initialEntries: [path] });
-  return render(
-    <ThemeProvider>
-      <RouterProvider router={router} />
-    </ThemeProvider>,
-  );
+/**
+ * `/sign-in` is outside `<AppShell/>`, which is exactly why this regression was possible. Since
+ * Task 6 every route also sits under `<SessionGate/>`, so the real session has to be driven:
+ * signed out for `/sign-in`, active for a shelled route.
+ */
+function renderRoute(path: string, signedIn = false) {
+  return renderApp({
+    path,
+    auth: stubAuthPort(signedIn),
+    client: stubApi({ session: () => Promise.resolve(makeUser()) }),
+    outer: (children) => <ThemeProvider>{children}</ThemeProvider>,
+  });
 }
 
 function stubPrefersDark(matches: boolean) {
@@ -43,7 +46,7 @@ describe('ThemeProvider at the root', () => {
     localStorage.setItem(THEME_STORAGE_KEY, 'dark');
     renderRoute('/sign-in');
 
-    expect(await screen.findByRole('heading', { level: 1, name: 'Đăng nhập' })).toBeVisible();
+    expect(await screen.findByRole('heading', { level: 1, name: /Skinny Legend/ })).toBeVisible();
     expect(root().classList.contains('dark')).toBe(true);
     expect(root().style.colorScheme).toBe('dark');
   });
@@ -67,7 +70,7 @@ describe('ThemeProvider at the root', () => {
 
   it('still themes a shelled route', async () => {
     localStorage.setItem(THEME_STORAGE_KEY, 'dark');
-    renderRoute('/account');
+    renderRoute('/account', true);
 
     await screen.findByRole('navigation', { name: 'Điều hướng chính' });
     expect(root().classList.contains('dark')).toBe(true);

@@ -74,3 +74,57 @@ export function CameraGlyph(props: GlyphProps) {
     </Glyph>
   );
 }
+
+/**
+ * The sign-in wordmark's flame (iOS uses the SF Symbol `flame.fill`) — filled rather than
+ * stroked, because at 72px a hairline outline disappears against the video.
+ */
+export function FlameGlyph(props: GlyphProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      aria-hidden="true"
+      focusable="false"
+      {...props}
+    >
+      <path d="M12.7 1.6c-.3-.5-1-.5-1.3 0-1 1.5-2.3 3.9-2.3 5.7 0 1 .3 1.7.6 2.2-.5.2-1 .1-1.5-.3-.6-.5-.9-1.3-.9-2.2 0-.6-.7-.9-1.1-.4C4.9 8.2 3.9 10.3 3.9 13c0 4.7 3.6 8.4 8.1 8.4s8.1-3.7 8.1-8.4c0-4.6-3.5-8.1-7.4-11.4zM12 19.2c-1.8 0-3.2-1.4-3.2-3.2 0-1.5 1-2.7 2-3.9.4-.5 1.1-.4 1.4.1.4.7 1 1.4 1.6 2.1.9 1 1.4 1.7 1.4 2.7-.1 1.7-1.5 3.2-3.2 3.2z" />
+    </svg>
+  );
+}
+
+/** The Google mark, as the monochrome circled `G` iOS draws with `g.circle.fill`. */
+export function GoogleGlyph(props: GlyphProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      aria-hidden="true"
+      focusable="false"
+      {...props}
+    >
+      <path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm.3 15.2a5.2 5.2 0 1 1 3.5-9.05l-1.8 1.7a2.75 2.75 0 1 0 .85 3.02H12.3v-2.3h5c.05.3.08.6.08.93 0 3.2-2.15 5.7-5.08 5.7z" />
+    </svg>
+  );
+}
+
+/** The pending-approval mark (iOS: the SF Symbol `hourglass`). */
+export function HourglassGlyph(props: GlyphProps) {
+  return (
+    <Glyph {...props}>
+      <path d="M7 3.75h10M7 20.25h10" />
+      <path d="M8 3.75v3.1c0 1.2.5 2.3 1.4 3.1l2.6 2.05 2.6-2.05A4.2 4.2 0 0 0 16 6.85v-3.1" />
+      <path d="M8 20.25v-3.1c0-1.2.5-2.3 1.4-3.1L12 12l2.6 2.05a4.2 4.2 0 0 1 1.4 3.1v3.1" />
+    </Glyph>
+  );
+}
+
+/** The disabled-account mark (iOS: the SF Symbol `lock.fill`). */
+export function LockGlyph(props: GlyphProps) {
+  return (
+    <Glyph {...props}>
+      <rect x="4.75" y="10.25" width="14.5" height="9.5" rx="2" />
+      <path d="M8.25 10.25V7.5a3.75 3.75 0 0 1 7.5 0v2.75" />
+    </Glyph>
+  );
+}

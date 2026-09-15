@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { RouterProvider } from 'react-router';
 import { ThemeProvider } from '@/app/theme-provider';
+import { SessionGateProvider } from '@/auth/session';
 import { LocaleProvider } from '@/i18n/provider';
 import { ApiProvider } from '@/lib/api';
 import { makeQueryClient, startPersistence } from '@/lib/query';
@@ -21,7 +22,9 @@ createRoot(container).render(
       <LocaleProvider>
         <QueryClientProvider client={queryClient}>
           <ApiProvider>
-            <RouterProvider router={createRouter()} />
+            <SessionGateProvider>
+              <RouterProvider router={createRouter()} />
+            </SessionGateProvider>
           </ApiProvider>
         </QueryClientProvider>
       </LocaleProvider>
