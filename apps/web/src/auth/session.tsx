@@ -32,8 +32,26 @@ export type SessionState =
   | { status: 'active'; user: UserDto }
   | { status: 'error'; messageKey: string };
 
+/**
+ * A failed Google sign-in, carrying the catalog key the sign-in screen renders **inline**.
+ *
+ * Deliberately a rejection rather than a `SessionState`: `SessionGate` handles `error` before it
+ * routes, so putting a sign-in failure in the session state would unmount the very screen the
+ * member is trying to use and offer them a "Thử lại" that re-reads `GET /me` while signed out.
+ * The failure belongs to the screen, not to the session.
+ */
+export class SignInError extends Error {
+  constructor(readonly messageKey: string) {
+    super(messageKey);
+    this.name = 'SignInError';
+  }
+}
+
 export interface SessionActions {
-  /** Google sign-in. A cancelled popup resolves quietly; anything else sets `error`. */
+  /**
+   * Google sign-in. A cancelled popup resolves quietly; any other failure rejects with a
+   * `SignInError` for the caller to render inline. The session state is never touched.
+   */
   signIn: () => Promise<void>;
   signOut: () => Promise<void>;
   /** Replaces the session's user row after a profile edit, without a round trip. */
@@ -126,6 +144,9 @@ export function SessionProvider({ children, auth }: { children: ReactNode; auth?
       try {
         return await api.updateMe({ locale: push });
       } catch (error) {
+        // Swallowed on purpose, a 401 included: the session load that got us here already
+        // succeeded, so a token that expired between the two calls is the next request's
+        // problem, not a reason to bounce the member out of a screen they can still read.
         console.error('[auth] PATCH /me { locale } failed', error);
         return user;
       }
@@ -198,9 +219,9 @@ export function SessionProvider({ children, auth }: { children: ReactNode; auth?
     } catch (error) {
       if (error instanceof Error && error.message === SIGN_IN_CANCELLED) return;
       // The real cause (popup blocked, unauthorised domain, misconfigured consent screen) stays
-      // in the console; the member only ever sees the catalog message.
+      // in the console; the member only ever sees the catalog message, under the button.
       console.error('[auth] Google sign-in failed', error);
-      setState({ status: 'error', messageKey: 'auth.failed' });
+      throw new SignInError('auth.failed');
     } finally {
       setIsWorking(false);
     }

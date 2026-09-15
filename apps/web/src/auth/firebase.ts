@@ -1,34 +1,7 @@
-import { getApp, getApps, initializeApp, type FirebaseApp } from 'firebase/app';
-import {
-  browserPopupRedirectResolver,
-  getIdToken as firebaseGetIdToken,
-  GoogleAuthProvider,
-  indexedDBLocalPersistence,
-  initializeAuth,
-  onAuthStateChanged,
-  signInWithPopup,
-  signInWithRedirect,
-  signOut,
-  type Auth,
-  type User,
-} from 'firebase/auth';
+import type { Auth } from 'firebase/auth';
+import { firebaseOptions } from './firebase-config';
 
-/**
- * Vite inlines every `import.meta.env.VITE_*` member expression at build time, so this object is
- * a compile-time constant and `hasFirebaseConfig` folds to a literal in the bundle.
- */
-const config = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-};
-
-/** True when all five `VITE_FIREBASE_*` variables are set. `AppMode.hasFirebasePlist`. */
-export const hasFirebaseConfig = Boolean(
-  config.apiKey && config.authDomain && config.projectId && config.appId && config.messagingSenderId,
-);
+export { hasFirebaseConfig } from './firebase-config';
 
 /**
  * The slice of Firebase Auth the session provider actually needs, as an interface, so
@@ -61,54 +34,77 @@ const POPUP_BLOCKED_CODES = new Set([
 ]);
 
 function errorCode(error: unknown): string {
-  return typeof error === 'object' && error !== null && 'code' in error
-    ? String(error.code)
-    : '';
+  return typeof error === 'object' && error !== null && 'code' in error ? String(error.code) : '';
 }
 
-let auth: Auth | null = null;
+type AuthModule = typeof import('firebase/auth');
+
+interface FirebaseSdk {
+  auth: Auth;
+  mod: AuthModule;
+}
+
+let sdk: Promise<FirebaseSdk> | null = null;
 
 /**
- * Lazily stands up Firebase. Never called in mock mode, and never called at all when
- * `hasFirebaseConfig` is false — `SessionProvider` renders the configuration-error screen first.
+ * Loads the Firebase SDK on first use and stands the app up.
+ *
+ * Both packages are reached through a dynamic `import()` so Rollup puts them in their own chunk:
+ * `firebase/auth` alone is ~180 KB, and a mock session, a preview and the configuration-error
+ * screen never touch it. `hasFirebaseConfig` lives in `firebase-config.ts` precisely so the
+ * pre-paint check does not drag this module in.
  *
  * `initializeAuth` with `indexedDBLocalPersistence` rather than `getAuth`: a reload restores the
  * session from IndexedDB with no network round trip (and IndexedDB, unlike `localStorage`,
  * survives Safari's 7-day script-writable-storage eviction for an installed PWA). It also means
  * the popup/redirect resolver has to be passed explicitly — `getAuth` bundles one, this does not.
  */
-export function firebaseAuth(): Auth {
-  if (!hasFirebaseConfig) throw new Error('Missing VITE_FIREBASE_* environment variables');
-  if (!auth) {
-    const app: FirebaseApp = getApps().length
-      ? getApp()
-      : initializeApp({
-          apiKey: config.apiKey!,
-          authDomain: config.authDomain!,
-          projectId: config.projectId!,
-          appId: config.appId!,
-          messagingSenderId: config.messagingSenderId!,
-        });
-    auth = initializeAuth(app, {
-      persistence: indexedDBLocalPersistence,
-      popupRedirectResolver: browserPopupRedirectResolver,
-    });
-  }
-  return auth;
+export function loadFirebase(): Promise<FirebaseSdk> {
+  sdk ??= (async () => {
+    const [app, mod] = await Promise.all([import('firebase/app'), import('firebase/auth')]);
+    const instance = app.getApps().length
+      ? app.getApp()
+      : app.initializeApp(firebaseOptions());
+    return {
+      mod,
+      auth: mod.initializeAuth(instance, {
+        persistence: mod.indexedDBLocalPersistence,
+        popupRedirectResolver: mod.browserPopupRedirectResolver,
+      }),
+    };
+  })();
+  return sdk;
 }
 
 /** The live port. Google is the only provider the web app offers (spec §3). */
 export function firebaseAuthPort(): AuthPort {
   return {
     observe(listener) {
-      return onAuthStateChanged(firebaseAuth(), (user: User | null) => {
-        listener(Boolean(user));
-      });
+      let unsubscribe: (() => void) | null = null;
+      let cancelled = false;
+      void loadFirebase().then(
+        ({ auth, mod }) => {
+          if (cancelled) return;
+          unsubscribe = mod.onAuthStateChanged(auth, (user) => {
+            listener(Boolean(user));
+          });
+        },
+        (error: unknown) => {
+          // A failed SDK load must not leave the app spinning forever: report "signed out" so
+          // the sign-in screen renders and the member can retry.
+          console.error('[auth] loading the Firebase SDK failed', error);
+          if (!cancelled) listener(false);
+        },
+      );
+      return () => {
+        cancelled = true;
+        unsubscribe?.();
+      };
     },
     async signInWithGoogle() {
-      const instance = firebaseAuth();
+      const { auth, mod } = await loadFirebase();
       try {
-        await signInWithPopup(instance, new GoogleAuthProvider());
+        await mod.signInWithPopup(auth, new mod.GoogleAuthProvider());
       } catch (error) {
         const code = errorCode(error);
         if (CANCELLED_CODES.has(code)) throw new Error(SIGN_IN_CANCELLED);
@@ -116,18 +112,20 @@ export function firebaseAuthPort(): AuthPort {
           // A blocked popup is the common case in an installed PWA and in Safari's Lockdown
           // Mode. The redirect never resolves — the page navigates away and comes back through
           // `observe` — so nothing after this line runs on the happy path.
-          await signInWithRedirect(instance, new GoogleAuthProvider());
+          await mod.signInWithRedirect(auth, new mod.GoogleAuthProvider());
           return;
         }
         throw error;
       }
     },
-    signOut() {
-      return signOut(firebaseAuth());
+    async signOut() {
+      const { auth, mod } = await loadFirebase();
+      await mod.signOut(auth);
     },
     async getIdToken() {
-      const user = firebaseAuth().currentUser;
-      return user ? await firebaseGetIdToken(user) : null;
+      const { auth, mod } = await loadFirebase();
+      const user = auth.currentUser;
+      return user ? await mod.getIdToken(user) : null;
     },
   };
 }

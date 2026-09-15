@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import userEvent from '@testing-library/user-event';
 import type { UserDto } from '@skinny/api-client';
+import { SIGN_IN_CANCELLED } from '@/auth/firebase';
 import { ApiError } from '@/lib/api';
 import { LOCALE_STORAGE_KEY } from '@/i18n/locale';
 import { screen, waitFor } from '@/test/intl';
@@ -98,6 +99,31 @@ describe('SessionProvider routing', () => {
     expect(await screen.findByRole('navigation', { name: 'Điều hướng chính' })).toBeVisible();
   });
 
+  it('keeps a failed sign-in on the sign-in screen, inline, and never routes it', async () => {
+    const auth = stubAuthPort(false);
+    auth.signInWithGoogle = () => Promise.reject(new Error('auth/unauthorized-domain'));
+    renderApp({ auth, client: stubApi({ session: () => Promise.resolve(makeUser()) }) });
+
+    await screen.findByRole('heading', { level: 1, name: WORDMARK });
+    await userEvent.click(screen.getByRole('button', { name: 'Đăng nhập với Google' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Đăng nhập thất bại.');
+    // Still the sign-in screen: no generic EmptyState, no "Thử lại" that would GET /me.
+    expect(screen.getByRole('heading', { level: 1, name: WORDMARK })).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'Thử lại' })).toBeNull();
+  });
+
+  it('says nothing when the member simply closes the popup', async () => {
+    const auth = stubAuthPort(false);
+    auth.signInWithGoogle = () => Promise.reject(new Error(SIGN_IN_CANCELLED));
+    renderApp({ auth, client: stubApi({ session: () => Promise.resolve(makeUser()) }) });
+
+    await screen.findByRole('heading', { level: 1, name: WORDMARK });
+    await userEvent.click(screen.getByRole('button', { name: 'Đăng nhập với Google' }));
+
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
   it('sends the member back to the sign-in screen when Firebase signs them out', async () => {
     const auth = stubAuthPort();
     renderApp({ auth, client: stubApi({ session: () => Promise.resolve(makeUser()) }) });
@@ -149,10 +175,10 @@ describe('locale reconciliation on every session load (ruling R18)', () => {
     renderApp({
       auth: stubAuthPort(),
       client: stubApi({
-        session: () => Promise.resolve(makeUser({ locale: 'en' })),
+        session: () => Promise.resolve(makeUser({ locale: 'vi' })),
         updateMe: (patch: { locale?: string }) => {
           patches.push(patch.locale ?? '');
-          return Promise.resolve(makeUser({ locale: 'vi' }));
+          return Promise.resolve(makeUser({ locale: 'en' }));
         },
       }),
     });
@@ -174,5 +200,7 @@ describe('locale reconciliation on every session load (ruling R18)', () => {
     });
 
     expect(await screen.findByRole('navigation', { name: 'Điều hướng chính' })).toBeVisible();
+    // The local preference is this browser's source of truth; a rejected PATCH never rewrites it.
+    expect(localStorage.getItem(LOCALE_STORAGE_KEY)).toBe('en');
   });
 });

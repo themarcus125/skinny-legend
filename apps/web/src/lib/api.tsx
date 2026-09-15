@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { ApiClient } from '@skinny/api-client';
-import { hasFirebaseConfig } from '@/auth/firebase';
+import { hasFirebaseConfig } from '@/auth/firebase-config';
 import { readMockOverride, resolveServices, type Services } from './app-mode';
 import { ApiError, createLiveApiClient, describeError } from './live-client';
 

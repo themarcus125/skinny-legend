@@ -54,11 +54,14 @@ export function reconcileLocale(input: LocaleReconcileInput): LocaleReconcileRes
   }
 
   // (3) A fresh install has never told the server anything: send what the device resolves to,
-  //     and keep "system" so the browser's language keeps being followed.
+  //     and keep "system" so the browser's language keeps being followed. The push is still
+  //     guarded on a real disagreement — the common case is a Vietnamese browser and a `vi`
+  //     server row, and that should cost no request at all.
   if (input.isFreshInstall) {
+    const resolved = resolveLocale('system', input.deviceLanguage);
     return {
       store: 'system',
-      push: canPush ? resolveLocale('system', input.deviceLanguage) : null,
+      push: canPush && input.serverLocale !== resolved ? resolved : null,
     };
   }
 

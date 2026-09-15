@@ -38,10 +38,16 @@ describe('reconcileLocale', () => {
       reconcileLocale({
         ...base,
         deviceLanguage: 'fr-FR',
-        serverLocale: 'vi',
+        serverLocale: 'en',
         isFreshInstall: true,
       }),
     ).toEqual({ store: 'system', push: 'vi' });
+  });
+
+  it('pushes nothing on a fresh install when the device already agrees with the server', () => {
+    expect(
+      reconcileLocale({ ...base, deviceLanguage: 'vi-VN', serverLocale: 'vi', isFreshInstall: true }),
+    ).toEqual({ store: 'system', push: null });
   });
 
   it('never pushes for a disabled account', () => {

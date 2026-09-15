@@ -2,9 +2,10 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'use-intl';
 import { cn } from '@skinny/ui';
 import { FlameGlyph, GoogleGlyph } from '@/app/icons';
-import { useSession } from '@/auth/session';
+import { SignInError, useSession } from '@/auth/session';
 import {
   prefersReducedMotion,
+  SIGN_IN_POSTER_SRC,
   SIGN_IN_VIDEO_SRC,
   signInBackgroundMode,
   type SignInBackgroundMode,
@@ -67,8 +68,16 @@ export function Component() {
   }, [mode]);
 
   const onVideo = mode === 'video';
+
+  // A failed sign-in is this screen's state, never the session's: `SessionGate` handles an
+  // `error` session before it routes, so routing the failure through it would unmount the very
+  // screen the member is standing on.
+  const [signInError, setSignInError] = useState<string | null>(null);
   const signIn = useCallback(() => {
-    void session.signIn();
+    setSignInError(null);
+    void session.signIn().catch((error: unknown) => {
+      setSignInError(error instanceof SignInError ? error.messageKey : 'auth.failed');
+    });
   }, [session]);
 
   const enterSampleData = useCallback(() => {
@@ -78,17 +87,30 @@ export function Component() {
 
   return (
     <main className="relative flex min-h-dvh flex-col overflow-hidden">
-      {onVideo ? (
+      {/* The gradient is always painted, underneath everything: the clip is 4.1 MB on
+          `preload="metadata"`, so this is what the first frames and the poster arrive over, and
+          what holds text contrast if neither ever does. */}
+      <div
+        aria-hidden="true"
+        className={cn(
+          'absolute inset-0 -z-20 bg-background',
+          'bg-[radial-gradient(120%_80%_at_50%_0%,var(--primary-soft),transparent_70%)]',
+        )}
+      />
+      {onVideo && (
         <>
           <video
             ref={videoRef}
             className="absolute inset-0 -z-10 size-full object-cover"
             src={SIGN_IN_VIDEO_SRC}
+            poster={SIGN_IN_POSTER_SRC}
             autoPlay
             muted
             loop
             playsInline
-            preload="auto"
+            // `metadata`, not `auto`: 4.1 MB has no business being fetched eagerly on a mobile
+            // connection. The poster carries the first second; the clip streams in behind it.
+            preload="metadata"
             aria-hidden="true"
             tabIndex={-1}
             onError={() => {
@@ -101,14 +123,6 @@ export function Component() {
             className="absolute inset-0 -z-10 bg-linear-to-b from-black/15 to-black/65"
           />
         </>
-      ) : (
-        <div
-          aria-hidden="true"
-          className={cn(
-            'absolute inset-0 -z-10 bg-background',
-            'bg-[radial-gradient(120%_80%_at_50%_0%,var(--primary-soft),transparent_70%)]',
-          )}
-        />
       )}
 
       <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 pt-16">
@@ -141,9 +155,9 @@ export function Component() {
           {t('auth.google')}
         </Button>
 
-        {session.status === 'error' && (
+        {signInError && (
           <p role="alert" className="type-caption text-center text-destructive">
-            {t(session.messageKey)}
+            {t(signInError)}
           </p>
         )}
 

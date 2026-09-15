@@ -4,6 +4,15 @@ export type SignInBackgroundMode = 'video' | 'gradient';
 export const SIGN_IN_VIDEO_SRC = '/signin-bg.mp4';
 
 /**
+ * A 540px-wide JPEG of the clip's first frame (44 KB), generated with
+ * `ffmpeg -i signin-bg.mp4 -frames:v 1 -vf scale=540:-1 -q:v 6 signin-bg-poster.jpg`.
+ *
+ * The clip itself is 4.1 MB and loads `preload="metadata"`, so the poster is what the member
+ * actually sees for the first second on a slow connection — and it is what the scrim darkens.
+ */
+export const SIGN_IN_POSTER_SRC = '/signin-bg-poster.jpg';
+
+/**
  * Port of `SignInBackground.mode` (`ios/SkinnyLegend/Features/Auth/SignInBackground.swift`).
  *
  * `assetAvailable` is fed from whether the clip is expected to be there **and** the `<video>`

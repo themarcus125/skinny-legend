@@ -108,8 +108,12 @@ test.describe('the sign-in gate', () => {
     // "Dùng dữ liệu mẫu" is dev-only; a production preview must not ship it.
     await expect(page.getByRole('button', { name: 'Dùng dữ liệu mẫu' })).toHaveCount(0);
 
-    // The background clip is served from /public and is NOT in the precache manifest.
+    // The background clip and its poster are served from /public and are NOT precached.
     expect((await page.request.get('/signin-bg.mp4')).ok()).toBe(true);
+    const video = page.locator('video');
+    await expect(video).toHaveAttribute('preload', 'metadata');
+    await expect(video).toHaveAttribute('poster', '/signin-bg-poster.jpg');
+    expect((await page.request.get('/signin-bg-poster.jpg')).ok()).toBe(true);
   });
 
   test('signs in through the gate and back out again', async ({ page }) => {
