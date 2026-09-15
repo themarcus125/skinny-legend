@@ -4,6 +4,13 @@ on:
   pull_request:
     branches: [main]
 
+# One R2 bucket, one prefix: global teardown sweeps everything under `e2e/`, so two runs that
+# overlap delete each other's freshly uploaded photos mid-flight. Queue the runs instead of
+# cancelling — a cancelled job never reaches its teardown and leaves the bucket dirty.
+concurrency:
+  group: e2e-r2-bucket
+  cancel-in-progress: false
+
 jobs:
   e2e:
     runs-on: ubuntu-latest

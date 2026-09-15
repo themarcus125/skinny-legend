@@ -10,7 +10,9 @@ services:
   # Used only by the end-to-end suite (docs/testing/e2e.md). Nothing in dev depends on it.
   auth-emulator:
     build: ./infra/firebase-emulator
-    ports: ["9099:9099"]
+    # Loopback only. The emulator mints tokens for any address on request and the e2e API trusts
+    # them unsigned, so publishing it on every host interface hands a shared LAN the suite's auth.
+    ports: ["127.0.0.1:9099:9099"]
     healthcheck:
       # The emulator answers GET / with its JSON banner once it is accepting traffic.
       test: ["CMD-SHELL", "curl -fsS http://localhost:9099/ > /dev/null || exit 1"]
