@@ -114,5 +114,9 @@
   "leaderboard.weekLead": {
     "vi": "Tuần này",
     "en": "This week"
+  },
+  "common.close": {
+    "vi": "Đóng",
+    "en": "Close"
   }
 }

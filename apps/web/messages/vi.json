@@ -20,6 +20,7 @@
     "saveChanges": "Lưu thay đổi",
     "saving": "Đang lưu…",
     "cancel": "Huỷ",
+    "close": "Đóng",
     "delete": "Xoá",
     "done": "Xong",
     "confirm": "Xác nhận",
@@ -183,6 +184,7 @@
   },
   "feed": {
     "title": "Nhật ký nhóm",
+    "emptyTitle": "Chưa có hoạt động nào",
     "today": "hôm nay",
     "entryCount": "{0} mục ghi",
     "noPlace": "không có địa điểm",

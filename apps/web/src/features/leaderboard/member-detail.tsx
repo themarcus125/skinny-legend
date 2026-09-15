@@ -1,14 +1,15 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback } from 'react';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router';
 import { useLocale, useTranslations } from 'use-intl';
 import type { HistoryEntryDto } from '@skinny/shared/wire';
 import { AlertBanner, Avatar, CategoryChip, EmptyState, SurfaceCard, cn } from '@skinny/ui';
 import { ChevronRightGlyph, MapPinGlyph, TrophyGlyph } from '@/app/icons';
-import { LargeTitle, SCROLL_CONTAINER_ATTR } from '@/app/large-title';
+import { LargeTitle } from '@/app/large-title';
 import { describeError, useApi } from '@/lib/api';
 import { formatLocalDay } from '@/lib/local-day';
 import { queryKeys } from '@/lib/query';
+import { useEndSentinel } from '@/lib/use-end-sentinel';
 import { Button } from '@/ui/button';
 
 /** Avatar diameter on the header card — `MemberDetailView`'s 56. */
@@ -222,27 +223,4 @@ function MemberEntryRow({
       </div>
     </li>
   );
-}
-
-/**
- * Fires `onReach` when the element scrolls into the shell's scroll container. Falls back to
- * doing nothing where `IntersectionObserver` is missing (jsdom) — the footer button is then the
- * only way on, which is exactly what the tests drive.
- */
-function useEndSentinel(enabled: boolean, onReach: () => void) {
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const element = ref.current;
-    if (!element || !enabled || typeof IntersectionObserver === 'undefined') return;
-    const root = element.closest<HTMLElement>(`[${SCROLL_CONTAINER_ATTR}]`);
-    const observer = new IntersectionObserver(
-      (records) => {
-        if (records.some((record) => record.isIntersecting)) onReach();
-      },
-      { root, rootMargin: '200px' },
-    );
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, [enabled, onReach]);
-  return ref;
 }

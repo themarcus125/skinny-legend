@@ -20,6 +20,7 @@
     "saveChanges": "Save changes",
     "saving": "Saving…",
     "cancel": "Cancel",
+    "close": "Close",
     "delete": "Delete",
     "done": "Done",
     "confirm": "Confirm",
@@ -183,6 +184,7 @@
   },
   "feed": {
     "title": "Group feed",
+    "emptyTitle": "No activity yet",
     "today": "today",
     "entryCount": "{0} entries",
     "noPlace": "no place",
