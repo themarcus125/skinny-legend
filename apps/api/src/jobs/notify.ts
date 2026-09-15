@@ -139,6 +139,8 @@ export async function runNotifyJob(deps: { sender?: PushSender; now?: Date } = {
       title: p.title,
       body: p.body,
       data: { deepLink: 'track', kind: p.kind },
+      // The device row decides the wire shape: web tokens go out data-only (see `fcmSender`).
+      platform: d.platform,
     }));
     const results = await sendInBatches(sender, p.userId, messages);
     for (const r of results) {

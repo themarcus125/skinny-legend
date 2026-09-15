@@ -174,7 +174,10 @@ adminRoutes.post('/notifications/test', validate('json', testNotification), asyn
   const copy = TEST_NOTIFICATION[target.locale ?? localeFor(devices)];
   let results: PushResult[];
   try {
-    results = await pushSender.send(devices.map((d) => ({ token: d.token, title: copy.title, body: copy.body, data: { deepLink: 'track', kind: 'test' } })));
+    // `platform` decides the wire shape: web tokens go out data-only (see services/push.ts).
+    results = await pushSender.send(
+      devices.map((d) => ({ token: d.token, title: copy.title, body: copy.body, data: { deepLink: 'track', kind: 'test' }, platform: d.platform })),
+    );
   } catch (err) {
     // fcmSender() throws on a whole-batch failure (network, auth); fakeSender never does. Nothing
     // was delivered and no per-token verdicts exist, so no tokens are dropped and nothing is audited.

@@ -58,6 +58,29 @@ describe('fcmSender', () => {
     ]);
   });
 
+  it('sends a web token data-only, with the copy folded into data', async () => {
+    // A `notification` block would make the Firebase JS SDK present its own (iconless, dead-tap)
+    // notification *and* still wake firebase-messaging-sw.js, which shows a second one.
+    sendEach.mockResolvedValue({ responses: [{ success: true }] });
+    await fcmSender().send([{ ...message('web-tok'), platform: 'web' }]);
+    expect(sendEach.mock.calls[0]![0]).toEqual([
+      { token: 'web-tok', data: { deepLink: 'track', title: 'T', body: 'B' } },
+    ]);
+  });
+
+  it('keeps the APNs notification shape for an explicit ios token', async () => {
+    sendEach.mockResolvedValue({ responses: [{ success: true }] });
+    await fcmSender().send([{ ...message('ios-tok'), platform: 'ios' }]);
+    expect(sendEach.mock.calls[0]![0]).toEqual([
+      {
+        token: 'ios-tok',
+        notification: { title: 'T', body: 'B' },
+        data: { deepLink: 'track' },
+        apns: { payload: { aps: { sound: 'default' } } },
+      },
+    ]);
+  });
+
   it('flags messaging/registration-token-not-registered as unregistered', async () => {
     sendEach.mockResolvedValue({
       responses: [

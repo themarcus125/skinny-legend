@@ -1,5 +1,5 @@
 import { getMessaging } from 'firebase-admin/messaging';
-import type { NotificationLocale } from '@skinny/shared';
+import type { DevicePlatform, NotificationLocale } from '@skinny/shared';
 import { env } from '../env.js';
 import { firebaseApp } from './firebase.js';
 
@@ -9,6 +9,11 @@ export interface PushMessage {
   body: string;
   /** FCM data payload. The app reads `deepLink` to pick a tab (PushPayload.tab(from:)). */
   data: Record<string, string>;
+  /**
+   * The platform of the device this token belongs to; decides the wire shape (see `fcmSender`).
+   * Defaults to `ios` so a caller that does not know (or care) keeps the APNs-compatible shape.
+   */
+  platform?: DevicePlatform;
 }
 
 export interface PushResult {
@@ -25,18 +30,36 @@ export interface PushSender {
 
 const UNREGISTERED_CODE = 'messaging/registration-token-not-registered';
 
+/**
+ * The wire shape for one message, which differs by platform.
+ *
+ * **iOS** keeps `notification: { title, body }`: APNs needs it to present a banner while the app
+ * is backgrounded, and the client reads the same copy back out.
+ *
+ * **Web** must be DATA-ONLY. With a `notification` block the Firebase JS SDK's own background
+ * handler shows a notification itself (no icon, no `tag`, and a tap that goes nowhere because
+ * there is no `fcmOptions.link`) *and* still calls `onBackgroundMessage`, so
+ * `public/firebase-messaging-sw.js` shows a second one — the member gets every reminder twice and
+ * one of the two is a dead tap. Dropping `notification` leaves the worker as the only presenter;
+ * the copy travels in `data`, which both the worker and `toPushMessage` already read first.
+ */
+function toFcmMessage(m: PushMessage) {
+  if (m.platform === 'web') {
+    return { token: m.token, data: { ...m.data, title: m.title, body: m.body } };
+  }
+  return {
+    token: m.token,
+    notification: { title: m.title, body: m.body },
+    data: m.data,
+    apns: { payload: { aps: { sound: 'default' } } },
+  };
+}
+
 export function fcmSender(): PushSender {
   return {
     async send(messages) {
       if (messages.length === 0) return [];
-      const response = await getMessaging(firebaseApp()).sendEach(
-        messages.map((m) => ({
-          token: m.token,
-          notification: { title: m.title, body: m.body },
-          data: m.data,
-          apns: { payload: { aps: { sound: 'default' } } },
-        })),
-      );
+      const response = await getMessaging(firebaseApp()).sendEach(messages.map(toFcmMessage));
       return response.responses.map((r, i) => ({
         token: messages[i]!.token,
         ok: r.success,
