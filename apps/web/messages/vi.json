@@ -110,6 +110,7 @@
     "moreThanYesterday": "Hơn hôm qua {0} điểm",
     "lessThanYesterday": "Kém hôm qua {0} điểm",
     "todayPointsOf": "Điểm hôm nay: {0}",
+    "dailyMax": "trên tối đa {0} điểm mỗi ngày",
     "streak": "Chuỗi ngày",
     "streakDays": "Chuỗi {0} ngày liên tiếp",
     "streakDaysLabel": "ngày liên tiếp",

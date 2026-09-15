@@ -113,12 +113,12 @@ describe('Overview', () => {
     expect(within(rows[2]!).getByTestId('checklist-mark').querySelector('svg')).toBeNull();
   });
 
-  it('shows the challenge total on the accent card, with the feed folded in below', async () => {
+  it('shows the challenge total on the ink card, with the feed folded in below', async () => {
     renderOverview(<Overview />);
 
     const total = await screen.findByTestId('challenge-total');
     expect(total).toHaveTextContent('43');
-    expect(total.closest('[data-accent="true"]')).not.toBeNull();
+    expect(total.closest('[data-testid="total-card"]')).not.toBeNull();
     expect(screen.getByText('Thưởng chuỗi: +5')).toBeInTheDocument();
     expect(screen.getByLabelText('Tổng điểm: 43 (thưởng chuỗi 5)')).toBeInTheDocument();
     // The "Nhật ký nhóm" card that used to link to /feed is gone: the feed is on this screen.

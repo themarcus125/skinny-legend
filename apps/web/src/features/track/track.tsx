@@ -3,7 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router';
 import { useTranslations } from 'use-intl';
 import { AlertBanner, ProgressBar, SurfaceCard } from '@skinny/ui';
-import { CameraGlyph, CloseGlyph, PhotoStackGlyph } from '@/app/icons';
+import { CameraGlyph, CloseGlyph, PhotoStackGlyph, SparklesGlyph } from '@/app/icons';
 import { LargeTitle } from '@/app/large-title';
 import { PullToRefresh } from '@/app/pull-to-refresh';
 import { useSession } from '@/auth/session';
@@ -272,7 +272,15 @@ export function Track({ onTracked }: TrackProps) {
         ) : null}
 
         {phase.kind === 'analyzing' ? (
-          <SurfaceCard as="section">
+          <SurfaceCard as="section" className="flex items-center gap-3">
+            {/* The AI at work: an amber sparkle that breathes while the verdict is on its way. */}
+            <span
+              aria-hidden="true"
+              data-testid="track-analyzing-sparkle"
+              className="bg-warning-soft text-warning grid size-10 shrink-0 animate-pulse place-items-center rounded-full motion-reduce:animate-none"
+            >
+              <SparklesGlyph className="size-5" />
+            </span>
             <p className="type-body-medium" data-testid="track-analyzing">
               {t('track.analyzing')}
             </p>

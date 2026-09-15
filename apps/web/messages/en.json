@@ -110,6 +110,7 @@
     "moreThanYesterday": "{0} points more than yesterday",
     "lessThanYesterday": "{0} points fewer than yesterday",
     "todayPointsOf": "Today's points: {0}",
+    "dailyMax": "of a {0}-point daily maximum",
     "streak": "Streak",
     "streakDays": "{0}-day streak",
     "streakDaysLabel": "days in a row",

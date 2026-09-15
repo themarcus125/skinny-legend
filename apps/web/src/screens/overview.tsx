@@ -2,12 +2,15 @@ import { useQuery } from '@tanstack/react-query';
 import { useTranslations } from 'use-intl';
 import type { Category } from '@skinny/shared/wire';
 import { RULEBOOK } from '@skinny/shared/scoring';
-import { AlertBanner, CategoryChip, StreakCounter, SurfaceCard, cn, filledDots } from '@skinny/ui';
+import { AlertBanner, CategoryChip, ProgressRing, StreakCounter, SurfaceCard, cn, filledDots } from '@skinny/ui';
 import {
   ArrowDownRightGlyph,
   ArrowUpRightGlyph,
   CheckGlyph,
   EqualGlyph,
+  FlameGlyph,
+  SparklesGlyph,
+  TrophyGlyph,
 } from '@/app/icons';
 import { useCallback, useEffect } from 'react';
 import { LargeTitle } from '@/app/large-title';
@@ -21,6 +24,18 @@ import { Button } from '@/ui/button';
 
 /** The number size iOS's `DashboardView` passes both cards of the streak/rank pair. */
 const PAIR_NUMBER_SIZE = 30;
+
+/**
+ * The most a day can score from the daily-capped categories — what the Today ring fills
+ * against. The weekly group bonus can push a day past it, and the ring simply reads full then.
+ */
+const DAILY_MAX = RULEBOOK.filter((rule) => rule.capPeriod === 'day').reduce(
+  (sum, rule) => sum + rule.points * rule.capCount,
+  0,
+);
+
+/** The card chrome shared by the tinted cards, which paint their own fill instead of `bg-card`. */
+const TINTED_CARD = 'relative overflow-hidden rounded-xl border p-[18px] shadow-card';
 
 /**
  * Trang chủ — the dashboard. Port of `DashboardView`
@@ -117,30 +132,44 @@ function TodayCard({
 }) {
   const t = useTranslations();
   return (
-    <SurfaceCard as="section" className="flex flex-col gap-2">
-      <CardLabel>{t('overview.todayPoints')}</CardLabel>
-      <div className="flex items-baseline gap-3">
-        <span
-          data-testid="today-points"
-          className="type-display text-[44px] tabular-nums"
-          aria-label={t('overview.todayPointsOf', { 0: points })}
+    <section
+      data-testid="today-card"
+      className={cn(TINTED_CARD, 'border-primary-border bg-primary-soft text-foreground')}
+    >
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex min-w-0 flex-col gap-2">
+          <CardLabel>{t('overview.todayPoints')}</CardLabel>
+          <DeltaBadge delta={delta} />
+          <p className="type-caption text-foreground-subtle">
+            {t('overview.dailyMax', { 0: DAILY_MAX })}
+          </p>
+        </div>
+        {/* The signature: the day's points drawn as how much of the day is already banked. */}
+        <ProgressRing
+          value={points}
+          max={DAILY_MAX}
+          size={100}
+          strokeWidth={9}
+          label={t('overview.todayPointsOf', { 0: points })}
         >
-          {points}
-        </span>
-        <DeltaBadge delta={delta} />
+          <span data-testid="today-points" className="type-display text-[40px] tabular-nums">
+            {points}
+          </span>
+        </ProgressRing>
       </div>
       {categories.length === 0 ? (
-        <p data-testid="today-empty" className="type-caption text-foreground-secondary">
+        <p data-testid="today-empty" className="type-caption text-foreground-secondary pt-3">
           {t('overview.empty')}
         </p>
       ) : (
-        <div className="flex flex-wrap gap-2 pt-1">
+        // Chips on the Vanilla fill sit on white: the group chip's own Vanilla would vanish.
+        <div className="flex flex-wrap gap-2 pt-3 [&_[data-slot=category-chip]]:bg-card [&_[data-slot=category-chip]]:shadow-card">
           {categories.map((category) => (
             <CategoryChip key={category} category={category} label={t(`categories.${category}`)} />
           ))}
         </div>
       )}
-    </SurfaceCard>
+    </section>
   );
 }
 
@@ -164,7 +193,7 @@ function DeltaBadge({ delta }: { delta: number }) {
       data-sign={delta > 0 ? 'up' : delta < 0 ? 'down' : 'flat'}
       aria-label={label}
       className={cn(
-        'type-caption inline-flex items-center gap-1',
+        'type-caption inline-flex w-fit items-center gap-1 rounded-full bg-card/70 px-2.5 py-1',
         delta > 0 ? 'text-success' : delta < 0 ? 'text-destructive' : 'text-foreground-subtle',
       )}
     >
@@ -179,9 +208,16 @@ function DeltaBadge({ delta }: { delta: number }) {
 function StreakCard({ current, longest }: { current: number; longest: number }) {
   const t = useTranslations();
   return (
-    <SurfaceCard as="section" className="flex flex-col gap-3">
+    <section className={cn(TINTED_CARD, 'flex flex-col gap-3 border-transparent bg-warning-soft')}>
+      <FlameGlyph aria-hidden="true" className="text-warning pointer-events-none absolute -right-3 -bottom-4 size-24 opacity-20" />
       <CardLabel>{t('overview.streak')}</CardLabel>
-      <div role="group" aria-label={t('overview.streakDays', { 0: current })}>
+      <div
+        role="group"
+        aria-label={t('overview.streakDays', { 0: current })}
+        // The counter's empty dots are the neutral track, which disappears on the amber fill:
+        // here they take the card's own amber, a shade deeper, and every dot grows a little.
+        className="relative [&_[data-testid=streak-dot]]:size-2.5 [&_[data-testid=streak-dot][data-filled=false]]:bg-warning/35"
+      >
         <StreakCounter
           days={current}
           longest={longest}
@@ -191,21 +227,22 @@ function StreakCard({ current, longest }: { current: number; longest: number }) 
           dotsLabel={t('overview.streakDots', { 0: filledDots(current) })}
         />
       </div>
-    </SurfaceCard>
+    </section>
   );
 }
 
 function RankCard({ rank, memberCount }: { rank: number; memberCount: number }) {
   const t = useTranslations();
   return (
-    <SurfaceCard as="section" className="flex flex-col gap-3">
+    <section className={cn(TINTED_CARD, 'flex flex-col gap-3 border-transparent bg-info-soft')}>
+      <TrophyGlyph aria-hidden="true" className="text-info pointer-events-none absolute -right-3 -bottom-4 size-24 opacity-20" />
       <CardLabel>{t('overview.rank')}</CardLabel>
-      <div className="flex flex-col gap-1">
+      <div className="relative flex flex-col gap-1">
         <p
           className="flex items-baseline gap-1"
           aria-label={t('overview.rankOf', { 0: rank, 1: memberCount })}
         >
-          <span data-testid="rank" className="type-display text-[30px] tabular-nums">
+          <span data-testid="rank" className="type-display text-info text-[30px] tabular-nums">
             {rank}
           </span>
           <span aria-hidden="true" className="type-h3 text-foreground-secondary">
@@ -214,7 +251,7 @@ function RankCard({ rank, memberCount }: { rank: number; memberCount: number }) 
         </p>
         <p className="type-caption text-foreground-subtle">{t('overview.inGroup')}</p>
       </div>
-    </SurfaceCard>
+    </section>
   );
 }
 
@@ -260,8 +297,8 @@ function ChecklistCard({ capsHit }: { capsHit: Record<Category, boolean> }) {
               </span>
               <span
                 className={cn(
-                  'type-caption shrink-0',
-                  done ? 'text-foreground-subtle' : 'text-foreground',
+                  'type-caption shrink-0 rounded-full px-2.5 py-1',
+                  done ? 'text-foreground-subtle' : 'bg-surface-2 text-foreground tabular-nums',
                 )}
               >
                 {done ? t('overview.capDone', { 0: t(period) }) : `+${points}`}
@@ -274,11 +311,14 @@ function ChecklistCard({ capsHit }: { capsHit: Record<Category, boolean> }) {
   );
 }
 
-/** The one accent card on the screen, so the challenge total reads as the milestone number. */
+/** The one ink card on the screen, so the challenge total reads as the milestone number. */
 function TotalCard({ total, bonusPoints }: { total: number; bonusPoints: number }) {
   const t = useTranslations();
   return (
-    <SurfaceCard as="section" accent className="flex items-center justify-between gap-3">
+    <section
+      data-testid="total-card"
+      className={cn(TINTED_CARD, 'flex items-center justify-between gap-3 border-transparent bg-primary text-primary-foreground')}
+    >
       <div
         role="group"
         aria-label={
@@ -289,19 +329,20 @@ function TotalCard({ total, bonusPoints }: { total: number; bonusPoints: number 
         className="flex flex-1 items-center justify-between gap-3"
       >
         <div className="flex min-w-0 flex-col gap-1">
-          <CardLabel>{t('overview.challengeTotal')}</CardLabel>
-          <p className="type-caption text-foreground-secondary">
+          <p className="type-label text-primary-foreground/70">{t('overview.challengeTotal')}</p>
+          <p className="type-caption text-primary-foreground/80 flex items-center gap-1">
+            <SparklesGlyph className="size-3.5 shrink-0" />
             {t('overview.streakBonus', { 0: bonusPoints })}
           </p>
         </div>
         <span
           data-testid="challenge-total"
-          className="type-display shrink-0 text-[30px] tabular-nums"
+          className="type-display shrink-0 text-[40px] tabular-nums"
         >
           {total}
         </span>
       </div>
-    </SurfaceCard>
+    </section>
   );
 }
 
@@ -309,7 +350,7 @@ function TotalCard({ total, bonusPoints }: { total: number; bonusPoints: number 
 function OverviewSkeleton() {
   return (
     <div data-testid="overview-skeleton" aria-busy="true" className="flex flex-col gap-4">
-      <div className="bg-surface-2 h-[150px] animate-pulse rounded-xl" />
+      <div className="bg-surface-2 h-[190px] animate-pulse rounded-xl" />
       <div className="grid grid-cols-2 gap-4">
         <div className="bg-surface-2 h-[140px] animate-pulse rounded-xl" />
         <div className="bg-surface-2 h-[140px] animate-pulse rounded-xl" />
