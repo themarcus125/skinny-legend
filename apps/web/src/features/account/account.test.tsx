@@ -86,7 +86,7 @@ describe('the account screen', () => {
     await userEvent.click(within(picker).getByRole('radio', { name: 'English' }));
 
     await waitFor(() => expect(updateMe).toHaveBeenCalledWith({ locale: 'en' }));
-    expect(await screen.findByText('Account')).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Account' })).toBeInTheDocument();
     expect(document.documentElement.lang).toBe('en');
     expect(localStorage.getItem('skinny.locale')).toBe('en');
   });
@@ -102,7 +102,7 @@ describe('the account screen', () => {
     expect(localStorage.getItem('skinny.locale')).toBe('system');
     // Spec §5: "follow this browser" is the weaker claim, so the server's explicit `vi` stands.
     // jsdom reports `en-US`, so the *display* follows the device immediately.
-    expect(await screen.findByText('Account')).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Account' })).toBeInTheDocument();
     expect(document.documentElement.lang).toBe('en');
     expect(updateMe).not.toHaveBeenCalled();
   });
