@@ -38,7 +38,10 @@ export default async function globalSetup(): Promise<void> {
   writeFileSync(R2_KEY_LOG, '', 'utf8');
   process.env.E2E_R2_KEY_LOG = R2_KEY_LOG;
 
-  await run('docker', ['compose', 'up', '-d', 'db', 'auth-emulator'], { cwd: ROOT });
+  // CI brings its own Postgres service and emulator container; locally compose owns both.
+  if (process.env.CI !== 'true') {
+    await run('docker', ['compose', 'up', '-d', 'db', 'auth-emulator'], { cwd: ROOT });
+  }
   await waitForPort(5432, { timeoutMs: 120_000 });
   await waitForPort(PORTS.emulator, { timeoutMs: 180_000 });
 

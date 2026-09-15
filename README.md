@@ -43,6 +43,8 @@ pnpm test
 ```
 API tests need the local Postgres running and use `AUTH_MODE=test` (header `x-test-uid`) with in-memory storage.
 
+- `pnpm e2e` — the local end-to-end suite (real services, Firebase Auth Emulator). See [docs/testing/e2e.md](docs/testing/e2e.md).
+
 ## Deploy (Railway)
 
 Step-by-step runbooks for the first deploy — Railway, R2, Firebase, Vercel, and the list of

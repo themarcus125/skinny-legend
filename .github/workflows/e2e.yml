@@ -1,0 +1,62 @@
+name: e2e
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # Until the repository secrets below exist, a red e2e run must not block a merge.
+    continue-on-error: true
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: skinny
+          POSTGRES_PASSWORD: skinny
+          POSTGRES_DB: skinny
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U skinny"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+      R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      R2_BUCKET: ${{ secrets.R2_BUCKET }}
+      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Build the Auth Emulator image and start it
+        run: |
+          docker build -t skinny-auth-emulator ./infra/firebase-emulator
+          docker run -d --name auth-emulator -p 9099:9099 skinny-auth-emulator
+
+      - run: pnpm --filter @skinny/e2e exec playwright install --with-deps chromium
+
+      - name: Run the suite
+        run: pnpm e2e
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-artifacts
+          path: |
+            e2e/test-results
+            e2e/playwright-report
+            e2e/logs
+          retention-days: 7
