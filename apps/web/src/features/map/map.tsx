@@ -48,17 +48,16 @@ export function escapeHtml(value: string): string {
  * when more than one entry clustered there. Port of `ClusterPin`'s anatomy
  * (ios/SkinnyLegend/Features/Map/MapScreen.swift).
  *
- * The composed name goes on the wrapper as an `aria-label`, with the initials and the count
- * hidden from the accessibility tree beneath it — iOS's `.accessibilityElement(children:
- * .combine)`. Leaflet 1.9's `alt` option only reaches an `<img>` icon, never a `divIcon`, so a
- * marker relying on it reads out as its raw contents ("L 2") instead of "Linh, 2 mục ghi, …".
+ * Everything in here is `aria-hidden`: the element that carries the name is Leaflet's own
+ * `.leaflet-marker-icon` div, which is the focusable node, and it is named in `nameMarker`
+ * below. Nothing in this markup may be announced, or the marker reads twice.
  *
  * Inline styles rather than utility classes: Leaflet injects this outside React, and Tailwind v4
  * only compiles classes it can see in the source it scans — a class named here would be correct
  * in the file and absent from the stylesheet. The values are design-system custom properties, so
  * the marker still follows the theme, dark mode included.
  */
-export function clusterMarkerHtml(cluster: MapCluster, label: string): string {
+export function clusterMarkerHtml(cluster: MapCluster): string {
   const newest = cluster.pins[0];
   const face = escapeHtml(initials(newest?.user.displayName ?? ''));
   const badge =
@@ -66,16 +65,16 @@ export function clusterMarkerHtml(cluster: MapCluster, label: string): string {
       ? `<span data-testid="cluster-count" aria-hidden="true" style="position:absolute;top:-2px;right:-4px;min-width:18px;padding:1px 5px;border-radius:9999px;background:var(--primary);color:var(--primary-foreground);border:1.5px solid var(--card);font:600 11px/1.4 var(--font-sans, system-ui),sans-serif;text-align:center;">${cluster.pins.length}</span>`
       : '';
   return (
-    `<div role="button" aria-label="${escapeHtml(label)}" style="position:relative;width:${MARKER_BOX}px;height:${MARKER_BOX}px;">` +
+    `<div aria-hidden="true" style="position:relative;width:${MARKER_BOX}px;height:${MARKER_BOX}px;">` +
     `<span data-testid="cluster-avatar" aria-hidden="true" style="display:flex;align-items:center;justify-content:center;width:${MARKER_SIZE}px;height:${MARKER_SIZE}px;margin:4px;border-radius:9999px;background:var(--primary-soft);color:var(--foreground);border:1px solid var(--primary-border);box-shadow:0 0 0 3px var(--card),var(--shadow-2);font:700 13px/1 var(--font-sans, system-ui),sans-serif;">${face}</span>` +
     badge +
     `</div>`
   );
 }
 
-function clusterIcon(cluster: MapCluster, label: string): L.DivIcon {
+function clusterIcon(cluster: MapCluster): L.DivIcon {
   return L.divIcon({
-    html: clusterMarkerHtml(cluster, label),
+    html: clusterMarkerHtml(cluster),
     className: '',
     iconSize: [MARKER_BOX, MARKER_BOX],
     iconAnchor: [MARKER_BOX / 2, MARKER_BOX / 2],
@@ -132,11 +131,7 @@ export function MapScreen() {
    * replace the marker's element, which throws away whatever focus or hover was on it.
    */
   const markers = useMemo(
-    () =>
-      clusters.map((cluster) => {
-        const label = markerLabel(cluster, t);
-        return { cluster, label, icon: clusterIcon(cluster, label) };
-      }),
+    () => clusters.map((cluster) => ({ cluster, label: markerLabel(cluster, t), icon: clusterIcon(cluster) })),
     [clusters, t],
   );
   const dismiss = useCallback(() => setSelected(null), []);
@@ -204,12 +199,19 @@ export function MapScreen() {
             />
             <FitBoundsOnce clusters={clusters} />
             {markers.map(({ cluster, label, icon }) => (
+              /*
+               * The key carries the label so a cluster whose contents changed remounts and
+               * fires `add` again — `setIcon` alone would rebuild the element and drop the
+               * attributes `nameMarker` put on it.
+               */
               <Marker
-                key={cluster.id}
+                key={`${cluster.id}:${label}`}
                 position={[cluster.center.lat, cluster.center.lng]}
                 icon={icon}
-                title={label}
-                eventHandlers={{ click: () => setSelected(cluster) }}
+                eventHandlers={{
+                  add: (event) => nameMarker(event.target as L.Marker, label),
+                  click: () => setSelected(cluster),
+                }}
               />
             ))}
           </MapContainer>
@@ -225,6 +227,27 @@ export function MapScreen() {
 
 /** React Router 7's lazy-route convention. */
 export const Component = MapScreen;
+
+/**
+ * Names the marker **element**, which is the one a reader actually lands on.
+ *
+ * Leaflet gives `.leaflet-marker-icon` `tabindex="0"` (its `keyboard: true` default) but no role
+ * and no name. A generic element does not take its name from its contents under the
+ * accessible-name spec, so an `aria-label` on anything *inside* the `divIcon` does not name it —
+ * and `alt` reaches an `<img>` icon only, never a `divIcon`. So the role and the name go on the
+ * element itself, once it has been added to the map, and the icon's own markup stays
+ * `aria-hidden` so nothing is announced twice. This is iOS's
+ * `.accessibilityElement(children: .combine)` + `.accessibilityAddTraits(.isButton)`.
+ *
+ * `setAttribute` takes the string as data, so there is no HTML seam to escape here — unlike the
+ * initials, which are interpolated into the `divIcon`'s HTML.
+ */
+export function nameMarker(marker: L.Marker, label: string): void {
+  const element = marker.getElement();
+  if (!element) return;
+  element.setAttribute('role', 'button');
+  element.setAttribute('aria-label', label);
+}
 
 /**
  * What a marker reads as: the newest member's name, the entry count when several clustered, and

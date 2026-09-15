@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -26,27 +26,35 @@ vi.mock('react-leaflet', () => ({
     <div data-testid="tile-layer" data-url={url} data-attribution={attribution} />
   ),
   /*
-   * The stub renders the icon's own HTML and nothing else, so the tests read exactly the
-   * attributes a browser exposes — the `aria-label` the divIcon carries. Mapping the `alt`
-   * prop onto something here would assert a contract Leaflet 1.9 does not honour for a
-   * `divIcon` (it applies `alt` to IMG icons only).
+   * Modelled on the real thing: the host element is Leaflet's `.leaflet-marker-icon`, which
+   * owns `tabindex="0"` (its `keyboard: true` default) and holds the `divIcon`'s HTML as its
+   * contents. `add` fires once the marker is on the map, handing the screen that element — so
+   * the role and name the screen puts on it are read here from the same node a browser
+   * exposes, rather than from a prop this stub invented.
    */
   Marker: ({
     icon,
     eventHandlers,
   }: {
     icon: { options: { html: string } };
-    eventHandlers?: { click?: () => void };
-  }) => (
-    <div
-      data-testid="map-marker"
-      // Leaflet's own `keyboard: true` default puts `tabindex="0"` on `.leaflet-marker-icon`,
-      // so the marker element is the focus target the sheet has to hand focus back to.
-      tabIndex={0}
-      onClick={() => eventHandlers?.click?.()}
-      dangerouslySetInnerHTML={{ __html: icon.options.html }}
-    />
-  ),
+    eventHandlers?: { add?: (event: { target: { getElement: () => HTMLElement | null } }) => void; click?: () => void };
+  }) => {
+    const host = useRef<HTMLDivElement>(null);
+    useEffect(() => {
+      eventHandlers?.add?.({ target: { getElement: () => host.current } });
+      // Mirrors Leaflet: `add` fires when the marker joins the map, not on every render.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+    return (
+      <div
+        ref={host}
+        data-testid="map-marker"
+        tabIndex={0}
+        onClick={() => eventHandlers?.click?.()}
+        dangerouslySetInnerHTML={{ __html: icon.options.html }}
+      />
+    );
+  },
   useMap: () => map,
 }));
 
@@ -108,23 +116,20 @@ describe('the group map', () => {
     expect(within(markers[0]!).getByTestId('cluster-count')).toHaveTextContent('2');
     expect(within(markers[1]!).queryByTestId('cluster-count')).not.toBeInTheDocument();
 
-    // The marker reads as one button — iOS's `.accessibilityElement(children: .combine)` —
-    // labelled the way `ClusterPin.accessibilityLabel` composes it: name, count, place. The
-    // initials and the count are hidden beneath it so it is not read as "L 2".
-    expect(within(markers[0]!).getByRole('button')).toHaveAccessibleName(
-      'Linh, 2 mục ghi, Hồ bơi Lam Sơn',
+    /*
+     * The name lands on the focusable marker element itself, not on anything inside the icon:
+     * a generic element takes no name from its contents, so a label on a child would not name
+     * it. The whole icon is `aria-hidden` beneath, so it never reads as "L 2" or twice over.
+     * The wording is `ClusterPin.accessibilityLabel`'s: name, count, place.
+     */
+    expect(markers[0]).toHaveAttribute('role', 'button');
+    expect(markers[0]).toHaveAccessibleName('Linh, 2 mục ghi, Hồ bơi Lam Sơn');
+    expect(markers[1]).toHaveAccessibleName('Trang, Hồ bơi Lam Sơn');
+    expect(screen.getByRole('button', { name: 'Linh, 2 mục ghi, Hồ bơi Lam Sơn' })).toBe(
+      markers[0],
     );
-    expect(within(markers[1]!).getByRole('button')).toHaveAccessibleName(
-      'Trang, Hồ bơi Lam Sơn',
-    );
-    expect(within(markers[0]!).getByTestId('cluster-avatar')).toHaveAttribute(
-      'aria-hidden',
-      'true',
-    );
-    expect(within(markers[0]!).getByTestId('cluster-count')).toHaveAttribute(
-      'aria-hidden',
-      'true',
-    );
+    expect(within(markers[0]!).getByTestId('cluster-avatar')).toHaveAttribute('aria-hidden', 'true');
+    expect(within(markers[0]!).getByTestId('cluster-count')).toHaveAttribute('aria-hidden', 'true');
 
     const tiles = screen.getByTestId('tile-layer');
     expect(tiles).toHaveAttribute('data-url', 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png');
@@ -253,15 +258,15 @@ describe('the group map', () => {
   });
 
   it('escapes member-supplied text before it reaches the divIcon HTML', () => {
-    expect(escapeHtml('<img src=x onerror=alert(1)>')).toBe(
-      '&lt;img src=x onerror=alert(1)&gt;',
-    );
-    const html = clusterMarkerHtml(
-      { id: 'x', center: { lat: 0, lng: 0 }, pins: [pin('x', 0, 0, '<script>')] },
-      '<script>alert(1)</script>, Hồ bơi "Lam Sơn"',
-    );
-    // Both seams: the initials in the body and the composed name in the aria-label.
+    expect(escapeHtml('<img src=x onerror=alert(1)>')).toBe('&lt;img src=x onerror=alert(1)&gt;');
+    // The initials are the only member-supplied thing interpolated into HTML; the label goes on
+    // the marker element through `setAttribute`, which takes it as data.
+    const html = clusterMarkerHtml({
+      id: 'x',
+      center: { lat: 0, lng: 0 },
+      pins: [pin('x', 0, 0, '<script>')],
+    });
     expect(html).not.toContain('<script>');
-    expect(html).toContain('aria-label="&lt;script&gt;alert(1)&lt;/script&gt;, Hồ bơi &quot;Lam Sơn&quot;"');
+    expect(html).toContain('&lt;');
   });
 });

@@ -23,13 +23,11 @@ test.describe('Nhật ký nhóm', () => {
     // Offline the OSM tiles never arrive; the markers are ours and must be there regardless.
     const markers = page.locator('.leaflet-marker-icon');
     await expect(markers.first()).toBeVisible();
-    // Leaflet gives the marker element `tabindex="0"`; the label it reads comes from the
-    // divIcon's own aria-label, since `alt` never reaches a divIcon.
-    await expect(markers.first()).toHaveAttribute('tabindex', '0');
-    await expect(markers.first().locator('[role="button"]')).toHaveAttribute(
-      'aria-label',
-      /mục ghi/,
-    );
+    // The role and the name sit on Leaflet's own marker element — the node that carries
+    // `tabindex="0"` and is therefore the one a reader lands on.
+    const named = page.getByRole('button', { name: /mục ghi/ }).first();
+    await expect(named).toHaveClass(/leaflet-marker-icon/);
+    await expect(named).toHaveAttribute('tabindex', '0');
     await expect(page.locator('.leaflet-control-attribution')).toContainText(
       'OpenStreetMap contributors',
     );
