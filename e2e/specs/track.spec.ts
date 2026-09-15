@@ -127,10 +127,15 @@ test('a photo upload produces a verdict, points, and a fetchable R2 object', asy
   // so the day-scoped assertions are the ones that stand down, never the entry-scoped ones above.
   if (FIXTURE_IS_TODAY) {
     await expect(page.getByTestId('today-points')).toHaveText(/^\d+$/);
-    const pointsAfter = Number(await page.getByTestId('today-points').innerText());
     // Exactly the scorer's number, not "no worse than before": `>=` is `0 >= 0` after every reset
-    // and would stay green if the entry's points were dropped on the floor.
-    expect(pointsAfter).toBe(pointsBefore + scored!.points);
+    // and would stay green if the entry's points were dropped on the floor. Polled, because this
+    // second visit to Trang chủ paints the cached dashboard from the first one — the pre-upload
+    // total — and only swaps in the refetched number a moment later.
+    await expect
+      .poll(async () => Number(await page.getByTestId('today-points').innerText()), {
+        timeout: 30_000,
+      })
+      .toBe(pointsBefore + scored!.points);
     await expect(page.getByTestId('today-empty')).toHaveCount(0);
     // Since SKI-134 the group log is the tail of Trang chủ, and its rows render chips of their
     // own — so the Today card's chips are addressed inside the card that holds `today-points`,
