@@ -23,6 +23,13 @@ test.describe('Nhật ký nhóm', () => {
     // Offline the OSM tiles never arrive; the markers are ours and must be there regardless.
     const markers = page.locator('.leaflet-marker-icon');
     await expect(markers.first()).toBeVisible();
+    // Leaflet gives the marker element `tabindex="0"`; the label it reads comes from the
+    // divIcon's own aria-label, since `alt` never reaches a divIcon.
+    await expect(markers.first()).toHaveAttribute('tabindex', '0');
+    await expect(markers.first().locator('[role="button"]')).toHaveAttribute(
+      'aria-label',
+      /mục ghi/,
+    );
     await expect(page.locator('.leaflet-control-attribution')).toContainText(
       'OpenStreetMap contributors',
     );
@@ -34,6 +41,8 @@ test.describe('Nhật ký nhóm', () => {
     await expect(page.getByTestId('pin-card').first()).toBeVisible();
     await page.getByRole('button', { name: 'Đóng' }).click();
     await expect(page.getByTestId('cluster-sheet')).toBeHidden();
+    // The page behind scrolls again once the modal sheet is gone.
+    await expect(page.locator('body')).not.toHaveCSS('overflow', 'hidden');
 
     await page.getByRole('button', { name: 'Quay lại' }).click();
     await expect(page).toHaveURL(/\/feed$/);

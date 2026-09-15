@@ -7,6 +7,7 @@ import { useTranslations } from 'use-intl';
 import { AlertBanner, EmptyState, initials } from '@skinny/ui';
 import { ChevronRightGlyph, CloseGlyph, MapPinGlyph } from '@/app/icons';
 import { LargeTitle } from '@/app/large-title';
+import { useModalSheet } from '@/app/use-modal-sheet';
 import { describeError, useApi } from '@/lib/api';
 import { queryKeys } from '@/lib/query';
 import { Button } from '@/ui/button';
@@ -47,29 +48,34 @@ export function escapeHtml(value: string): string {
  * when more than one entry clustered there. Port of `ClusterPin`'s anatomy
  * (ios/SkinnyLegend/Features/Map/MapScreen.swift).
  *
+ * The composed name goes on the wrapper as an `aria-label`, with the initials and the count
+ * hidden from the accessibility tree beneath it — iOS's `.accessibilityElement(children:
+ * .combine)`. Leaflet 1.9's `alt` option only reaches an `<img>` icon, never a `divIcon`, so a
+ * marker relying on it reads out as its raw contents ("L 2") instead of "Linh, 2 mục ghi, …".
+ *
  * Inline styles rather than utility classes: Leaflet injects this outside React, and Tailwind v4
  * only compiles classes it can see in the source it scans — a class named here would be correct
  * in the file and absent from the stylesheet. The values are design-system custom properties, so
  * the marker still follows the theme, dark mode included.
  */
-export function clusterMarkerHtml(cluster: MapCluster): string {
+export function clusterMarkerHtml(cluster: MapCluster, label: string): string {
   const newest = cluster.pins[0];
-  const label = escapeHtml(initials(newest?.user.displayName ?? ''));
+  const face = escapeHtml(initials(newest?.user.displayName ?? ''));
   const badge =
     cluster.pins.length > 1
-      ? `<span data-testid="cluster-count" style="position:absolute;top:-2px;right:-4px;min-width:18px;padding:1px 5px;border-radius:9999px;background:var(--primary);color:var(--primary-foreground);border:1.5px solid var(--card);font:600 11px/1.4 var(--font-sans, system-ui),sans-serif;text-align:center;">${cluster.pins.length}</span>`
+      ? `<span data-testid="cluster-count" aria-hidden="true" style="position:absolute;top:-2px;right:-4px;min-width:18px;padding:1px 5px;border-radius:9999px;background:var(--primary);color:var(--primary-foreground);border:1.5px solid var(--card);font:600 11px/1.4 var(--font-sans, system-ui),sans-serif;text-align:center;">${cluster.pins.length}</span>`
       : '';
   return (
-    `<div style="position:relative;width:${MARKER_BOX}px;height:${MARKER_BOX}px;">` +
-    `<span data-testid="cluster-avatar" style="display:flex;align-items:center;justify-content:center;width:${MARKER_SIZE}px;height:${MARKER_SIZE}px;margin:4px;border-radius:9999px;background:var(--primary-soft);color:var(--foreground);border:1px solid var(--primary-border);box-shadow:0 0 0 3px var(--card),var(--shadow-2);font:700 13px/1 var(--font-sans, system-ui),sans-serif;">${label}</span>` +
+    `<div role="button" aria-label="${escapeHtml(label)}" style="position:relative;width:${MARKER_BOX}px;height:${MARKER_BOX}px;">` +
+    `<span data-testid="cluster-avatar" aria-hidden="true" style="display:flex;align-items:center;justify-content:center;width:${MARKER_SIZE}px;height:${MARKER_SIZE}px;margin:4px;border-radius:9999px;background:var(--primary-soft);color:var(--foreground);border:1px solid var(--primary-border);box-shadow:0 0 0 3px var(--card),var(--shadow-2);font:700 13px/1 var(--font-sans, system-ui),sans-serif;">${face}</span>` +
     badge +
     `</div>`
   );
 }
 
-function clusterIcon(cluster: MapCluster): L.DivIcon {
+function clusterIcon(cluster: MapCluster, label: string): L.DivIcon {
   return L.divIcon({
-    html: clusterMarkerHtml(cluster),
+    html: clusterMarkerHtml(cluster, label),
     className: '',
     iconSize: [MARKER_BOX, MARKER_BOX],
     iconAnchor: [MARKER_BOX / 2, MARKER_BOX / 2],
@@ -121,6 +127,18 @@ export function MapScreen() {
   });
 
   const clusters = useMemo(() => clusterPins(data ?? [], CLUSTER_RADIUS_M), [data]);
+  /**
+   * The icons are built with the clusters, not per render: a fresh `DivIcon` makes Leaflet
+   * replace the marker's element, which throws away whatever focus or hover was on it.
+   */
+  const markers = useMemo(
+    () =>
+      clusters.map((cluster) => {
+        const label = markerLabel(cluster, t);
+        return { cluster, label, icon: clusterIcon(cluster, label) };
+      }),
+    [clusters, t],
+  );
   const dismiss = useCallback(() => setSelected(null), []);
 
   return (
@@ -185,13 +203,12 @@ export function MapScreen() {
               attribution="&copy; OpenStreetMap contributors"
             />
             <FitBoundsOnce clusters={clusters} />
-            {clusters.map((cluster) => (
+            {markers.map(({ cluster, label, icon }) => (
               <Marker
                 key={cluster.id}
                 position={[cluster.center.lat, cluster.center.lng]}
-                icon={clusterIcon(cluster)}
-                alt={markerLabel(cluster, t)}
-                title={markerLabel(cluster, t)}
+                icon={icon}
+                title={label}
                 eventHandlers={{ click: () => setSelected(cluster) }}
               />
             ))}
@@ -228,15 +245,11 @@ function markerLabel(cluster: MapCluster, t: ReturnType<typeof useTranslations>)
  */
 function ClusterSheet({ cluster, onDismiss }: { cluster: MapCluster; onDismiss: () => void }) {
   const t = useTranslations();
+  const panel = useRef<HTMLDivElement>(null);
   const single = cluster.pins.length === 1 ? cluster.pins[0] : undefined;
 
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onDismiss();
-    };
-    document.addEventListener('keydown', onKeyDown);
-    return () => document.removeEventListener('keydown', onKeyDown);
-  }, [onDismiss]);
+  /** The same modality the verdict sheet gets — focus in, trapped, page locked, focus back. */
+  useModalSheet({ panelRef: panel, onDismiss });
 
   return (
     <div className="fixed inset-0 z-50 flex items-end">
@@ -248,11 +261,13 @@ function ClusterSheet({ cluster, onDismiss }: { cluster: MapCluster; onDismiss: 
         className="absolute inset-0 bg-black/40"
       />
       <div
+        ref={panel}
         role="dialog"
         aria-modal="true"
         aria-label={single ? single.user.displayName : t('common.place')}
+        tabIndex={-1}
         data-testid="cluster-sheet"
-        className="bg-background relative flex max-h-[85dvh] w-full flex-col gap-3 rounded-t-[18px] p-4 pb-[calc(env(safe-area-inset-bottom)+1rem)]"
+        className="bg-background relative flex max-h-[85dvh] w-full flex-col gap-3 rounded-t-[18px] p-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] outline-none"
       >
         <div className="flex items-center justify-between gap-3">
           <h2 className="type-h3 truncate font-heading">
@@ -262,7 +277,7 @@ function ClusterSheet({ cluster, onDismiss }: { cluster: MapCluster; onDismiss: 
             <CloseGlyph className="size-4" />
           </Button>
         </div>
-        <div className="-mx-1 overflow-y-auto px-1">
+        <div className="-mx-1 overflow-y-auto overscroll-contain px-1">
           {single ? <MapPinCard pin={single} /> : <ClusterList cluster={cluster} />}
         </div>
       </div>

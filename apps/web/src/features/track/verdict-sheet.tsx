@@ -1,8 +1,9 @@
-import { useEffect, useId, useRef } from 'react';
+import { useId, useRef } from 'react';
 import { useTranslations } from 'use-intl';
 import { AlertBanner, CategoryChip, SurfaceCard, cn } from '@skinny/ui';
 import { CATEGORIES } from '@skinny/shared/wire';
 import { CloseGlyph, QuestionGlyph, SparklesGlyph } from '@/app/icons';
+import { useModalSheet } from '@/app/use-modal-sheet';
 import { Button } from '@/ui/button';
 import { PlaceChip } from './place-chip';
 import {
@@ -56,65 +57,11 @@ export function VerdictSheet({ state, onChange, lat, lng, onDismiss, onPrimary }
   const warnings = capWarnings(state, t);
 
   /**
-   * `onDismiss` is a fresh arrow on every render of the screen above, so it can never be a
-   * dependency of anything that touches focus — that is what made every keystroke in the place
-   * field yank focus back to the panel. The listener reads it through a ref instead.
+   * Modality — focus in, Escape and Tab trapped, the page behind locked, focus restored on
+   * dismissal. Shared with the map's cluster sheet; see `src/app/use-modal-sheet.ts` for why
+   * `onDismiss` is read through a ref rather than depended on.
    */
-  const dismissRef = useRef(onDismiss);
-  useEffect(() => {
-    dismissRef.current = onDismiss;
-  }, [onDismiss]);
-
-  /**
-   * Modality, once, on mount: move focus into the panel, remember where it came from so it can
-   * go back on dismissal, and stop the page behind from scrolling. iOS Safari in particular
-   * will happily scroll the document under a fixed overlay, which reads as a broken sheet.
-   *
-   * A native `<dialog>` would give all three for free, but jsdom implements neither
-   * `showModal()` nor its focus behaviour, so the sheet would be untestable.
-   */
-  useEffect(() => {
-    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    panel.current?.focus();
-    const body = document.body;
-    const previousOverflow = body.style.overflow;
-    body.style.overflow = 'hidden';
-    return () => {
-      body.style.overflow = previousOverflow;
-      // Back to the button that opened the sheet: a keyboard or screen-reader user otherwise
-      // lands at the top of the document with no idea where they were.
-      opener?.focus();
-    };
-  }, []);
-
-  // Escape closes, and Tab cycles inside the panel: a modal that leaks focus to the tab bar
-  // behind it is not modal.
-  useEffect(() => {
-    const node = panel.current;
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        event.preventDefault();
-        dismissRef.current();
-        return;
-      }
-      if (event.key !== 'Tab' || !node) return;
-      const focusable = node.querySelectorAll<HTMLElement>(
-        'button:not([disabled]), input:not([disabled]), [href], [tabindex]:not([tabindex="-1"])',
-      );
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      if (!first || !last) return;
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first.focus();
-      }
-    };
-    document.addEventListener('keydown', onKeyDown);
-    return () => document.removeEventListener('keydown', onKeyDown);
-  }, []);
+  useModalSheet({ panelRef: panel, onDismiss });
 
   const title = verdict === null
     ? t('account.editActivity')

@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { fireEvent } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
@@ -24,19 +25,24 @@ vi.mock('react-leaflet', () => ({
   TileLayer: ({ url, attribution }: { url: string; attribution: string }) => (
     <div data-testid="tile-layer" data-url={url} data-attribution={attribution} />
   ),
+  /*
+   * The stub renders the icon's own HTML and nothing else, so the tests read exactly the
+   * attributes a browser exposes — the `aria-label` the divIcon carries. Mapping the `alt`
+   * prop onto something here would assert a contract Leaflet 1.9 does not honour for a
+   * `divIcon` (it applies `alt` to IMG icons only).
+   */
   Marker: ({
     icon,
-    alt,
     eventHandlers,
   }: {
     icon: { options: { html: string } };
-    alt: string;
     eventHandlers?: { click?: () => void };
   }) => (
-    <button
-      type="button"
+    <div
       data-testid="map-marker"
-      aria-label={alt}
+      // Leaflet's own `keyboard: true` default puts `tabindex="0"` on `.leaflet-marker-icon`,
+      // so the marker element is the focus target the sheet has to hand focus back to.
+      tabIndex={0}
       onClick={() => eventHandlers?.click?.()}
       dangerouslySetInnerHTML={{ __html: icon.options.html }}
     />
@@ -102,9 +108,23 @@ describe('the group map', () => {
     expect(within(markers[0]!).getByTestId('cluster-count')).toHaveTextContent('2');
     expect(within(markers[1]!).queryByTestId('cluster-count')).not.toBeInTheDocument();
 
-    // The label reads as iOS's `ClusterPin.accessibilityLabel`: name, count, place.
-    expect(markers[0]).toHaveAccessibleName('Linh, 2 mục ghi, Hồ bơi Lam Sơn');
-    expect(markers[1]).toHaveAccessibleName('Trang, Hồ bơi Lam Sơn');
+    // The marker reads as one button — iOS's `.accessibilityElement(children: .combine)` —
+    // labelled the way `ClusterPin.accessibilityLabel` composes it: name, count, place. The
+    // initials and the count are hidden beneath it so it is not read as "L 2".
+    expect(within(markers[0]!).getByRole('button')).toHaveAccessibleName(
+      'Linh, 2 mục ghi, Hồ bơi Lam Sơn',
+    );
+    expect(within(markers[1]!).getByRole('button')).toHaveAccessibleName(
+      'Trang, Hồ bơi Lam Sơn',
+    );
+    expect(within(markers[0]!).getByTestId('cluster-avatar')).toHaveAttribute(
+      'aria-hidden',
+      'true',
+    );
+    expect(within(markers[0]!).getByTestId('cluster-count')).toHaveAttribute(
+      'aria-hidden',
+      'true',
+    );
 
     const tiles = screen.getByTestId('tile-layer');
     expect(tiles).toHaveAttribute('data-url', 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png');
@@ -181,6 +201,35 @@ describe('the group map', () => {
     });
   });
 
+  it('is modal: focus moves in, is trapped, the page locks and focus comes back', async () => {
+    renderMap(stubApi(() => Promise.resolve(PINS)));
+    const markers = await screen.findAllByTestId('map-marker');
+    const opener = markers[0]!;
+    opener.focus();
+
+    await userEvent.click(markers[0]!);
+    const sheet = await screen.findByTestId('cluster-sheet');
+    expect(document.activeElement).toBe(sheet);
+    expect(document.body).toHaveStyle({ overflow: 'hidden' });
+
+    // Tab off the last control inside the panel wraps to the first, never out to the map.
+    const inside = within(sheet).getAllByRole('button');
+    const first = inside[0]!;
+    const last = inside[inside.length - 1]!;
+    last.focus();
+    fireEvent.keyDown(document, { key: 'Tab' });
+    expect(document.activeElement).toBe(first);
+    fireEvent.keyDown(document, { key: 'Tab', shiftKey: true });
+    expect(document.activeElement).toBe(last);
+
+    fireEvent.keyDown(document, { key: 'Escape' });
+    await waitFor(() => {
+      expect(screen.queryByTestId('cluster-sheet')).not.toBeInTheDocument();
+    });
+    expect(document.body.style.overflow).toBe('');
+    expect(document.activeElement).toBe(opener);
+  });
+
   it('shows the catalog empty state when nobody has shared a place', async () => {
     renderMap(stubApi(() => Promise.resolve([])));
     expect(await screen.findByText('Chưa có địa điểm nào được chia sẻ.')).toBeInTheDocument();
@@ -207,12 +256,12 @@ describe('the group map', () => {
     expect(escapeHtml('<img src=x onerror=alert(1)>')).toBe(
       '&lt;img src=x onerror=alert(1)&gt;',
     );
-    const html = clusterMarkerHtml({
-      id: 'x',
-      center: { lat: 0, lng: 0 },
-      pins: [pin('x', 0, 0, '<script>')],
-    });
+    const html = clusterMarkerHtml(
+      { id: 'x', center: { lat: 0, lng: 0 }, pins: [pin('x', 0, 0, '<script>')] },
+      '<script>alert(1)</script>, Hồ bơi "Lam Sơn"',
+    );
+    // Both seams: the initials in the body and the composed name in the aria-label.
     expect(html).not.toContain('<script>');
-    expect(html).toContain('&lt;');
+    expect(html).toContain('aria-label="&lt;script&gt;alert(1)&lt;/script&gt;, Hồ bơi &quot;Lam Sơn&quot;"');
   });
 });
