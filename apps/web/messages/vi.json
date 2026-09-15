@@ -156,7 +156,11 @@
     "streakBonusValue": "Thưởng chuỗi: +{0}",
     "capReached": "Đã đủ {0} {1} — mục này không cộng thêm điểm.",
     "capDone": "đã đủ {0}",
-    "alreadyCounted": "Đã tính vào tổng điểm của bạn."
+    "alreadyCounted": "Đã tính vào tổng điểm của bạn.",
+    "celebration": "Đã ghi nhận +{0} điểm!",
+    "distanceApprox": "≈ {0} m",
+    "photoAlt": "Ảnh hoạt động vừa ghi nhận",
+    "placeSheetLabel": "Địa điểm của hoạt động"
   },
   "leaderboard": {
     "title": "Xếp hạng",

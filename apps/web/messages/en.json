@@ -156,7 +156,11 @@
     "streakBonusValue": "Streak bonus: +{0}",
     "capReached": "You've hit your {0} limit for {1} — this one earns no extra points.",
     "capDone": "Done for {0}",
-    "alreadyCounted": "Already counted toward your total."
+    "alreadyCounted": "Already counted toward your total.",
+    "celebration": "Tracked, +{0} points!",
+    "distanceApprox": "≈ {0} m away",
+    "photoAlt": "The activity photo you just tracked",
+    "placeSheetLabel": "The activity's place"
   },
   "leaderboard": {
     "title": "Leaderboard",

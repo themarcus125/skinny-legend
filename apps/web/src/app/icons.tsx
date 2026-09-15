@@ -175,3 +175,55 @@ export function EqualGlyph(props: GlyphProps) {
     </Glyph>
   );
 }
+
+/** The place chip's marker (`mappin.circle.fill` on iOS, drawn as an outline here). */
+export function MapPinGlyph(props: GlyphProps) {
+  return (
+    <Glyph {...props}>
+      <path d="M19 10.5c0 5.25-7 11-7 11s-7-5.75-7-11a7 7 0 1 1 14 0z" />
+      <circle cx="12" cy="10.5" r="2.5" />
+    </Glyph>
+  );
+}
+
+/** The AI verdict card's mark (`sparkles` on iOS). */
+export function SparklesGlyph(props: GlyphProps) {
+  return (
+    <Glyph {...props}>
+      <path d="m12 3.5 1.85 4.65L18.5 10l-4.65 1.85L12 16.5l-1.85-4.65L5.5 10l4.65-1.85z" />
+      <path d="M18 16.5l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z" />
+    </Glyph>
+  );
+}
+
+/** A verdict the vision model could not read (`questionmark.circle.fill` on iOS). */
+export function QuestionGlyph(props: GlyphProps) {
+  return (
+    <Glyph {...props}>
+      <circle cx="12" cy="12" r="8.75" />
+      <path d="M9.75 9.5a2.25 2.25 0 1 1 2.75 2.2v1.55" />
+      <path d="M12.5 16.4h.01" />
+    </Glyph>
+  );
+}
+
+/** Dismisses the photo or the sheet (`xmark` on iOS). */
+export function CloseGlyph(props: GlyphProps) {
+  return (
+    <Glyph strokeWidth={2.25} {...props}>
+      <path d="M7 7l10 10" />
+      <path d="M17 7 7 17" />
+    </Glyph>
+  );
+}
+
+/** The library button's mark (`photo.on.rectangle` on iOS). */
+export function PhotoStackGlyph(props: GlyphProps) {
+  return (
+    <Glyph {...props}>
+      <rect x="3.25" y="6.75" width="14" height="11" rx="2" />
+      <path d="M6.75 17.75 11 13l3 3 2-2 3.5 3.5" />
+      <path d="M7.75 6.75V5.5a1.75 1.75 0 0 1 1.75-1.75h9.25A1.75 1.75 0 0 1 20.5 5.5v9.25" />
+    </Glyph>
+  );
+}

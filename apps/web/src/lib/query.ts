@@ -23,6 +23,8 @@ export const queryKeys = {
   myEntries: ['entries', 'mine'] as const,
   userEntries: (id: string) => ['entries', 'user', id] as const,
   me: ['me'] as const,
+  /** `GET /places/nearby` for one fix; the API caches by cell, so the key is the raw pair. */
+  places: (lat: number, lng: number) => ['places', lat, lng] as const,
 };
 
 export function makeQueryClient(): QueryClient {

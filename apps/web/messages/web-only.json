@@ -1,9 +1,24 @@
 {
-  "meta.appName": { "vi": "Skinny Legend", "en": "Skinny Legend" },
-  "auth.wordmark": { "vi": "Operation\nSkinny Legend", "en": "Operation\nSkinny Legend" },
-  "nav.tabBar": { "vi": "Điều hướng chính", "en": "Main navigation" },
-  "nav.primaryAction": { "vi": "Ghi nhận hoạt động", "en": "Track an activity" },
-  "common.offline": { "vi": "Đang ngoại tuyến", "en": "Offline" },
+  "meta.appName": {
+    "vi": "Skinny Legend",
+    "en": "Skinny Legend"
+  },
+  "auth.wordmark": {
+    "vi": "Operation\nSkinny Legend",
+    "en": "Operation\nSkinny Legend"
+  },
+  "nav.tabBar": {
+    "vi": "Điều hướng chính",
+    "en": "Main navigation"
+  },
+  "nav.primaryAction": {
+    "vi": "Ghi nhận hoạt động",
+    "en": "Track an activity"
+  },
+  "common.offline": {
+    "vi": "Đang ngoại tuyến",
+    "en": "Offline"
+  },
   "errors.forbidden": {
     "vi": "Bạn không có quyền xem nội dung này.",
     "en": "You don't have access to this."
@@ -32,23 +47,60 @@
     "vi": "Gửi thông báo thất bại, hãy thử lại sau.",
     "en": "Sending the notification failed, please try again later."
   },
-  "account.theme": { "vi": "Giao diện", "en": "Appearance" },
+  "account.theme": {
+    "vi": "Giao diện",
+    "en": "Appearance"
+  },
   "account.themeHint": {
     "vi": "Chọn nền sáng hoặc nền tối cho ứng dụng",
     "en": "Pick a light or dark background for the app"
   },
-  "account.themeLight": { "vi": "Sáng", "en": "Light" },
-  "account.themeDark": { "vi": "Tối", "en": "Dark" },
-  "account.history": { "vi": "Lịch sử hoạt động", "en": "Activity history" },
+  "account.themeLight": {
+    "vi": "Sáng",
+    "en": "Light"
+  },
+  "account.themeDark": {
+    "vi": "Tối",
+    "en": "Dark"
+  },
+  "account.history": {
+    "vi": "Lịch sử hoạt động",
+    "en": "Activity history"
+  },
   "push.unsupported": {
     "vi": "Trình duyệt này chưa hỗ trợ thông báo đẩy.",
     "en": "This browser doesn't support push notifications."
   },
-  "pwa.installTitle": { "vi": "Thêm vào màn hình chính", "en": "Add to Home Screen" },
+  "pwa.installTitle": {
+    "vi": "Thêm vào màn hình chính",
+    "en": "Add to Home Screen"
+  },
   "pwa.installBody": {
     "vi": "Mở trình đơn Chia sẻ của Safari rồi chọn “Thêm vào MH chính” để nhận nhắc nhở.",
     "en": "Open Safari's Share menu and choose “Add to Home Screen” to get reminders."
   },
-  "pwa.updateAvailable": { "vi": "Đã có bản cập nhật mới.", "en": "A new version is available." },
-  "pwa.updateAction": { "vi": "Tải lại ngay", "en": "Reload now" }
+  "pwa.updateAvailable": {
+    "vi": "Đã có bản cập nhật mới.",
+    "en": "A new version is available."
+  },
+  "pwa.updateAction": {
+    "vi": "Tải lại ngay",
+    "en": "Reload now"
+  },
+  "track.celebration": {
+    "vi": "Đã ghi nhận +{0} điểm!",
+    "en": "Tracked, +{0} points!"
+  },
+  "track.distanceApprox": {
+    "vi": "≈ {0} m",
+    "en": "≈ {0} m away"
+  },
+  "track.photoAlt": {
+    "vi": "Ảnh hoạt động vừa ghi nhận",
+    "en": "The activity photo you just tracked"
+  },
+  "track.placeSheetLabel": {
+    "vi": "Địa điểm của hoạt động",
+    "en": "The activity's place"
+  }
 }
