@@ -6,6 +6,7 @@ import {
   RELOAD_STAMP_KEY,
   RouteError,
   autoReloadOnChunkError,
+  describeRouteError,
   isChunkLoadError,
   shouldAutoReload,
 } from './route-error';
@@ -111,5 +112,16 @@ describe('RouteError', () => {
     await screen.findByText('Cần tải lại ứng dụng');
     expect(reload).toHaveBeenCalledTimes(1);
     expect(sessionStorage.getItem(RELOAD_STAMP_KEY)).not.toBeNull();
+  });
+});
+
+describe('describeRouteError', () => {
+  it('reduces a failure to one reportable line', () => {
+    expect(describeRouteError(chunkError())).toBe(
+      'TypeError: Failed to fetch dynamically imported module: /assets/trends-abc123.js',
+    );
+    expect(describeRouteError(new Error('render exploded'))).toBe('render exploded');
+    expect(describeRouteError({ status: 404, statusText: 'Not Found' })).toBe('404 Not Found');
+    expect(describeRouteError('plain')).toBe('plain');
   });
 });

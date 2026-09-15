@@ -1,9 +1,10 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouteError } from 'react-router';
 import { useTranslations } from 'use-intl';
 import { EmptyState, SurfaceCard } from '@skinny/ui';
 import { QuestionGlyph } from '@/app/icons';
 import { Button } from '@/ui/button';
+import { recoverFromStaleWorker } from './sw-update';
 
 /**
  * The router's last resort, and in practice a deploy story.
@@ -81,15 +82,36 @@ export function autoReloadOnChunkError(error: unknown, reload: () => void, now =
   return true;
 }
 
+/** One line of the failure, for the screen: enough to report, never a stack. */
+export function describeRouteError(error: unknown): string {
+  if (typeof error !== 'object' || error === null) return String(error);
+  const { name, message, status, statusText } = error as {
+    name?: unknown;
+    message?: unknown;
+    status?: unknown;
+    statusText?: unknown;
+  };
+  if (typeof status === 'number') return `${status} ${typeof statusText === 'string' ? statusText : ''}`.trim();
+  const head = typeof name === 'string' && name !== 'Error' ? `${name}: ` : '';
+  const line = `${head}${typeof message === 'string' ? message : ''}`.trim();
+  return line || (typeof name === 'string' ? name : 'Error');
+}
+
 export function RouteError() {
   const error = useRouteError();
   const t = useTranslations();
+  const [isRecovering, setRecovering] = useState(false);
 
   useEffect(() => {
     autoReloadOnChunkError(error, () => {
       window.location.reload();
     });
   }, [error]);
+
+  const recover = () => {
+    setRecovering(true);
+    void recoverFromStaleWorker().finally(() => setRecovering(false));
+  };
 
   return (
     <main className="flex min-h-dvh flex-col items-center justify-center gap-6 px-6">
@@ -100,16 +122,17 @@ export function RouteError() {
           description={t('pwa.crashBody')}
           className="px-0 py-2"
         />
+        {/* The failure itself, small: what a screenshot of this screen needs to be actionable. */}
+        <p
+          data-testid="route-error-detail"
+          className="type-caption text-foreground-subtle border-border mt-2 border-t pt-3 break-words"
+        >
+          {describeRouteError(error)}
+        </p>
       </SurfaceCard>
 
-      <Button
-        size="lg"
-        fullWidth
-        onClick={() => {
-          window.location.reload();
-        }}
-      >
-        {t('pwa.updateAction')}
+      <Button size="lg" fullWidth disabled={isRecovering} onClick={recover}>
+        {isRecovering ? t('common.loading') : t('pwa.updateAction')}
       </Button>
     </main>
   );

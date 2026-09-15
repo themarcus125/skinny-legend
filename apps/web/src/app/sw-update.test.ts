@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { checkForWorkerUpdates, reloadOnWorkerTakeover } from './sw-update';
+import { checkForWorkerUpdates, recoverFromStaleWorker, reloadOnWorkerTakeover } from './sw-update';
 
 /** Enough of `ServiceWorkerContainer` for the listener: the controller, and the event target. */
 function container(controller: object | null) {
@@ -73,18 +73,20 @@ describe('checkForWorkerUpdates', () => {
     return { update, serviceWorker, doc, win, timers };
   }
 
-  it('asks the registration for an update when the app returns to the foreground', async () => {
+  it('checks once as soon as the registration is ready, then on every return to the foreground', async () => {
     const { update, serviceWorker, doc, win } = harness();
     checkForWorkerUpdates({ serviceWorker }, { document: doc, window: win as unknown as Window });
     await Promise.resolve();
+    // The boot-time check: WebKit will not look for a new worker on a reload by itself.
+    expect(update).toHaveBeenCalledTimes(1);
 
     doc.dispatchEvent(new Event('visibilitychange'));
-    expect(update).toHaveBeenCalledTimes(1);
+    expect(update).toHaveBeenCalledTimes(2);
 
     // Going *to* the background is not a return.
     doc.visibilityState = 'hidden';
     doc.dispatchEvent(new Event('visibilitychange'));
-    expect(update).toHaveBeenCalledTimes(1);
+    expect(update).toHaveBeenCalledTimes(2);
   });
 
   it('also checks when the connection comes back, and on a timer while resident', async () => {
@@ -93,10 +95,10 @@ describe('checkForWorkerUpdates', () => {
     await Promise.resolve();
 
     win.dispatchEvent(new Event('online'));
-    expect(update).toHaveBeenCalledTimes(1);
+    expect(update).toHaveBeenCalledTimes(2);
     expect(win.setInterval).toHaveBeenCalledWith(expect.any(Function), 5000);
     timers[0]!();
-    expect(update).toHaveBeenCalledTimes(2);
+    expect(update).toHaveBeenCalledTimes(3);
   });
 
   it('swallows a failed check and stops listening once detached', async () => {
@@ -109,11 +111,73 @@ describe('checkForWorkerUpdates', () => {
 
     stop();
     doc.dispatchEvent(new Event('visibilitychange'));
-    expect(update).toHaveBeenCalledTimes(1);
+    expect(update).toHaveBeenCalledTimes(2);
     expect(win.clearInterval).toHaveBeenCalledWith(1);
   });
 
   it('is a no-op in a browser without service workers', () => {
     expect(() => checkForWorkerUpdates({})()).not.toThrow();
+  });
+});
+
+describe('recoverFromStaleWorker', () => {
+  function harness(options: { takeover?: boolean } = {}) {
+    const update = vi.fn(() => Promise.resolve());
+    const unregister = vi.fn(() => Promise.resolve(true));
+    const registration = { update, unregister } as unknown as ServiceWorkerRegistration;
+    const target = new EventTarget();
+    const serviceWorker = Object.assign(target, {
+      controller: {},
+      getRegistration: vi.fn(() => Promise.resolve(registration)),
+      getRegistrations: vi.fn(() => Promise.resolve([registration])),
+    }) as unknown as ServiceWorkerContainer;
+    const deleted: string[] = [];
+    const caches = {
+      keys: vi.fn(() => Promise.resolve(['workbox-precache-v2', 'thumbs'])),
+      delete: vi.fn((key: string) => {
+        deleted.push(key);
+        return Promise.resolve(true);
+      }),
+    };
+    const reload = vi.fn();
+    // The wait is where a new worker would claim the page; the harness decides whether one does.
+    const wait = vi.fn(() => {
+      if (options.takeover) target.dispatchEvent(new Event('controllerchange'));
+      return Promise.resolve();
+    });
+    return { update, unregister, serviceWorker, caches, deleted, reload, wait };
+  }
+
+  it('asks for an update and leaves the takeover reload to do the rest when a new worker arrives', async () => {
+    const { update, unregister, serviceWorker, caches, reload, wait } = harness({ takeover: true });
+    const result = await recoverFromStaleWorker({ serviceWorker }, { caches, reload, wait });
+    expect(result).toBe('takeover');
+    expect(update).toHaveBeenCalledTimes(1);
+    expect(unregister).not.toHaveBeenCalled();
+    expect(caches.delete).not.toHaveBeenCalled();
+    expect(reload).not.toHaveBeenCalled();
+  });
+
+  it('otherwise drops every worker and cache and reloads from the network', async () => {
+    const { update, unregister, serviceWorker, caches, deleted, reload, wait } = harness();
+    const result = await recoverFromStaleWorker({ serviceWorker }, { caches, reload, wait });
+    expect(result).toBe('reset');
+    expect(update).toHaveBeenCalledTimes(1);
+    expect(unregister).toHaveBeenCalledTimes(1);
+    expect(deleted).toEqual(['workbox-precache-v2', 'thumbs']);
+    expect(reload).toHaveBeenCalledTimes(1);
+  });
+
+  it('still reloads when the update check itself blows up', async () => {
+    const { serviceWorker, caches, reload, wait } = harness();
+    (serviceWorker.getRegistration as unknown as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('boom'));
+    await recoverFromStaleWorker({ serviceWorker }, { caches, reload, wait });
+    expect(reload).toHaveBeenCalledTimes(1);
+  });
+
+  it('just reloads in a browser without service workers', async () => {
+    const reload = vi.fn();
+    expect(await recoverFromStaleWorker({}, { reload })).toBe('reset');
+    expect(reload).toHaveBeenCalledTimes(1);
   });
 });
