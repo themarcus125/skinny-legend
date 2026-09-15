@@ -110,20 +110,22 @@ export default defineConfig({
          * in, since everything in `public/` is copied into the build output.
          */
         /*
-         * `globPatterns` sweeps everything in `dist`; these three are the exceptions.
+         * `globPatterns` sweeps everything in `dist`; these two are the exceptions.
          *
          * 1. `firebase-messaging-sw.js` — the site's SECOND service worker (see above).
-         * 2. `assets/firebase-*.js` — the Firebase SDK, ~350 KB across auth and messaging, which
-         *    the app only ever loads dynamically (`src/push/messaging.ts`, `src/auth/firebase.ts`)
-         *    and which a member who never enables reminders never fetches at all. Precaching it
-         *    would make every install pay for it up front and re-download it on every deploy. The
-         *    chunks are named by the `manualChunks` rule in `build.rollupOptions` below precisely
-         *    so this pattern can name them; without it Rollup calls them `index.esm-<hash>.js`.
-         * 3. `signin-bg.mp4` — a 2 MB decoration behind the sign-in screen, shown once. It is
+         * 2. `signin-bg.mp4` — a 2 MB decoration behind the sign-in screen, shown once. It is
          *    already outside `globPatterns` (no `mp4`), and named here so a later pattern edit
          *    cannot quietly pull a video into the precache manifest.
+         *
+         * `assets/firebase-*.js` used to be a third exception, and must not be again: a cold
+         * OFFLINE relaunch needs that chunk before it can do anything at all. `src/auth/firebase.ts`
+         * imports it to restore the session (`initializeAuth` + `indexedDBLocalPersistence`), and
+         * Pages serves `/assets/*` with `max-age=0, must-revalidate`, so an uncached chunk simply
+         * fails to load offline — `observe()` reports signed-out and the member lands on the
+         * sign-in screen with a full day of persisted data sitting invisible behind it. One
+         * 53 KB-gzip chunk in the precache is the price of the offline launch the spec asks for.
          */
-        globIgnores: ['**/firebase-messaging-sw.js', '**/firebase-*.js', '**/signin-bg.mp4'],
+        globIgnores: ['**/firebase-messaging-sw.js', '**/signin-bg.mp4'],
         navigateFallback: 'index.html',
         // Never hand an API URL the shell: those are fetches, not navigations, but a bad
         // denylist entry is cheaper to reason about than a mis-served HTML body.

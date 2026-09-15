@@ -20,7 +20,7 @@ this repository, then:
 | --- | --- |
 | Framework preset | **None** |
 | **Root directory** | **`apps/web`** |
-| Build command | `pnpm install --frozen-lockfile && pnpm --filter @skinny/shared build && pnpm --filter @skinny/web build` |
+| Build command | `pnpm install --frozen-lockfile && pnpm --filter @skinny/shared build && VITE_BUILD_ID=$CF_PAGES_COMMIT_SHA pnpm --filter @skinny/web build` (the prefix is the only place `VITE_BUILD_ID` can be set; see §2) |
 | Build output directory | `apps/web/dist` |
 | Node.js version | **22** — set `NODE_VERSION=22` as a build environment variable, or commit `.node-version`. Pages defaults to an older Node and the build fails on Vite 8. |
 | Production branch | `main` |
@@ -48,7 +48,7 @@ authoritative list is `apps/web/src/vite-env.d.ts`.
 | `VITE_FIREBASE_MESSAGING_SENDER_ID` | yes | Same config (`messagingSenderId`). Web push does not work without it. |
 | `VITE_FIREBASE_VAPID_KEY` | yes for push | Firebase console → Project settings → **Cloud Messaging** → *Web configuration* → **Web Push certificates** → the "Key pair" value (generate one if the list is empty). Without it `getToken()` fails and the reminders toggle stays off. |
 | `VITE_MOCK` | preview only | `1` on preview branches to run the whole app against the seeded mock client with no API and no Firebase. **Never `1` in production.** |
-| `VITE_BUILD_ID` | no | `$CF_PAGES_COMMIT_SHA`. Busts the persisted query cache on a new build (`src/lib/persist.ts`); without it a returning member can hydrate a 24-hour-old snapshot shaped by the previous release. |
+| `VITE_BUILD_ID` | no | **Not settable here** — the dashboard's env table stores values literally, so `$CF_PAGES_COMMIT_SHA` would be inlined as that literal text and never change. Put it on the *build command* instead: `VITE_BUILD_ID=$CF_PAGES_COMMIT_SHA pnpm --filter @skinny/web build`. Busts the persisted query cache on a new build (`src/lib/persist.ts`); without it a returning member can hydrate a 24-hour-old snapshot shaped by the previous release. |
 | `VITE_R2_PUBLIC_HOST` | no | Only if the thumbnails are served from a custom domain instead of `*.r2.dev`: the bare hostname (no scheme), so the service worker's thumbnail cache rule matches it. |
 | `NODE_VERSION` | yes | `22` (see above) |
 
@@ -83,16 +83,19 @@ query string from the *cache key* only — the network request keeps its signatu
 there and inlined into `dist/sw.js` at build time. `isThumbnailHost` in the same file is what
 `VITE_R2_PUBLIC_HOST` feeds.
 
-**Three things are deliberately not precached.** `globIgnores` in `apps/web/vite.config.ts`:
+**Two things are deliberately not precached.** `globIgnores` in `apps/web/vite.config.ts`:
 
 - `firebase-messaging-sw.js` — the site's *second* service worker, registered at its own narrower
   scope by `src/push/messaging.ts`. A precached copy would let a stale revision keep answering
   pushes after a deploy.
-- `assets/firebase-*.js` — the Firebase SDK (~190 KB gzipped-to-53 KB in one chunk), loaded
-  dynamically and never fetched at all by a member who does not enable reminders. Precaching it
-  would make every install pay for it up front and re-download it on every deploy. The
-  `manualChunks` rule in the same file is what gives those chunks a nameable prefix.
 - `signin-bg.mp4` — a decoration shown once, on a screen a signed-in member never sees again.
+
+**`assets/firebase-*.js` IS precached, on purpose.** It is ~190 KB (53 KB gzipped) in one chunk
+and it is what a cold *offline* relaunch needs first: `src/auth/firebase.ts` imports it to restore
+the session, and Pages serves `/assets/*` with `max-age=0, must-revalidate`, so a chunk that is
+not in the precache cannot load without a network — the member would land on the sign-in screen
+with a day of persisted data invisible behind it (checklist step 7.5). The `manualChunks` rule in
+`vite.config.ts` is what gives the chunk its nameable prefix.
 
 After a deploy, check the precache size in the build log (`PWA v1.3.0 … precache N entries`); a
 jump of hundreds of KiB usually means a new pattern swept one of these back in.
