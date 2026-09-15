@@ -29,22 +29,51 @@ export interface ModalSheetOptions {
  * keystroke — which is exactly the bug Task 8's review caught in the verdict sheet's place
  * field. Extracted from `features/track/verdict-sheet.tsx` when the map's cluster sheet needed
  * the same four behaviours; both sheets now share this one copy.
+ *
+ * **Stacking.** Sheets nest — the Account history opens a delete confirmation *inside* the verdict
+ * sheet — so the hooks keep a module-level stack and only the topmost one acts: one Escape closes
+ * one sheet, Tab cycles inside the sheet the reader is actually in, and the page's scroll is
+ * restored when the stack empties rather than when the inner sheet unmounts (which would let the
+ * page behind scroll again while the outer sheet is still up).
  */
+
+/** The open sheets, innermost last. Module-level: modality is a property of the document. */
+const stack: symbol[] = [];
+/** The page's own `overflow`, captured when the first sheet opened and restored when the last closes. */
+let restoreOverflow: string | null = null;
+
+/** Exported for tests only — a leaked entry would make every later sheet non-dismissable. */
+export function openSheetCount(): number {
+  return stack.length;
+}
+
 export function useModalSheet({ panelRef, onDismiss }: ModalSheetOptions): void {
   const dismissRef = useRef(onDismiss);
+  // One identity per mounted sheet, stable across renders.
+  const token = useRef<symbol>(undefined as unknown as symbol);
+  token.current ??= Symbol('modal-sheet');
   useEffect(() => {
     dismissRef.current = onDismiss;
   }, [onDismiss]);
 
   // Mount-only: focus in, page locked; unmount: page restored, focus back to the opener.
   useEffect(() => {
+    const mine = token.current;
     const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     panelRef.current?.focus();
+    stack.push(mine);
     const body = document.body;
-    const previousOverflow = body.style.overflow;
-    body.style.overflow = 'hidden';
+    if (stack.length === 1) {
+      restoreOverflow = body.style.overflow;
+      body.style.overflow = 'hidden';
+    }
     return () => {
-      body.style.overflow = previousOverflow;
+      const index = stack.lastIndexOf(mine);
+      if (index >= 0) stack.splice(index, 1);
+      if (stack.length === 0) {
+        body.style.overflow = restoreOverflow ?? '';
+        restoreOverflow = null;
+      }
       opener?.focus();
     };
     // `panelRef` is a stable ref object; re-running this would steal focus mid-interaction.
@@ -53,6 +82,9 @@ export function useModalSheet({ panelRef, onDismiss }: ModalSheetOptions): void 
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
+      // Only the sheet on top of the stack reacts: otherwise one Escape would close a nested
+      // confirmation *and* the sheet that opened it, and two focus traps would fight over Tab.
+      if (stack[stack.length - 1] !== token.current) return;
       if (event.key === 'Escape') {
         event.preventDefault();
         dismissRef.current();

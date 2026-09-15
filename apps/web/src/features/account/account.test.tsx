@@ -6,6 +6,7 @@ import { MemoryRouter } from 'react-router';
 import type { ApiClient } from '@skinny/api-client';
 import { createMockApiClient, makeSeed } from '@skinny/api-client/mock';
 import { ThemeProvider } from '@/app/theme-provider';
+import { openSheetCount } from '@/app/use-modal-sheet';
 import { SessionProvider } from '@/auth/session';
 import { LocaleProvider } from '@/i18n/provider';
 import { ApiError } from '@/lib/live-client';
@@ -143,7 +144,32 @@ describe('the account screen', () => {
     const dialog = await screen.findByTestId('confirm-dialog');
     await userEvent.click(within(dialog).getByRole('button', { name: 'Xoá' }));
 
-    expect(await screen.findByText('Không xoá được, hãy thử lại.')).toBeInTheDocument();
+    // Visible, not merely mounted: the banner sits on the screen, so both modals have to be gone.
+    expect(await screen.findByText('Không xoá được, hãy thử lại.')).toBeVisible();
+    expect(screen.queryByTestId('confirm-dialog')).toBeNull();
+    expect(screen.queryByTestId('verdict-sheet')).toBeNull();
+  });
+
+  it('closes only the confirmation when Escape is pressed over it', async () => {
+    renderAccount();
+
+    const rows = await screen.findAllByTestId('history-row');
+    await userEvent.click(within(rows[0]!).getByRole('button', { name: 'Không đúng?' }));
+    await userEvent.click(await screen.findByTestId('verdict-delete'));
+    expect(await screen.findByTestId('confirm-dialog')).toBeInTheDocument();
+
+    // Nested modals: only the topmost one reacts, so one Escape is one dismissal.
+    await userEvent.keyboard('{Escape}');
+    expect(screen.queryByTestId('confirm-dialog')).toBeNull();
+    expect(screen.getByTestId('verdict-sheet')).toBeInTheDocument();
+
+    // …and the sheet underneath is live again.
+    await userEvent.keyboard('{Escape}');
+    expect(screen.queryByTestId('verdict-sheet')).toBeNull();
+    // The stack empties and the page scrolls again — a leaked entry would make every later sheet
+    // in this document undismissable.
+    expect(openSheetCount()).toBe(0);
+    expect(document.body.style.overflow).toBe('');
   });
 
   it('pages the history from the footer button', async () => {

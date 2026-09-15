@@ -149,6 +149,9 @@ export function AccountHistory() {
         if (!alive.current) return;
         setIsDeleting(false);
         setDeleting(null);
+        // The banner lives on the screen, *behind* two modals — so the modals go first. Leaving
+        // the verdict sheet up would render the failure where nobody can see it.
+        setSheet(null);
         setDeleteErrorKey(describeError(error));
       });
   };
