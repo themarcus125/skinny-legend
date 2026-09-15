@@ -102,5 +102,17 @@
   "track.placeSheetLabel": {
     "vi": "Địa điểm của hoạt động",
     "en": "The activity's place"
+  },
+  "common.loadMore": {
+    "vi": "Tải thêm",
+    "en": "Load more"
+  },
+  "common.back": {
+    "vi": "Quay lại",
+    "en": "Back"
+  },
+  "leaderboard.weekLead": {
+    "vi": "Tuần này",
+    "en": "This week"
   }
 }

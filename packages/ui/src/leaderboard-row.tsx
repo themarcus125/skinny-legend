@@ -63,6 +63,9 @@ export function LeaderboardRow({
   const shared = {
     'data-testid': 'leaderboard-row',
     'data-slot': 'leaderboard-row',
+    // The rank as an attribute: a consumer asserting the competition sequence reads it off the
+    // row rather than re-parsing the rendered number.
+    'data-rank': rank,
     'data-me': isMe ? 'true' : 'false',
     className: cn(
       'flex w-full items-center gap-3 rounded-xl border p-4 text-left shadow-card',

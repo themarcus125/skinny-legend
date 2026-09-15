@@ -10,7 +10,12 @@ export const SCROLL_CONTAINER_ATTR = 'data-scroll-container';
 
 export interface LargeTitleProps {
   title: string;
-  /** Trailing controls — a filter, a "Tải lại" button — pinned beside the title. */
+  /**
+   * A leading control ahead of the title — the back button on a pushed screen such as the
+   * member detail, which is where iOS puts the navigation bar's back item.
+   */
+  leading?: ReactNode;
+  /** Trailing controls — a filter, a reload button — pinned beside the title. */
   children?: ReactNode;
 }
 
@@ -22,7 +27,7 @@ export interface LargeTitleProps {
  * `data-collapsed` is the state, exposed as an attribute so the styling is one CSS hop and the
  * behaviour is assertable without measuring fonts.
  */
-export function LargeTitle({ title, children }: LargeTitleProps) {
+export function LargeTitle({ title, leading, children }: LargeTitleProps) {
   const ref = useRef<HTMLElement>(null);
   const [collapsed, setCollapsed] = useState(false);
 
@@ -49,14 +54,17 @@ export function LargeTitle({ title, children }: LargeTitleProps) {
         collapsed ? 'pt-[calc(env(safe-area-inset-top)+0.5rem)] pb-2' : 'pt-[calc(env(safe-area-inset-top)+1.5rem)] pb-3',
       )}
     >
-      <h1
-        className={cn(
-          'min-w-0 truncate transition-[font-size,line-height] duration-200',
-          collapsed ? 'type-h3' : 'type-h1',
-        )}
-      >
-        {title}
-      </h1>
+      <div className="flex min-w-0 flex-1 items-center gap-1">
+        {leading ? <div className="-ml-2 shrink-0">{leading}</div> : null}
+        <h1
+          className={cn(
+            'min-w-0 truncate transition-[font-size,line-height] duration-200',
+            collapsed ? 'type-h3' : 'type-h1',
+          )}
+        >
+          {title}
+        </h1>
+      </div>
       {children ? <div className="shrink-0">{children}</div> : null}
     </header>
   );
