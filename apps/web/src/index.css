@@ -30,6 +30,15 @@
     text-rendering: optimizeLegibility;
     /* iOS Safari: keep the rubber band from showing the page behind the standalone shell. */
     overscroll-behavior-y: none;
+    /* No page zoom: pinch and double-tap would leave the fixed shell (tab bar, sheets) zoomed
+       and broken. Panning stays native; the map is handled below. */
+    touch-action: pan-x pan-y;
+  }
+  /* Leaflet pans and pinch-zooms the map in its own touch handlers, so its container hands
+     every gesture to it. Its stylesheet asks for `pinch-zoom`, which the html rule above would
+     veto (touch-action intersects down the tree); `none` lets Leaflet do all of it. */
+  .leaflet-container {
+    touch-action: none;
   }
   html.dark {
     color-scheme: dark;
