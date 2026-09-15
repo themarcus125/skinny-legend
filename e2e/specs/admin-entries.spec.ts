@@ -78,8 +78,20 @@ test('an entry reaches the admin list with its verdict, is rejected, and the mem
 
   const row = adminPage.locator(`[data-testid="entry-row"][data-entry-id="${entry!.id}"]`);
   await expect(row).toBeVisible();
-  // Tolerant: the verdict cell must carry text, never a particular category.
-  await expect(row.getByTestId('entry-verdict')).not.toBeEmpty();
+  // Tolerant about *which* verdict, strict about there being one. `not.toBeEmpty()` alone is
+  // vacuous: `verdictSummary` renders "Không có" (common.none) for a missing verdict row, so the
+  // cell has text either way. The real assertions are that the cell is not that none-label, and
+  // that a verdict row exists in the database keyed to this entry — "AI lỗi" (a failed call) stays
+  // legal per spec §3, and no category is ever named.
+  await expect(row.getByTestId('entry-verdict')).not.toHaveText('Không có');
+  const [verdict] = await query<{ failed: boolean; categories: string[] | null }>(
+    // Preflight R6: the model's own answer lives in `categories_json`.
+    'select failed, categories_json as categories from ai_verdicts where entry_id = $1',
+    [entry!.id],
+  );
+  expect(verdict).toBeTruthy();
+  expect(typeof verdict!.failed).toBe('boolean');
+  expect(Array.isArray(verdict!.categories)).toBe(true);
 
   await row.getByTestId('entry-reject').click();
   await expect(row.getByTestId('entry-status')).toHaveText('Đã từ chối');
@@ -89,14 +101,23 @@ test('an entry reaches the admin list with its verdict, is rejected, and the mem
   ]);
   expect(afterReject!.status).toBe('rejected');
 
-  // A rejected entry scores nothing: it drops out of the member's history feed entirely and the
-  // dashboard total can only have gone down.
+  /**
+   * Ruling: "the member's history shows the rejection and the points drop" is satisfied by two
+   * facts together, because there is no such thing as a zero-point rejected history row — a
+   * rejected entry does not appear in the member's history at all. `GET /entries/mine` filters
+   * `status != 'rejected'` and `GET /users/:id/entries` keeps only `confirmed`
+   * (apps/api/src/routes/entries.ts, routes/read.ts). So the assertions are:
+   *   1. the entry leaves the history — the row was visible before the rejection (guarded above)
+   *      and is gone after it; and
+   *   2. the member's total falls — `GET /me/dashboard`, which is where points live at all
+   *      (preflight R5).
+   * The delta is not asserted exactly: the total also carries the streak bonus, which the scorer
+   * owns independently of this entry.
+   */
   expect(await myEntryPoints(request, ha, entry!.id)).toBeNull();
+  expect(pointsBefore!).toBeGreaterThan(0);
   const totalAfter = await dashboardTotal(request, ha);
-  expect(totalAfter).toBeLessThanOrEqual(totalBefore);
-  // Not an exact delta: the total also carries the streak bonus, which the scorer owns. What the
-  // rejection must do is take the entry's own points away.
-  if (pointsBefore! > 0) expect(totalAfter).toBeLessThan(totalBefore);
+  expect(totalAfter).toBeLessThan(totalBefore);
 
   // The member's own screen reflects the rejection without a re-sign-in.
   await memberPage.reload();

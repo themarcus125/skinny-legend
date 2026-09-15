@@ -102,16 +102,22 @@ export function apiToken(m: Member): Promise<string> {
 /**
  * Closes the open verdict sheet the way its own state allows, and waits for it to detach.
  *
- * A successful verdict has already tracked the entry, so the primary is a plain "Xong" that only
- * dismisses. A real OpenRouter call may instead come back `failed` (spec §3 keeps that legal): the
- * sheet then opens on the chip picker with the primary disabled until a category is chosen, so
- * this picks `fallback` first. Playwright's own actionability wait covers the enabling.
+ * A successful verdict has already tracked the entry: the primary is a plain "Xong" that only
+ * dismisses, and this must not touch a single chip — a correction is a different test. A real
+ * OpenRouter call may instead come back `failed` (spec §3 keeps that legal), which is the one
+ * state that opens the manual picker: `initVerdictState` sets `isEditingCategories` and leaves
+ * the selection empty, so the chips render as `<button data-hit="44">` with no
+ * `data-selected="true"` among them. That structural signal is the gate — never the primary's
+ * disabled flag, which a transient saving state also raises on a perfectly successful verdict.
  */
 export async function settleVerdict(page: Page, fallback = 'exercise'): Promise<void> {
-  const primary = page.getByTestId('verdict-primary');
-  if (await primary.isDisabled()) {
-    await page.locator(`[data-testid="category-chip"][data-category="${fallback}"]`).click();
+  const sheet = page.getByTestId('verdict-sheet');
+  await sheet.waitFor();
+  const editable = sheet.locator('[data-testid="category-chip"][data-hit="44"]');
+  const selected = sheet.locator('[data-testid="category-chip"][data-selected="true"]');
+  if ((await editable.count()) > 0 && (await selected.count()) === 0) {
+    await sheet.locator(`[data-testid="category-chip"][data-category="${fallback}"]`).click();
   }
-  await primary.click();
-  await page.getByTestId('verdict-sheet').waitFor({ state: 'detached', timeout: 60_000 });
+  await page.getByTestId('verdict-primary').click();
+  await sheet.waitFor({ state: 'detached', timeout: 60_000 });
 }

@@ -44,6 +44,11 @@ test.beforeAll(async () => {
 test('a photo upload produces a verdict, points, and a fetchable R2 object', async ({ page, request }) => {
   const ha = await member({ name: 'Hà', email: 'ha-track@example.com', status: 'active' });
   await signInWeb(page, ha);
+  // Home first: `today-points` before the upload is the baseline the tracked entry must not
+  // undercut.
+  await page.goto(`${WEB_URL}/`);
+  const pointsBefore = Number(await page.getByTestId('today-points').innerText());
+  expect(Number.isFinite(pointsBefore)).toBe(true);
   await page.goto(`${WEB_URL}/track`);
 
   const presign = page.waitForResponse((r) => r.url().endsWith('/uploads/presign') && r.ok());
@@ -52,7 +57,15 @@ test('a photo upload produces a verdict, points, and a fetchable R2 object', asy
   // The key must land under the run's own prefix, never in production's namespace.
   expect(presignBody.key.startsWith('e2e/photos/')).toBe(true);
 
-  // The analysing state is transient; the sheet is the assertion that matters.
+  // The screen must show it is working before the sheet arrives: the `uploading` phase renders a
+  // ProgressBar (`role="progressbar"`, packages/ui/src/progress-bar.tsx) and the `analyzing` phase
+  // the `track-analyzing` card. Which of the two is caught depends on how fast the PUT completes —
+  // a fixture-sized upload can finish in well under a frame — so the assertion is that one of the
+  // two busy states is on screen, never that a particular one was observed.
+  const busy = page.getByRole('progressbar').or(page.getByTestId('track-analyzing'));
+  await expect(busy.first()).toBeVisible();
+
+  // …and the sheet follows it.
   await page.getByTestId('verdict-sheet').waitFor({ timeout: 90_000 });
   await expect(page.getByTestId('verdict-points')).toHaveText(/^\d+$/);
 
@@ -96,6 +109,31 @@ test('a photo upload produces a verdict, points, and a fetchable R2 object', asy
   const object = await request.get(objectUrl!);
   expect(object.status()).toBe(200);
   expect(object.headers()['content-type']).toContain('image');
+
+  // Home reflects the entry. `today-points` can only have gone up (or stayed put, if the entry
+  // scored 0 — legal), the "nothing today" line is gone, and the Today card carries a chip for
+  // every category the entry actually ended up with. The checklist is `capsHit`, not "done today",
+  // so it is asserted as present-and-well-formed rather than ticked by a single entry.
+  const stored = await query<{ category: string }>(
+    'select category from entry_categories where entry_id = $1',
+    [entry!.id],
+  );
+  await page.goto(`${WEB_URL}/`);
+  await expect(page.getByTestId('today-points')).toHaveText(/^\d+$/);
+  const pointsAfter = Number(await page.getByTestId('today-points').innerText());
+  expect(pointsAfter).toBeGreaterThanOrEqual(pointsBefore);
+  expect(stored.length).toBeGreaterThan(0);
+  await expect(page.getByTestId('today-empty')).toHaveCount(0);
+  for (const { category } of stored) {
+    await expect(page.locator(`[data-testid="checklist-row"][data-category="${category}"]`)).toHaveAttribute(
+      'data-done',
+      /^(true|false)$/,
+    );
+    // The Today card is the only place the overview renders chips (screens/overview.tsx:115).
+    await expect(
+      page.locator(`[data-testid="category-chip"][data-category="${category}"]`),
+    ).toBeVisible();
+  }
 });
 
 test('correcting the category recalculates the points', async ({ page, request }) => {
