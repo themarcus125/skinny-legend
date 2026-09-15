@@ -94,7 +94,18 @@ export function WeeklyBars({ weeks }: { weeks: TrendsResponse['weeks'] }) {
         className="h-[190px] w-full"
       >
       <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={data} margin={{ top: 8, right: 4, bottom: 0, left: 4 }} barGap={2}>
+        {/*
+         * Recharts 3.10 defaults `accessibilityLayer` on, which makes the `<svg>` a
+         * `role="application"` with `tabIndex=0` — a focusable stop inside a wrapper that is
+         * already `role="img"`, i.e. a presentational subtree. The sr-only table below is the
+         * reader's route to these numbers, so the layer is turned off rather than nested.
+         */}
+        <BarChart
+          data={data}
+          margin={{ top: 8, right: 4, bottom: 0, left: 4 }}
+          barGap={2}
+          accessibilityLayer={false}
+        >
           <XAxis
             dataKey="label"
             tickLine={false}

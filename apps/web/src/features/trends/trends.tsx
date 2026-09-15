@@ -82,7 +82,7 @@ export function Trends() {
                   <div
                     data-testid="bars-fallback"
                     aria-busy="true"
-                    className="bg-surface-2 h-[220px] animate-pulse rounded-xl"
+                    className="bg-surface-2 h-[190px] animate-pulse rounded-xl"
                   />
                 }
               >

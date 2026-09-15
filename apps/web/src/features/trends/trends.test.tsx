@@ -157,6 +157,11 @@ describe('the trends screen', () => {
       name: 'Điểm theo tuần: Bạn, Trung bình nhóm',
     });
     expect(chart).toBeInTheDocument();
+    // Nothing inside the picture may take focus or claim a role of its own: Recharts' own
+    // accessibility layer would otherwise put a `role="application"` tabstop under `role="img"`.
+    expect(chart.querySelector('[role="application"]')).toBeNull();
+    expect(chart.querySelector('[tabindex]:not([tabindex="-1"])')).toBeNull();
+
     const table = screen.getByTestId('weekly-bars-table');
     expect(within(table).getAllByRole('columnheader').map((cell) => cell.textContent)).toEqual([
       'Tuần',
