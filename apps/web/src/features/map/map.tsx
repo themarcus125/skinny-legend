@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import L from 'leaflet';
 import { MapContainer, Marker, TileLayer, useMap } from 'react-leaflet';
-import { useNavigate } from 'react-router';
+import { useNavigate, useSearchParams } from 'react-router';
 import { useTranslations } from 'use-intl';
 import { AlertBanner, EmptyState, initials } from '@skinny/ui';
 import { ChevronRightGlyph, CloseGlyph, MapPinGlyph } from '@/app/icons';
@@ -21,6 +21,15 @@ export const MAP_DAYS = 30;
 /** District 1, HCMC — where the map sits before any pin has landed. */
 const HCMC_CENTER: [number, number] = [10.7769, 106.7009];
 const INITIAL_ZOOM = 12;
+/**
+ * Where the camera lands when the map was opened from a row's location (`?entry=…`): close
+ * enough to read the street the entry sits on, and short of `fitBounds`'s 16 so the neighbouring
+ * pins are still on screen — arriving from one place must not hide the rest of the group.
+ */
+const FOCUS_ZOOM = 15;
+
+/** The search param a location tap carries — see `features/map/place-button.tsx`. */
+export const ENTRY_PARAM = 'entry';
 
 /** The marker's avatar diameter, matching iOS's `ClusterPin`. */
 const MARKER_SIZE = 36;
@@ -82,24 +91,35 @@ function clusterIcon(cluster: MapCluster): L.DivIcon {
 }
 
 /**
- * Fits the viewport to every cluster **once**, on the first load that has pins — iOS's
- * `fitCameraIfNeeded`. A manual pan or zoom afterwards, and the toolbar's "Tải lại", must never
- * yank the map back, so the guard is a ref rather than a dependency.
+ * Places the camera **once**, on the first load that has pins — iOS's `fitCameraIfNeeded`. A
+ * manual pan or zoom afterwards, and the toolbar's "Tải lại", must never yank the map back, so
+ * the guard is a ref rather than a dependency.
+ *
+ * With a `focus` cluster (the map was opened from a row's location) the camera centres on that
+ * entry instead of fitting everything; every other pin is still drawn, just off-centre. Without
+ * one — no param, or an id this window knows nothing about — it falls back to fitting them all,
+ * which is what the map has always done.
  *
  * `invalidateSize` first: the container's final size is not always known the instant Leaflet
  * mounts, and `fitBounds` against a stale (often 0×0) size overzooms.
  */
-function FitBoundsOnce({ clusters }: { clusters: MapCluster[] }) {
+function PlaceCameraOnce({ clusters, focus }: { clusters: MapCluster[]; focus: MapCluster | null }) {
   const map = useMap();
-  const fitted = useRef(false);
+  const placed = useRef(false);
   useEffect(() => {
-    if (fitted.current) return;
+    if (placed.current) return;
+    if (focus) {
+      placed.current = true;
+      map.invalidateSize();
+      map.setView([focus.center.lat, focus.center.lng], FOCUS_ZOOM);
+      return;
+    }
     const bounds = clusterBounds(clusters);
     if (!bounds) return;
-    fitted.current = true;
+    placed.current = true;
     map.invalidateSize();
     map.fitBounds(bounds, { padding: [32, 32], maxZoom: 16 });
-  }, [map, clusters]);
+  }, [map, clusters, focus]);
   return null;
 }
 
@@ -107,6 +127,9 @@ function FitBoundsOnce({ clusters }: { clusters: MapCluster[] }) {
  * Bản đồ — the group's recent places. Port of `MapScreen`
  * (ios/SkinnyLegend/Features/Map/MapScreen.swift) over Leaflet and OpenStreetMap raster tiles,
  * with `MapClusterer` ported verbatim in `clusterer.ts`.
+ *
+ * Arriving with `?entry=<id>` — a location tapped on a feed row or in a member's history —
+ * centres the camera on that entry and opens its pin card, while every other pin stays drawn.
  *
  * The one behaviour worth spelling out is the refresh: "Tải lại" refetches **without**
  * unmounting the map. React Query keeps the previous `data` while the new request is in flight,
@@ -118,6 +141,8 @@ export function MapScreen() {
   const t = useTranslations();
   const api = useApi();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const entryId = searchParams.get(ENTRY_PARAM);
   const [selected, setSelected] = useState<MapCluster | null>(null);
 
   const { data, error, isPending, refetch } = useQuery({
@@ -134,6 +159,30 @@ export function MapScreen() {
     () => clusters.map((cluster) => ({ cluster, label: markerLabel(cluster, t), icon: clusterIcon(cluster) })),
     [clusters, t],
   );
+  /**
+   * The cluster holding the entry the reader tapped, once the pins have landed. An id from an
+   * entry outside the map's 30-day window — or a hand-typed one — simply finds nothing, and the
+   * map opens the way it always has rather than erroring at the reader over a stale link.
+   */
+  const focus = useMemo(
+    () =>
+      entryId
+        ? (clusters.find((cluster) => cluster.pins.some((pin) => pin.entryId === entryId)) ?? null)
+        : null,
+    [clusters, entryId],
+  );
+
+  /**
+   * Opening the focused cluster's sheet is a one-shot: the reader must be free to close it, and
+   * a refetch that rebuilds the clusters must not shove it back up in their face.
+   */
+  const opened = useRef(false);
+  useEffect(() => {
+    if (opened.current || !focus) return;
+    opened.current = true;
+    setSelected(focus);
+  }, [focus]);
+
   const dismiss = useCallback(() => setSelected(null), []);
 
   return (
@@ -145,7 +194,7 @@ export function MapScreen() {
             size="sm"
             variant="ghost"
             aria-label={t('common.back')}
-            onClick={() => void navigate('/feed')}
+            onClick={() => void navigate('/')}
           >
             <ChevronRightGlyph className="size-4 rotate-180" />
           </Button>
@@ -197,7 +246,7 @@ export function MapScreen() {
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
               attribution="&copy; OpenStreetMap contributors"
             />
-            <FitBoundsOnce clusters={clusters} />
+            <PlaceCameraOnce clusters={clusters} focus={focus} />
             {markers.map(({ cluster, label, icon }) => (
               /*
                * The key carries the label so a cluster whose contents changed remounts and

@@ -1,5 +1,4 @@
 import { useQuery } from '@tanstack/react-query';
-import { Link } from 'react-router';
 import { useTranslations } from 'use-intl';
 import type { Category } from '@skinny/shared/wire';
 import { RULEBOOK } from '@skinny/shared/scoring';
@@ -8,10 +7,10 @@ import {
   ArrowDownRightGlyph,
   ArrowUpRightGlyph,
   CheckGlyph,
-  ChevronRightGlyph,
   EqualGlyph,
 } from '@/app/icons';
 import { LargeTitle } from '@/app/large-title';
+import { FeedSection } from '@/features/feed/feed';
 import { describeError, useApi } from '@/lib/api';
 import { queryKeys } from '@/lib/query';
 import { Button } from '@/ui/button';
@@ -23,7 +22,8 @@ const PAIR_NUMBER_SIZE = 30;
  * Trang chủ — the dashboard. Port of `DashboardView`
  * (ios/SkinnyLegend/Features/Dashboard/DashboardView.swift): today's points and the delta vs
  * yesterday, the streak counter, the rank, the "still scorable today" checklist, the accent
- * card with the challenge total, and a link into the group feed.
+ * card with the challenge total, and — since SKI-134 — the group feed itself underneath, on
+ * its own query so neither half blanks the other.
  */
 export function Overview() {
   const t = useTranslations();
@@ -63,9 +63,13 @@ export function Overview() {
             </div>
             <ChecklistCard capsHit={data.capsHit} />
             <TotalCard total={data.total} bonusPoints={data.streak.bonusPoints} />
-            <FeedLinkCard />
           </>
         ) : null}
+        {/*
+         * The group log, under the dashboard cards and on its own query: neither half blanks
+         * the other when its request fails (SKI-134).
+         */}
+        <FeedSection />
       </div>
     </>
   );
@@ -277,19 +281,7 @@ function TotalCard({ total, bonusPoints }: { total: number; bonusPoints: number 
   );
 }
 
-function FeedLinkCard() {
-  const t = useTranslations();
-  return (
-    <Link to="/feed" className="block rounded-xl">
-      <SurfaceCard className="flex items-center justify-between gap-3">
-        <span className="type-h3 min-w-0 truncate">{t('overview.feedCard')}</span>
-        <ChevronRightGlyph className="text-foreground-subtle size-4 shrink-0" />
-      </SurfaceCard>
-    </Link>
-  );
-}
-
-/** All five cards in outline while the dashboard loads — the layout does not jump when it lands. */
+/** All four cards in outline while the dashboard loads — the layout does not jump when it lands. */
 function OverviewSkeleton() {
   return (
     <div data-testid="overview-skeleton" aria-busy="true" className="flex flex-col gap-4">
@@ -300,7 +292,6 @@ function OverviewSkeleton() {
       </div>
       <div className="bg-surface-2 h-[190px] animate-pulse rounded-xl" />
       <div className="bg-surface-2 h-[84px] animate-pulse rounded-xl" />
-      <div className="bg-surface-2 h-[62px] animate-pulse rounded-xl" />
     </div>
   );
 }

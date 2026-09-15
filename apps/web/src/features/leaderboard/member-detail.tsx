@@ -4,8 +4,9 @@ import { useNavigate, useParams } from 'react-router';
 import { useLocale, useTranslations } from 'use-intl';
 import type { HistoryEntryDto } from '@skinny/shared/wire';
 import { AlertBanner, Avatar, CategoryChip, EmptyState, SurfaceCard, cn } from '@skinny/ui';
-import { ChevronRightGlyph, MapPinGlyph, TrophyGlyph } from '@/app/icons';
+import { ChevronRightGlyph, TrophyGlyph } from '@/app/icons';
 import { LargeTitle } from '@/app/large-title';
+import { PlaceButton } from '@/features/map/place-button';
 import { describeError, useApi } from '@/lib/api';
 import { formatLocalDay } from '@/lib/local-day';
 import { queryKeys } from '@/lib/query';
@@ -212,13 +213,7 @@ function MemberEntryRow({
           ))}
         </div>
         {entry.placeName ? (
-          <p
-            data-testid="history-place"
-            className="type-caption text-foreground-secondary flex items-center gap-1 truncate"
-          >
-            <MapPinGlyph className="size-3.5 shrink-0" />
-            <span className="truncate">{entry.placeName}</span>
-          </p>
+          <PlaceButton entryId={entry.id} placeName={entry.placeName} testId="history-place" />
         ) : null}
       </div>
     </li>
