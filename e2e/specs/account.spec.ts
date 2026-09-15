@@ -157,11 +157,11 @@ test('a member deletes an entry and signs out', async ({ page }) => {
   );
   expect(entry).toBeTruthy();
 
-  await page.goto(`${WEB_URL}/account`);
+  await page.goto(`${WEB_URL}/track`);
   const historyRow = page.locator(`[data-testid="history-row"][data-entry-id="${entry!.id}"]`);
   await expect(historyRow).toBeVisible({ timeout: 30_000 });
-  // The row is an <li>; its one button ("Không đúng?") is what opens the verdict sheet in edit
-  // mode — the brief's bare row click lands on the photo and does nothing.
+  // The row is an <li> wrapping one full-width button: a tap anywhere on it opens the verdict
+  // sheet in edit mode.
   await historyRow.getByRole('button').click();
   await page.getByTestId('verdict-sheet').waitFor();
   await page.getByTestId('verdict-delete').click();

@@ -67,7 +67,7 @@ test('an entry reaches the admin list with its verdict, is rejected, and the mem
 
   // The member's own history lists the entry before the admin touches it — this is what makes the
   // post-rejection assertion below non-vacuous.
-  await memberPage.goto(`${WEB_URL}/account`);
+  await memberPage.goto(`${WEB_URL}/track`);
   const historyRow = memberPage.locator(`[data-testid="history-row"][data-entry-id="${entry!.id}"]`);
   await expect(historyRow).toBeVisible({ timeout: 30_000 });
 

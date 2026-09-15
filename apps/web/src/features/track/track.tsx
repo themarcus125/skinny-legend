@@ -13,6 +13,7 @@ import { queryKeys } from '@/lib/query';
 import { uploadPhoto } from '@/lib/upload';
 import { usePush } from '@/push/use-push';
 import { Button } from '@/ui/button';
+import { AccountHistory } from '@/features/account/history';
 import { VerdictSheet } from './verdict-sheet';
 import {
   adoptConfirmation,
@@ -336,6 +337,9 @@ export function Track({ onTracked }: TrackProps) {
             {t('track.library')}
           </Button>
         </div>
+
+        {/* The last few entries, right under the camera: the rest page in as the list is scrolled. */}
+        <AccountHistory />
       </div>
 
       {sheet ? (
@@ -355,9 +359,9 @@ export function Track({ onTracked }: TrackProps) {
 /**
  * The routed screen: `Track` with the push prompt hung off `onTracked`.
  *
- * Spec §E asks for the notification prompt after the member's *first confirmed entry*, never at
- * launch, and `requestAfterFirstConfirmedEntry` is the once-per-user-id guard — so every tracked
- * entry can call it and only the first one prompts. The plain `Track` stays prop-driven so the
+ * Reminders default to ON. A confirmed entry is the surest moment to ask — the member just
+ * tapped, so even iOS Safari lets the prompt show — and `requestIfUndecided` is the
+ * once-per-user-id guard, so every tracked entry can call it and only the first one prompts. The plain `Track` stays prop-driven so the
  * feature tests never stand a registrar up.
  */
 export function TrackScreen() {
@@ -368,7 +372,7 @@ export function TrackScreen() {
 
   const onTracked = useCallback(() => {
     if (userId === null) return;
-    void registrar.requestAfterFirstConfirmedEntry(userId);
+    void registrar.requestIfUndecided(userId);
   }, [registrar, userId]);
 
   return <Track onTracked={onTracked} />;

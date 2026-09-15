@@ -63,7 +63,10 @@ describe('mock client', () => {
     expect(failed).toHaveLength(1);
     expect(failed[0]!.entry.status).toBe('pending');
     expect(failed[0]!.entry.categories).toEqual([]);
-    expect(results.filter((r) => r.entry.status === 'confirmed')).toHaveLength(4);
+    // Every entry waits as pending for the member's confirmation; a usable verdict only differs
+    // by carrying its suggested categories.
+    expect(results.every((r) => r.entry.status === 'pending')).toBe(true);
+    expect(results.filter((r) => r.entry.categories.length > 0)).toHaveLength(4);
   });
 
   /**

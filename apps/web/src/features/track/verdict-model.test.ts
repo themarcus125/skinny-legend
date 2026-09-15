@@ -317,9 +317,11 @@ describe('saving against the mock client', () => {
       photoKey: 'photos/x.jpg',
       takenAt: '2026-09-14T03:00:00.000Z',
     });
-    expect(response.entry.status).toBe('confirmed');
+    // The API now creates entries pending; the already-tracked branch is kept for a server that
+    // answers `confirmed`, so this test stands one up by hand.
+    expect(response.entry.status).toBe('pending');
     let s = initVerdictState({
-      entry: response.entry,
+      entry: { ...response.entry, status: 'confirmed' },
       mode: { kind: 'created', verdict: response.verdict! },
       capsHit: response.capsHit,
       cappedCategories: response.cappedCategories,

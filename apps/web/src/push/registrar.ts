@@ -8,11 +8,12 @@ import type { PushAuthorizing, PushPermission, PushTokenSource } from './ports';
  * Owns notification permission and FCM token registration on the web — a method-for-method port
  * of `ios/SkinnyLegend/Core/Push/PushRegistrar.swift`, generation counter included.
  *
- * Permission is only ever requested from `enable()` — the Account toggle — or
- * `requestAfterFirstConfirmedEntry()`, never at launch (spec §E). A browser is even stricter
- * than iOS here: `Notification.requestPermission()` outside a user gesture is ignored (Safari)
- * or auto-denied (Chrome's abusive-notification heuristics), and a denial on the web is
- * *permanent* until the member digs into site settings, so an unprompted call does real damage.
+ * Reminders default to ON: `requestIfUndecided()` asks once per user id — on Trang chủ and after
+ * a confirmed entry — and `enable()` is the Account toggle. A browser is stricter than iOS
+ * here: `Notification.requestPermission()` outside a user gesture is refused (Safari) or
+ * auto-denied (Chrome's abusive-notification heuristics), and a denial on the web is *permanent*
+ * until the member digs into site settings — so a refused prompt is recorded as *undecided*, not
+ * denied, and the next call that comes from a tap gets to ask for real.
  *
  * The one case the phone does not have is `unsupported` (see `ports.ts`); everything else —
  * intent-before-token, pending-until-token, the take-it-back-down branch, the bounded sign-out
@@ -72,7 +73,13 @@ export interface PushRegistrar {
   disable(): Promise<void>;
   registerCurrentToken(): Promise<boolean>;
   handleTokenRefresh(): Promise<void>;
-  requestAfterFirstConfirmedEntry(userId: string): Promise<void>;
+  /**
+   * Reminders are on by default: turns them on for a member who has never been asked in this
+   * browser, prompting for permission when the browser has not decided yet. Runs at most once per
+   * user id once the prompt has actually been shown; a browser that refuses to show it without a
+   * user gesture (iOS Safari) leaves the question open for the next call.
+   */
+  requestIfUndecided(userId: string): Promise<void>;
   clearLocalState(): void;
   resetForSignOut(): Promise<void>;
 }
@@ -170,15 +177,17 @@ class Registrar implements PushRegistrar {
       if (!this.#isCurrent(generation)) return false;
       if (this.#snapshot.permission === 'notDetermined') {
         let granted = false;
+        let shown = true;
         try {
           granted = await this.#deps.authorizer.requestPermission();
         } catch {
-          // A prompt the browser refused to show (no user gesture, Lockdown Mode) is a denial
-          // as far as this call is concerned; `refresh()` re-reads the real setting later.
+          // A prompt the browser refused to show (no user gesture, Lockdown Mode) decided
+          // nothing: the permission stays undetermined so a later call — from a tap — can ask.
           granted = false;
+          shown = false;
         }
         if (!this.#isCurrent(generation)) return false;
-        this.#patch({ permission: granted ? 'authorized' : 'denied' });
+        if (shown) this.#patch({ permission: granted ? 'authorized' : 'denied' });
       }
       if (this.#snapshot.permission !== 'authorized') {
         this.#setEnabled(false);
@@ -277,14 +286,17 @@ class Registrar implements PushRegistrar {
   }
 
   /**
-   * Spec §E: "Permission is requested after the user's first confirmed entry, never at launch."
-   * Runs at most once per user in this browser, whether or not they say yes.
+   * Reminders default to ON. Trang chủ calls this on every visit and Ghi nhận after every
+   * confirmed entry; the per-user "asked" flag makes the whole thing a one-off, whether the
+   * member said yes or no. The flag is only written once the browser has actually put the
+   * question — a prompt refused for want of a user gesture keeps the default alive for the next
+   * tap that can show it.
    */
-  async requestAfterFirstConfirmedEntry(userId: string): Promise<void> {
+  async requestIfUndecided(userId: string): Promise<void> {
     const key = didAskKey(userId);
     if (this.#readFlag(key)) return;
-    this.#writeFlag(key, true);
     await this.enable();
+    if (this.#snapshot.permission !== 'notDetermined') this.#writeFlag(key, true);
   }
 
   /**

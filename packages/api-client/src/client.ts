@@ -62,8 +62,9 @@ export interface ApiClient {
   leaderboard(): Promise<LeaderboardRowDto[]>;
   trends(): Promise<TrendsResponse>;
   feed(cursor?: string): Promise<FeedResponse>;
-  myEntries(cursor?: string): Promise<HistoryResponse>;
-  userEntries(userId: string, cursor?: string): Promise<HistoryResponse>;
+  /** `limit` is the page size; omitted, the server's default (50). */
+  myEntries(cursor?: string, limit?: number): Promise<HistoryResponse>;
+  userEntries(userId: string, cursor?: string, limit?: number): Promise<HistoryResponse>;
   mapPins(days: number): Promise<MapPin[]>;
 
   // Entries & uploads
@@ -201,12 +202,12 @@ export class LiveApiClient implements ApiClient {
     return this.request<FeedResponse>(`/feed${query({ cursor })}`);
   }
 
-  myEntries(cursor?: string): Promise<HistoryResponse> {
-    return this.request<HistoryResponse>(`/entries/mine${query({ cursor })}`);
+  myEntries(cursor?: string, limit?: number): Promise<HistoryResponse> {
+    return this.request<HistoryResponse>(`/entries/mine${query({ cursor, limit })}`);
   }
 
-  userEntries(userId: string, cursor?: string): Promise<HistoryResponse> {
-    return this.request<HistoryResponse>(`/users/${userId}/entries${query({ cursor })}`);
+  userEntries(userId: string, cursor?: string, limit?: number): Promise<HistoryResponse> {
+    return this.request<HistoryResponse>(`/users/${userId}/entries${query({ cursor, limit })}`);
   }
 
   async mapPins(days: number): Promise<MapPin[]> {

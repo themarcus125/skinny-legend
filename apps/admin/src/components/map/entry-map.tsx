@@ -50,7 +50,7 @@ export default function EntryMap({ pins }: { pins: MapPin[] }) {
       center={HCMC_CENTER}
       zoom={12}
       scrollWheelZoom
-      className="h-[70vh] min-h-[420px] w-full overflow-hidden rounded-xl border border-border shadow-card"
+      className="relative z-0 h-[70vh] min-h-[420px] w-full overflow-hidden rounded-xl border border-border shadow-card"
     >
       <TileLayer
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"

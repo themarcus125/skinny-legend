@@ -157,10 +157,12 @@ describe('GET /feed and GET /users/:id/entries', () => {
     expect(page.entries.map((e: { localDate: string }) => e.localDate)).toEqual(['2026-09-08']);
   });
 
-  it('feed shows a freshly posted entry immediately (auto-confirmed from the verdict)', async () => {
+  it('feed shows an entry once the member confirms it, and not before', async () => {
     classify.mockResolvedValue({ ...verdict, categories: ['exercise'] });
     const a = await asUser('a', { activate: true });
     const created = await postEntry(a.headers, { takenAt: '2026-09-09T01:00:00Z' });
+    expect((await (await app.request('/feed', { headers: a.headers })).json()).entries).toEqual([]);
+    await app.request(`/entries/${created.entry.id}`, { method: 'PATCH', headers: { ...a.headers, 'content-type': 'application/json' }, body: JSON.stringify({ categories: ['exercise'] }) });
     const feed = await (await app.request('/feed', { headers: a.headers })).json();
     expect(feed.entries.map((e: { id: string; categories: string[] }) => [e.id, e.categories])).toEqual([[created.entry.id, ['exercise']]]);
     const board = await (await app.request('/leaderboard', { headers: a.headers })).json();
@@ -198,9 +200,11 @@ describe('GET /entries/map', () => {
     expect(body.pins).toEqual([]);
   });
 
-  it('shows a freshly posted entry with coordinates immediately', async () => {
+  it('shows a confirmed entry with coordinates, and not a pending one', async () => {
     const a = await asUser('a', { activate: true });
-    await postEntry(a.headers, { takenAt: '2026-09-09T01:00:00Z', lat: 10.77, lng: 106.70 });
+    const created = await postEntry(a.headers, { takenAt: '2026-09-09T01:00:00Z', lat: 10.77, lng: 106.70 });
+    expect((await (await app.request('/entries/map?days=30', { headers: a.headers })).json()).pins).toHaveLength(0);
+    await app.request(`/entries/${created.entry.id}`, { method: 'PATCH', headers: { ...a.headers, 'content-type': 'application/json' }, body: JSON.stringify({ categories: ['exercise'] }) });
     const body = await (await app.request('/entries/map?days=30', { headers: a.headers })).json();
     expect(body.pins).toHaveLength(1);
   });

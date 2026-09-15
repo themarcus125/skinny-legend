@@ -58,21 +58,26 @@ describe('the Track screen', () => {
     expect(screen.getByTestId('library-input')).not.toHaveAttribute('capture');
   });
 
-  it('uploads with a progress bar and opens the sheet on an AI-confirmed entry', async () => {
+  it('uploads with a progress bar and opens the sheet on a pending entry with the AI picks selected', async () => {
     renderTrack(createMockApiClient({ seed: makeSeed(SEED_DAY) }));
     pick('library-input');
 
     expect(await screen.findByRole('progressbar')).toBeInTheDocument();
 
     const sheet = await screen.findByRole('dialog');
-    expect(within(sheet).getByRole('heading', { name: 'Đã ghi nhận' })).toBeInTheDocument();
-    // Already tracked: the points are banked, and the primary only dismisses.
-    expect(within(sheet).getByText('Điểm đã cộng')).toBeInTheDocument();
-    expect(within(sheet).getByText('Đã tính vào tổng điểm của bạn.')).toBeInTheDocument();
-    expect(screen.getByTestId('verdict-primary')).toHaveTextContent('Xong');
+    expect(within(sheet).getByRole('heading', { name: 'Chọn hoạt động' })).toBeInTheDocument();
+    // Nothing has counted yet: the points are a projection, and the primary is the confirmation.
+    expect(within(sheet).getByText('Điểm dự kiến')).toBeInTheDocument();
+    const chips = within(sheet).getAllByTestId('category-chip');
+    expect(chips.length).toBeGreaterThan(0);
+    expect(chips.every((chip) => chip.getAttribute('data-selected') === 'true')).toBe(true);
+    const primary = screen.getByTestId('verdict-primary');
+    expect(primary).toHaveTextContent('Xác nhận');
+    expect(primary).toBeEnabled();
+    expect(screen.queryByTestId('verdict-hint')).toBeNull();
   });
 
-  it('"Xong" dismisses without a PATCH, celebrates once and refreshes the dashboard', async () => {
+  it('"Xác nhận" PATCHes the AI picks, celebrates once and refreshes the dashboard', async () => {
     const api = createMockApiClient({ seed: makeSeed(SEED_DAY) });
     const confirmEntry = vi.spyOn(api, 'confirmEntry');
     const { queryClient } = renderTrack(api);
@@ -83,7 +88,9 @@ describe('the Track screen', () => {
     fireEvent.click(screen.getByTestId('verdict-primary'));
 
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
-    expect(confirmEntry).not.toHaveBeenCalled();
+    // The entry only counts once the member confirms it — this is the PATCH that does so.
+    expect(confirmEntry).toHaveBeenCalledOnce();
+    expect(confirmEntry.mock.calls[0]?.[1]?.categories.length).toBeGreaterThan(0);
     expect(await screen.findByText(/Đã ghi nhận \+\d+ điểm!/)).toBeInTheDocument();
     const keys = invalidate.mock.calls.map((call) => JSON.stringify(call[0]?.queryKey));
     expect(keys).toContain(JSON.stringify(['dashboard']));
@@ -95,14 +102,16 @@ describe('the Track screen', () => {
   it('"Không đúng?" expands the chips and turns the primary into a save', async () => {
     renderTrack(createMockApiClient({ seed: makeSeed(SEED_DAY) }));
     pick('library-input');
-    await screen.findByRole('dialog');
+    const sheet = await screen.findByRole('dialog');
 
+    // Scoped to the sheet: the history under the camera buttons carries chips of its own.
     fireEvent.click(screen.getByTestId('toggle-editing'));
-    const chips = screen.getAllByTestId('category-chip');
+    const chips = within(sheet).getAllByTestId('category-chip');
     expect(chips).toHaveLength(3);
 
-    fireEvent.click(screen.getByRole('button', { name: /Bữa ăn lành mạnh/ }));
-    expect(screen.getByTestId('verdict-primary')).toHaveTextContent('Lưu thay đổi');
+    fireEvent.click(within(sheet).getByRole('button', { name: /Bữa ăn lành mạnh/ }));
+    // Still a pending entry, so the corrected selection is confirmed, not "saved".
+    expect(screen.getByTestId('verdict-primary')).toHaveTextContent('Xác nhận');
   });
 
   it('a failed verdict opens the picker with the confirm button disabled until a chip is picked', async () => {
@@ -120,9 +129,12 @@ describe('the Track screen', () => {
     const primary = screen.getByTestId('verdict-primary');
     expect(primary).toHaveTextContent('Xác nhận');
     expect(primary).toBeDisabled();
+    // ...and says so, rather than leaving a dead button under a place the member just typed.
+    expect(screen.getByTestId('verdict-hint')).toHaveTextContent('Chọn ít nhất một hạng mục');
 
-    fireEvent.click(screen.getByRole('button', { name: /Tập luyện/ }));
+    fireEvent.click(within(sheet).getByRole('button', { name: /Tập luyện/ }));
     expect(primary).toBeEnabled();
+    expect(screen.queryByTestId('verdict-hint')).toBeNull();
   });
 
   it('a place picked from the nearby list is PATCHed with placeSource osm', async () => {
@@ -138,7 +150,7 @@ describe('the Track screen', () => {
     fireEvent.click(option);
 
     const primary = screen.getByTestId('verdict-primary');
-    expect(primary).toHaveTextContent('Lưu thay đổi');
+    expect(primary).toHaveTextContent('Xác nhận');
     fireEvent.click(primary);
 
     await waitFor(() => expect(confirmEntry).toHaveBeenCalled());
@@ -162,7 +174,7 @@ describe('the Track screen', () => {
       expect(document.activeElement).toBe(field);
     }
     expect(field).toHaveValue('Hồ bơi');
-    expect(screen.getByTestId('verdict-primary')).toHaveTextContent('Lưu thay đổi');
+    expect(screen.getByTestId('verdict-primary')).toHaveTextContent('Xác nhận');
   });
 
   it('locks the page behind the sheet and gives focus back to the opener', async () => {

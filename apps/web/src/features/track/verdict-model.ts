@@ -17,9 +17,10 @@ import { describeError } from '@/lib/api';
  * testable with no React, no network and no clock. The component keeps the state in `useState`
  * and owns the `PATCH` itself.
  *
- * The one thing to keep in mind while reading: `POST /entries` confirms an entry straight from
- * the AI verdict, so a successful verdict means the entry *already counted* when the sheet
- * opened. `PATCH /entries/:id` is therefore a correction, not the thing that makes it count.
+ * `POST /entries` creates the entry `pending`, with the AI's categories attached as a suggestion,
+ * so nothing counts until the member confirms the sheet with `PATCH /entries/:id`. The
+ * `isAlreadyTracked` branch survives for an API that answers `confirmed` (older servers, the
+ * admin's re-runs): it turns the primary into a plain dismissal.
  */
 export type VerdictMode = { kind: 'created'; verdict: VerdictDto } | { kind: 'edit' };
 

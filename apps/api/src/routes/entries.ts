@@ -106,13 +106,14 @@ export function entryRoutes(deps: EntryDeps) {
     const thumbKey = newKey('thumb', user.id);
     await storage.putObject(thumbKey, thumb, 'image/jpeg');
 
-    // The entry is confirmed straight from the verdict: the stored verdict keeps what the model
-    // actually saw, while the confirmed categories drop an unhealthy meal so the member has to
-    // opt in (via PATCH) rather than opt out of claiming the points. A failed verdict leaves the
-    // entry pending with no categories — it scores nothing until the member picks them manually.
+    // The entry is created `pending` with the verdict's categories attached as the AI's
+    // suggestion: nothing scores, and nothing reaches the feed, until the member reviews the
+    // sheet and confirms with `PATCH`. The stored verdict keeps what the model actually saw,
+    // while the suggested categories drop an unhealthy meal so the member has to opt in rather
+    // than opt out of claiming the points. A failed verdict suggests nothing.
     const suggested = verdict.healthy === false ? verdict.categories.filter((cat) => cat !== 'meal') : verdict.categories;
     const categories = verdict.failed ? [] : [...new Set(suggested)];
-    const status = verdict.failed ? ('pending' as const) : ('confirmed' as const);
+    const status = 'pending' as const;
     const entry = await db.transaction(async (tx) => {
       const [row] = await tx.insert(schema.entries).values({
         userId: user.id,
@@ -138,8 +139,8 @@ export function entryRoutes(deps: EntryDeps) {
       return row!;
     });
 
-    // `projection` drops the entry's own confirmed row before re-adding it as the candidate,
-    // so an auto-confirmed entry is not counted twice against its own caps.
+    // The entry is still pending, so it is not among `others`; `projection` scores it as the
+    // candidate the member is about to confirm.
     const others = (await loadConfirmedEntries([user.id])).get(user.id) ?? [];
     const proj = await projection(challenge, entry, categories, others);
     return c.json({ entry: await toEntryDto(entry, categories), verdict: toVerdictDto(verdict), ...proj } satisfies EntryMutationResponse, 201);
@@ -179,7 +180,7 @@ export function entryRoutes(deps: EntryDeps) {
 
   r.get('/mine', validate('query', historyQuery), async (c) => {
     const user = c.get('user');
-    const { cursor } = c.req.valid('query');
+    const { cursor, limit = HISTORY_PAGE_SIZE } = c.req.valid('query');
     const challenge = await loadChallenge();
     const rows = await db.select().from(schema.entries)
       .where(and(
@@ -187,7 +188,7 @@ export function entryRoutes(deps: EntryDeps) {
         ne(schema.entries.status, 'rejected'),
         ...(cursor ? [lt(schema.entries.takenAt, new Date(cursor))] : []),
       ))
-      .orderBy(desc(schema.entries.takenAt)).limit(HISTORY_PAGE_SIZE);
+      .orderBy(desc(schema.entries.takenAt)).limit(limit);
     const score = computeScore({ entries: (await loadConfirmedEntries([user.id])).get(user.id) ?? [], rules: challenge.rules, challenge: challenge.config, asOf: todayLocal(challenge.config) });
     const entries: HistoryEntryDto[] = [];
     for (const row of rows) {
@@ -196,7 +197,7 @@ export function entryRoutes(deps: EntryDeps) {
       const capped = score.scored.some((s) => s.entryId === row.id && s.capped);
       entries.push({ ...(await toEntryDto(row, cats)), points, capped });
     }
-    const nextCursor = rows.length === HISTORY_PAGE_SIZE ? rows[rows.length - 1]!.takenAt.toISOString() : null;
+    const nextCursor = rows.length === limit ? rows[rows.length - 1]!.takenAt.toISOString() : null;
     return c.json({ entries, nextCursor } satisfies HistoryResponse);
   });
 

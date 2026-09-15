@@ -12,7 +12,6 @@ import { queryKeys } from '@/lib/query';
 import { Button } from '@/ui/button';
 import { ConfirmDialog } from './confirm-dialog';
 import { FeedbackSheet } from './feedback-sheet';
-import { AccountHistory } from './history';
 import { LanguagePicker } from './language-picker';
 import { ProfileEditSheet } from './profile-edit';
 import { RemindersRow } from './reminders-row';
@@ -26,8 +25,8 @@ const HEADER_AVATAR = 56;
 
 /**
  * "Tài khoản" — port of `ios/SkinnyLegend/Features/Account/AccountView.swift`: a profile header
- * that opens the edit sheet, one settings card (language, appearance, reminders, the group fund,
- * feedback, sign-out, version), and my activity history with per-day totals and corrections.
+ * that opens the edit sheet and one settings card (language, appearance, reminders, the group
+ * fund, feedback, sign-out, version). My activity history moved to Ghi nhận (`history.tsx`).
  *
  * Two deliberate differences from the iOS list:
  *
@@ -148,8 +147,6 @@ export function Account() {
             }
           />
         </SurfaceCard>
-
-        <AccountHistory />
       </div>
 
       {isProfileOpen && user ? (

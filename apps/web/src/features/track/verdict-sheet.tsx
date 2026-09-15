@@ -42,12 +42,12 @@ export interface VerdictSheetProps {
 /**
  * Port of `ios/SkinnyLegend/Features/Track/VerdictSheet.swift` as a bottom sheet.
  *
- * On a successful verdict the entry is already tracked when the sheet appears: the title reads
- * "Đã ghi nhận", the points card says the points are banked, and the primary button is a plain
- * "Xong" that only dismisses. "Không đúng?" expands the chips into their interactive form and
- * the button becomes "Lưu thay đổi" (a `PATCH`). A failed verdict opens on "Chọn hoạt động"
- * with the chips already expanded and "Xác nhận"; the button is disabled whenever `canSave` is
- * false, which is exactly what keeps an empty selection from ever being sent.
+ * The entry is `pending` when the sheet appears: the AI's categories are pre-selected, the
+ * points card is a projection, and the primary is "Xác nhận" — the `PATCH` that makes the entry
+ * count. "Không đúng?" expands the chips so the selection can be corrected first. A failed
+ * verdict opens with the chips already expanded and nothing selected; the button is disabled
+ * whenever `canSave` is false, and a line under it says why, so an empty selection is never
+ * sent and never a mystery.
  *
  * The state machine lives in `verdict-model.ts`; this file only renders it and reports edits
  * back through `onChange`. The `PATCH` itself belongs to the screen.
@@ -249,6 +249,11 @@ export function VerdictSheet({
           >
             {primaryLabel}
           </Button>
+          {mustSave && state.selected.length === 0 ? (
+            <p data-testid="verdict-hint" className="type-caption text-foreground-subtle text-center">
+              {t('track.pickOneToConfirm')}
+            </p>
+          ) : null}
           {onDelete && state.mode.kind === 'edit' ? (
             <Button
               variant="ghost"

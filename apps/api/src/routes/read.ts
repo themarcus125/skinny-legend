@@ -128,19 +128,19 @@ readRoutes.get('/entries/map', validate('query', mapQuery), async (c) => {
 
 readRoutes.get('/users/:id/entries', validate('param', uuidParam), validate('query', historyQuery), async (c) => {
   const { id } = c.req.valid('param');
-  const { cursor } = c.req.valid('query');
+  const { cursor, limit = HISTORY_PAGE_SIZE } = c.req.valid('query');
   const rows = await db.select().from(schema.entries)
     .where(and(
       eq(schema.entries.userId, id),
       eq(schema.entries.status, 'confirmed'),
       ...(cursor ? [lt(schema.entries.takenAt, new Date(cursor))] : []),
     ))
-    .orderBy(desc(schema.entries.takenAt)).limit(HISTORY_PAGE_SIZE);
+    .orderBy(desc(schema.entries.takenAt)).limit(limit);
   const entries: HistoryResponse['entries'] = [];
   for (const row of rows) {
     const cats = (await db.select().from(schema.entryCategories).where(eq(schema.entryCategories.entryId, row.id))).map((r) => r.category as Category);
     entries.push(await toEntryDto(row, cats));
   }
-  const nextCursor = rows.length === HISTORY_PAGE_SIZE ? rows[rows.length - 1]!.takenAt.toISOString() : null;
+  const nextCursor = rows.length === limit ? rows[rows.length - 1]!.takenAt.toISOString() : null;
   return c.json({ entries, nextCursor } satisfies HistoryResponse);
 });

@@ -242,7 +242,7 @@ describe('the push registrar', () => {
 
   it('the once-per-user prompt still registers when the token arrives later', async () => {
     const { registrar, api, storage } = make({ token: [null, 'fcm-token-late'] });
-    await registrar.requestAfterFirstConfirmedEntry('u1');
+    await registrar.requestIfUndecided('u1');
     expect(storage.getItem(didAskKey('u1'))).toBe('1');
     expect(registrar.state.isRegistrationPending).toBe(true);
 
@@ -261,7 +261,7 @@ describe('the push registrar', () => {
 
   it('sign-out deletes the token and clears every install-scoped flag, keeping the per-user asked flag', async () => {
     const { registrar, api, storage } = make();
-    await registrar.requestAfterFirstConfirmedEntry('u1');
+    await registrar.requestIfUndecided('u1');
     expect(api.tokens()).toEqual(['fcm-web-token']);
 
     await registrar.resetForSignOut();
@@ -413,19 +413,19 @@ describe('the push registrar', () => {
 
   it('a returning member who turned reminders off stays off, a new account is asked afresh', async () => {
     const { registrar, api, authorizer, storage } = make();
-    await registrar.requestAfterFirstConfirmedEntry('u1');
+    await registrar.requestIfUndecided('u1');
     expect(authorizer.requestCount).toBe(1);
     await registrar.disable(); // an explicit OFF
     await registrar.resetForSignOut();
     expect(storage.getItem(didAskKey('u1'))).toBe('1');
 
     // u1 signs back in and confirms another entry: not re-enabled.
-    await registrar.requestAfterFirstConfirmedEntry('u1');
+    await registrar.requestIfUndecided('u1');
     expect(registrar.state.isEnabled).toBe(false);
     expect(api.tokens()).toEqual([]);
 
     // A different account in the same browser is asked afresh.
-    await registrar.requestAfterFirstConfirmedEntry('u2');
+    await registrar.requestIfUndecided('u2');
     expect(storage.getItem(didAskKey('u2'))).toBe('1');
     expect(registrar.state.isEnabled).toBe(true);
     expect(api.tokens()).toEqual(['fcm-web-token']);
@@ -459,13 +459,13 @@ describe('the push registrar', () => {
     expect(api.tokens()).toEqual(['fcm-web-token']);
   });
 
-  it('the post-first-entry prompt runs at most once per user id', async () => {
+  it('the default-on prompt runs at most once per user id', async () => {
     const { registrar, authorizer, storage } = make();
-    await registrar.requestAfterFirstConfirmedEntry('u1');
+    await registrar.requestIfUndecided('u1');
     expect(authorizer.requestCount).toBe(1);
     expect(storage.getItem(didAskKey('u1'))).toBe('1');
 
-    await registrar.requestAfterFirstConfirmedEntry('u1');
+    await registrar.requestIfUndecided('u1');
     expect(authorizer.requestCount).toBe(1);
   });
 
@@ -473,18 +473,18 @@ describe('the push registrar', () => {
     const storage = new MemoryStorage();
     storage.setItem(didAskKey('u1'), '1');
     const { registrar, authorizer } = make({ storage });
-    await registrar.requestAfterFirstConfirmedEntry('u1');
+    await registrar.requestIfUndecided('u1');
     expect(authorizer.requestCount).toBe(0);
   });
 
   it('a member who already turned notifications off is not re-prompted by a later entry', async () => {
     const { registrar, api, authorizer } = make({ grant: false });
-    await registrar.requestAfterFirstConfirmedEntry('u1');
+    await registrar.requestIfUndecided('u1');
     expect(authorizer.requestCount).toBe(1);
     expect(registrar.state.isEnabled).toBe(false);
 
     // A second confirmed entry must not nag.
-    await registrar.requestAfterFirstConfirmedEntry('u1');
+    await registrar.requestIfUndecided('u1');
     expect(authorizer.requestCount).toBe(1);
     expect(api.tokens()).toEqual([]);
   });
@@ -579,5 +579,28 @@ describe('the push registrar', () => {
     unsubscribe();
     await registrar.disable();
     expect(listener.mock.calls.length).toBe(seen);
+  });
+});
+
+describe('reminders on by default', () => {
+  it('a prompt the browser refused to show leaves the question open for a later tap', async () => {
+    const { registrar, authorizer, storage } = make();
+    authorizer.requestPermission = () => Promise.reject(new Error('no user gesture'));
+    await registrar.requestIfUndecided('u1');
+    expect(registrar.state.permission).toBe('notDetermined');
+    expect(registrar.state.isEnabled).toBe(false);
+    expect(storage.getItem(didAskKey('u1'))).toBeNull();
+
+    // The next call, from a gesture, gets to ask for real.
+    let asked = 0;
+    authorizer.requestPermission = () => {
+      asked += 1;
+      authorizer.status = 'authorized';
+      return Promise.resolve(true);
+    };
+    await registrar.requestIfUndecided('u1');
+    expect(asked).toBe(1);
+    expect(registrar.state.isEnabled).toBe(true);
+    expect(storage.getItem(didAskKey('u1'))).toBe('1');
   });
 });

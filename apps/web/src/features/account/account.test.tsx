@@ -6,10 +6,8 @@ import { MemoryRouter } from 'react-router';
 import type { ApiClient } from '@skinny/api-client';
 import { createMockApiClient, makeSeed } from '@skinny/api-client/mock';
 import { ThemeProvider } from '@/app/theme-provider';
-import { openSheetCount } from '@/app/use-modal-sheet';
 import { SessionProvider } from '@/auth/session';
 import { LocaleProvider } from '@/i18n/provider';
-import { ApiError } from '@/lib/live-client';
 import { ApiProvider } from '@/lib/api';
 import { MOCK_OVERRIDE_KEY } from '@/lib/app-mode';
 import { stubAuthPort, type StubAuth } from '@/test/session';
@@ -77,113 +75,6 @@ describe('the account screen', () => {
       'noreferrer noopener',
     );
     expect(screen.getByTestId('app-version')).toHaveTextContent(/\d+\.\d+\.\d+/);
-  });
-
-  it('groups my history by day with each day’s points and each row’s own', async () => {
-    renderAccount();
-
-    const days = await screen.findAllByTestId('history-day');
-    expect(days.length).toBeGreaterThan(0);
-    const first = days[0]!;
-    // Newest first, and the day header totals the rows underneath it.
-    const rows = within(first).getAllByTestId('history-row');
-    const rowPoints = within(first)
-      .getAllByTestId('history-points')
-      .map((node) => Number(node.textContent?.replace('+', '')));
-    expect(rows.length).toBe(rowPoints.length);
-    expect(within(first).getByTestId('history-day-points')).toHaveTextContent(
-      `+${rowPoints.reduce((sum, points) => sum + points, 0)}`,
-    );
-  });
-
-  it('opens the Track verdict sheet in edit mode from "Không đúng?"', async () => {
-    renderAccount();
-
-    const buttons = await screen.findAllByRole('button', { name: 'Không đúng?' });
-    await userEvent.click(buttons[0]!);
-
-    const sheet = await screen.findByRole('dialog');
-    // `.edit` mode has no fresh verdict, so the sheet titles itself "Sửa hoạt động" and says the
-    // server will recount rather than showing a local projection (ruling 2).
-    expect(sheet).toHaveTextContent('Sửa hoạt động');
-    expect(sheet).toHaveTextContent('Điểm sẽ được máy chủ tính lại khi lưu.');
-  });
-
-  it('deletes an entry from the edit sheet, behind a confirmation', async () => {
-    const api = makeApi();
-    const deleteEntry = vi.spyOn(api, 'deleteEntry');
-    renderAccount(api);
-
-    const rows = await screen.findAllByTestId('history-row');
-    const doomed = rows[0]!.getAttribute('data-entry-id');
-    await userEvent.click(
-      within(rows[0]!).getByRole('button', { name: 'Không đúng?' }),
-    );
-    await userEvent.click(await screen.findByTestId('verdict-delete'));
-
-    // The confirmation asks with the entry's own day, and nothing is sent until it is answered.
-    const dialog = await screen.findByTestId('confirm-dialog');
-    expect(deleteEntry).not.toHaveBeenCalled();
-    await userEvent.click(within(dialog).getByRole('button', { name: 'Xoá' }));
-
-    await waitFor(() => expect(deleteEntry).toHaveBeenCalledWith(doomed));
-    await waitFor(() =>
-      expect(
-        screen.queryAllByTestId('history-row').some((row) => row.getAttribute('data-entry-id') === doomed),
-      ).toBe(false),
-    );
-  });
-
-  it('surfaces a failed deletion', async () => {
-    const api = makeApi();
-    vi.spyOn(api, 'deleteEntry').mockRejectedValue(new ApiError(500, 'internal', 'boom'));
-    renderAccount(api);
-
-    const rows = await screen.findAllByTestId('history-row');
-    await userEvent.click(within(rows[0]!).getByRole('button', { name: 'Không đúng?' }));
-    await userEvent.click(await screen.findByTestId('verdict-delete'));
-    const dialog = await screen.findByTestId('confirm-dialog');
-    await userEvent.click(within(dialog).getByRole('button', { name: 'Xoá' }));
-
-    // Visible, not merely mounted: the banner sits on the screen, so both modals have to be gone.
-    expect(await screen.findByText('Không xoá được, hãy thử lại.')).toBeVisible();
-    expect(screen.queryByTestId('confirm-dialog')).toBeNull();
-    expect(screen.queryByTestId('verdict-sheet')).toBeNull();
-  });
-
-  it('closes only the confirmation when Escape is pressed over it', async () => {
-    renderAccount();
-
-    const rows = await screen.findAllByTestId('history-row');
-    await userEvent.click(within(rows[0]!).getByRole('button', { name: 'Không đúng?' }));
-    await userEvent.click(await screen.findByTestId('verdict-delete'));
-    expect(await screen.findByTestId('confirm-dialog')).toBeInTheDocument();
-
-    // Nested modals: only the topmost one reacts, so one Escape is one dismissal.
-    await userEvent.keyboard('{Escape}');
-    expect(screen.queryByTestId('confirm-dialog')).toBeNull();
-    expect(screen.getByTestId('verdict-sheet')).toBeInTheDocument();
-
-    // …and the sheet underneath is live again.
-    await userEvent.keyboard('{Escape}');
-    expect(screen.queryByTestId('verdict-sheet')).toBeNull();
-    // The stack empties and the page scrolls again — a leaked entry would make every later sheet
-    // in this document undismissable.
-    expect(openSheetCount()).toBe(0);
-    expect(document.body.style.overflow).toBe('');
-  });
-
-  it('pages the history from the footer button', async () => {
-    renderAccount(makeApi({ historyPageSize: 2 }));
-
-    await screen.findAllByTestId('history-row');
-    const before = screen.getAllByTestId('history-row').length;
-    expect(screen.getByTestId('history-footer')).toHaveAttribute('data-has-more', 'true');
-
-    await userEvent.click(screen.getByRole('button', { name: 'Tải thêm' }));
-    await waitFor(() =>
-      expect(screen.getAllByTestId('history-row').length).toBeGreaterThan(before),
-    );
   });
 
   it('switching the language re-renders in English and PATCHes /me', async () => {

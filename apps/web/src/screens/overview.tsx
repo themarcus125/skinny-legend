@@ -9,7 +9,10 @@ import {
   CheckGlyph,
   EqualGlyph,
 } from '@/app/icons';
+import { useCallback, useEffect } from 'react';
 import { LargeTitle } from '@/app/large-title';
+import { useSession } from '@/auth/session';
+import { usePush } from '@/push/use-push';
 import { FeedSection } from '@/features/feed/feed';
 import { describeError, useApi } from '@/lib/api';
 import { queryKeys } from '@/lib/query';
@@ -76,7 +79,26 @@ export function Overview() {
 }
 
 /** React Router 7's lazy-route convention. */
-export const Component = Overview;
+/**
+ * The routed screen: `Overview` plus the reminders default. Reminders are on unless the member
+ * turns them off, so the first visit to Trang chủ with a session asks the browser (once per
+ * user id; `requestIfUndecided` is the guard). The plain `Overview` stays prop-free so its tests
+ * never stand a registrar up.
+ */
+export function OverviewScreen() {
+  const session = useSession();
+  const { registrar } = usePush();
+  const userId =
+    session.status === 'active' || session.status === 'pending' ? session.user.id : null;
+  const ask = useCallback(() => {
+    if (userId !== null) void registrar.requestIfUndecided(userId);
+  }, [registrar, userId]);
+  useEffect(ask, [ask]);
+  return <Overview />;
+}
+
+/** React Router 7's lazy-route convention. */
+export const Component = OverviewScreen;
 
 function CardLabel({ children }: { children: string }) {
   return <p className="type-label text-foreground-secondary">{children}</p>;

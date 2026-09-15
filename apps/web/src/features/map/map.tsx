@@ -258,7 +258,9 @@ export function MapScreen() {
             center={HCMC_CENTER}
             zoom={INITIAL_ZOOM}
             scrollWheelZoom
-            className="border-border h-[60vh] min-h-[360px] w-full overflow-hidden rounded-xl border shadow-card"
+            // `relative z-0` opens a stacking context: Leaflet's panes sit at z-index 400+ and its
+            // controls at 1000, which would otherwise paint over the `z-50` cluster sheet.
+            className="border-border relative z-0 h-[60vh] min-h-[360px] w-full overflow-hidden rounded-xl border shadow-card"
           >
             <TileLayer
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"

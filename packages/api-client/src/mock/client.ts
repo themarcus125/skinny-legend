@@ -333,26 +333,27 @@ export class MockApiClient implements ApiClient {
     return { entries, nextCursor: page.nextCursor };
   }
 
-  async myEntries(cursor?: string): Promise<HistoryResponse> {
+  async myEntries(cursor?: string, limit?: number): Promise<HistoryResponse> {
     await this.delay();
-    return this.historyFor(this.state.me.id, cursor, (entry) => entry.status !== 'rejected');
+    return this.historyFor(this.state.me.id, cursor, (entry) => entry.status !== 'rejected', limit);
   }
 
-  async userEntries(userId: string, cursor?: string): Promise<HistoryResponse> {
+  async userEntries(userId: string, cursor?: string, limit?: number): Promise<HistoryResponse> {
     await this.delay();
-    return this.historyFor(userId, cursor, (entry) => entry.status === 'confirmed');
+    return this.historyFor(userId, cursor, (entry) => entry.status === 'confirmed', limit);
   }
 
   private historyFor(
     userId: string,
     cursor: string | undefined,
     keep: (entry: AdminEntry) => boolean,
+    limit: number = this.historyPageSize,
   ): HistoryResponse {
     const score = this.score(userId);
     const visible = this.state.entries
       .filter((entry) => entry.userId === userId && keep(entry))
       .sort((a, b) => b.takenAt.localeCompare(a.takenAt));
-    const page = paginate(visible, cursor, this.historyPageSize, 'takenAt');
+    const page = paginate(visible, cursor, limit, 'takenAt');
     const entries = page.items.map<HistoryEntryDto>((entry) => {
       const scored = score.scored.filter((row) => row.entryId === entry.id);
       return {
@@ -415,8 +416,8 @@ export class MockApiClient implements ApiClient {
     this.counter += 1;
     // A deterministic pretend verdict, mirroring MockAPIClient.swift: every fifth id is the
     // failing fixture (the vision call came back unusable), the rest alternate between a meal
-    // and a group workout. A usable verdict confirms the entry outright with the suggested
-    // categories; a failed one leaves it pending with none, for the member to pick by hand.
+    // and a group workout. Either way the entry waits as `pending` — a usable verdict with the
+    // suggested categories attached, a failed one with none — until `confirmEntry`.
     const failed = this.counter % 5 === 0;
     const suggested: Category[] = failed ? [] : this.counter % 3 === 0 ? ['meal'] : ['exercise', 'group'];
     const localDate = toLocalDate(new Date(body.takenAt), CHALLENGE_TIMEZONE);
@@ -430,7 +431,7 @@ export class MockApiClient implements ApiClient {
       thumbUrl: photo,
       takenAt: body.takenAt,
       localDate,
-      status: failed ? 'pending' : 'confirmed',
+      status: 'pending',
       categories: [...suggested],
       placeName: body.placeName ?? null,
       placeSource: body.placeSource ?? (body.placeName ? 'manual' : 'none'),

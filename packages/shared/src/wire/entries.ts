@@ -18,7 +18,11 @@ export const patchEntryBody = z.object({
 });
 export type PatchEntryInput = z.infer<typeof patchEntryBody>;
 
-export const historyQuery = z.object({ cursor: cursorSchema.optional() });
+export const historyQuery = z.object({
+  cursor: cursorSchema.optional(),
+  /** Page size; the server's `HISTORY_PAGE_SIZE` when omitted. Ghi nhận asks for 5. */
+  limit: z.coerce.number().int().min(1).max(50).optional(),
+});
 export type HistoryQuery = z.infer<typeof historyQuery>;
 
 export interface EntryDto {

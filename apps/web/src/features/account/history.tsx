@@ -51,13 +51,20 @@ export function groupByDay(entries: readonly HistoryEntryDto[]): DaySection[] {
     .sort((a, b) => b.date.localeCompare(a.date));
 }
 
+/** The first page Ghi nhận shows under the camera buttons; the rest load as the list is scrolled. */
+export const TRACK_HISTORY_PAGE_SIZE = 5;
+
 /**
  * "Lịch sử hoạt động" — my confirmed and pending entries, grouped by day, paged by cursor, each
  * row correctable through the **Track** feature's verdict sheet in `{ kind: 'edit' }` mode. That
  * reuse is the point (`AccountView.makeEditModel` does the same on iOS): the rules for what may be
  * selected, what may be saved and what the points become live in `verdict-model.ts` alone.
+ *
+ * It lives under the camera buttons on Ghi nhận (it used to sit at the bottom of Tài khoản):
+ * `pageSize` is how many rows land before the sentinel takes over, so the screen opens on the
+ * last few entries rather than a wall of them.
  */
-export function AccountHistory() {
+export function AccountHistory({ pageSize = TRACK_HISTORY_PAGE_SIZE }: { pageSize?: number } = {}) {
   const t = useTranslations();
   const locale = useLocale();
   const api = useApi();
@@ -77,7 +84,7 @@ export function AccountHistory() {
 
   const history = useInfiniteQuery({
     queryKey: queryKeys.myEntries,
-    queryFn: ({ pageParam }) => api.myEntries(pageParam),
+    queryFn: ({ pageParam }) => api.myEntries(pageParam, pageSize),
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (last) => last.nextCursor ?? undefined,
   });
@@ -309,12 +316,15 @@ function HistoryRow({
   onEdit: () => void;
 }) {
   const t = useTranslations();
+  // The whole row is the control: a member taps a row expecting its detail, and a small
+  // "Không đúng?" link was the only target. The link survives as the visual cue inside it.
   return (
-    <li
-      data-testid="history-row"
-      data-entry-id={entry.id}
-      className={cn('flex items-center gap-3 p-4', divided && 'border-border border-t')}
-    >
+    <li data-testid="history-row" data-entry-id={entry.id} className={cn(divided && 'border-border border-t')}>
+      <button
+        type="button"
+        onClick={onEdit}
+        className="flex w-full items-center gap-3 p-4 text-left outline-ring"
+      >
       <img
         src={entry.thumbUrl ?? entry.photoUrl}
         alt=""
@@ -344,9 +354,7 @@ function HistoryRow({
             </p>
           ) : null}
         </div>
-        <Button size="sm" variant="ghost" className="self-start px-0" onClick={onEdit}>
-          {t('common.notRight')}
-        </Button>
+        <span className="type-label text-primary">{t('common.notRight')}</span>
       </div>
       <div className="flex shrink-0 flex-col items-end gap-1">
         <span data-testid="history-points" className="type-h3 font-heading tabular-nums">
@@ -358,6 +366,7 @@ function HistoryRow({
           </span>
         ) : null}
       </div>
+      </button>
     </li>
   );
 }
