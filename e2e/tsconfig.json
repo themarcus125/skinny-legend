@@ -10,5 +10,13 @@
     "skipLibCheck": true,
     "verbatimModuleSyntax": true
   },
-  "include": ["src", "specs", "global-setup.ts", "global-teardown.ts", "playwright.config.ts"]
+  "include": [
+    "src",
+    "specs",
+    "test",
+    "global-setup.ts",
+    "global-teardown.ts",
+    "playwright.config.ts",
+    "vitest.config.ts"
+  ]
 }

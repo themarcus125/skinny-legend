@@ -7,6 +7,8 @@
     "build": "echo 'no build: playwright suite'",
     "e2e": "playwright test",
     "e2e:headed": "playwright test --headed",
+    "unit": "vitest run",
+    "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
@@ -17,6 +19,7 @@
     "piexifjs": "^1.0.6",
     "postgres": "^3.4.0",
     "sharp": "^0.35.4",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "vitest": "^5.0.0"
   }
 }
