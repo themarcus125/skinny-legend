@@ -71,4 +71,29 @@ describe('<StreakCounter>', () => {
     expect(screen.getByTestId('streak-counter').dataset.alive).toBe('false');
     expect(screen.queryAllByTestId('streak-dot').filter((d) => d.dataset.filled === 'true')).toHaveLength(0);
   });
+
+  it('takes the numeral size from `numberSize`, defaulting to 40 (iOS parity)', () => {
+    const { rerender } = render(
+      <StreakCounter
+        days={3}
+        longest={9}
+        daysLabel="ngày liên tiếp"
+        longestLabel="Dài nhất: 9 ngày"
+        dotsLabel="3 trên 7 ngày"
+      />,
+    );
+    expect(screen.getByText('3')).toHaveStyle({ fontSize: '40px' });
+
+    rerender(
+      <StreakCounter
+        days={3}
+        longest={9}
+        numberSize={30}
+        daysLabel="ngày liên tiếp"
+        longestLabel="Dài nhất: 9 ngày"
+        dotsLabel="3 trên 7 ngày"
+      />,
+    );
+    expect(screen.getByText('3')).toHaveStyle({ fontSize: '30px' });
+  });
 });

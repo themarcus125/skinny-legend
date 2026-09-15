@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router';
 import type { ApiClient } from '@skinny/api-client';
+import type { DashboardDto } from '@skinny/shared/wire';
 import { ApiError } from '@skinny/api-client';
 import { createMockApiClient, makeSeed } from '@skinny/api-client/mock';
 import { filledDots } from '@skinny/ui';
@@ -20,6 +21,13 @@ function mockApi(): ApiClient {
 /** An `ApiClient` whose `dashboard()` always rejects — the error-banner path. */
 function failingApi(error: Error): ApiClient {
   return { dashboard: () => Promise.reject(error) } as unknown as ApiClient;
+}
+
+/** The seed's dashboard with a few fields overridden — the branches the fixture does not cover. */
+async function patchedApi(patch: (dashboard: DashboardDto) => DashboardDto): Promise<ApiClient> {
+  const api = mockApi();
+  const dashboard = patch(await api.dashboard());
+  return { ...api, dashboard: () => Promise.resolve(dashboard) };
 }
 
 function renderOverview(ui: ReactElement, { api = mockApi() }: { api?: ApiClient } = {}) {
@@ -56,7 +64,8 @@ describe('Overview', () => {
 
     expect(await screen.findByTestId('today-points')).toHaveTextContent('5');
     // The seed's yesterday matches today, so the delta reads as the "same as yesterday" caption.
-    expect(screen.getByTestId('delta')).toHaveTextContent('Bằng hôm qua');
+    expect(screen.getByTestId('delta')).toHaveTextContent('bằng hôm qua');
+    expect(screen.getByLabelText('Bằng hôm qua')).toBeInTheDocument();
     expect(screen.getByTestId('rank')).toHaveTextContent('3');
     expect(screen.getByText('/ 5')).toBeInTheDocument();
     expect(screen.getByText('trong nhóm')).toBeInTheDocument();
@@ -71,6 +80,8 @@ describe('Overview', () => {
     expect(lit).toHaveLength(7);
     expect(screen.getByText('ngày liên tiếp')).toBeInTheDocument();
     expect(screen.getByText('Dài nhất: 7 ngày')).toBeInTheDocument();
+    // iOS passes numberSize 30 to both cards of the pair, so the two numerals match.
+    expect(screen.getByText('7')).toHaveStyle({ fontSize: '30px' });
     expect(screen.getByRole('img', { name: '7 trên 7 ngày của chuỗi hiện tại' })).toBeInTheDocument();
   });
 
@@ -84,6 +95,9 @@ describe('Overview', () => {
     expect(rows.map((row) => row.dataset.done)).toEqual(['true', 'true', 'false']);
     expect(within(rows[0]!).getByText('đã đủ hôm nay')).toBeInTheDocument();
     expect(within(rows[2]!).getByText('+3')).toBeInTheDocument();
+    // iOS draws `checkmark.circle.fill` on a done row: the tick is inside the filled circle.
+    expect(within(rows[0]!).getByTestId('checklist-mark').querySelector('svg')).not.toBeNull();
+    expect(within(rows[2]!).getByTestId('checklist-mark').querySelector('svg')).toBeNull();
   });
 
   it('shows the challenge total on the accent card and links to the group feed', async () => {
@@ -93,24 +107,35 @@ describe('Overview', () => {
     expect(total).toHaveTextContent('43');
     expect(total.closest('[data-accent="true"]')).not.toBeNull();
     expect(screen.getByText('Thưởng chuỗi: +5')).toBeInTheDocument();
+    expect(screen.getByLabelText('Tổng điểm: 43 (thưởng chuỗi 5)')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Nhật ký nhóm' })).toHaveAttribute('href', '/feed');
   });
 
-  it('shows the empty caption when nothing has been tracked today', async () => {
-    const api = mockApi();
-    const dashboard = await api.dashboard();
-    const empty: ApiClient = {
-      ...api,
-      dashboard: () =>
-        Promise.resolve({ ...dashboard, today: { points: 0, categories: [] }, deltaVsYesterday: -5 }),
-    };
-    renderOverview(<Overview />, { api: empty });
+  it('shows the empty caption and a negative delta when nothing was tracked today', async () => {
+    const api = await patchedApi((dashboard) => ({
+      ...dashboard,
+      today: { points: 0, categories: [] },
+      deltaVsYesterday: -5,
+    }));
+    renderOverview(<Overview />, { api });
 
     expect(await screen.findByTestId('today-empty')).toHaveTextContent(
       'Chưa ghi nhận hoạt động nào hôm nay.',
     );
     expect(screen.getByTestId('delta')).toHaveTextContent('-5 so với hôm qua');
+    expect(screen.getByTestId('delta').dataset.sign).toBe('down');
+    expect(screen.getByLabelText('Kém hôm qua 5 điểm')).toBeInTheDocument();
     expect(screen.queryByTestId('category-chip')).toBeNull();
+  });
+
+  it('spells a positive delta with its sign and a "more than yesterday" label', async () => {
+    const api = await patchedApi((dashboard) => ({ ...dashboard, deltaVsYesterday: 3 }));
+    renderOverview(<Overview />, { api });
+
+    const delta = await screen.findByTestId('delta');
+    expect(delta).toHaveTextContent('+3 so với hôm qua');
+    expect(delta.dataset.sign).toBe('up');
+    expect(screen.getByLabelText('Hơn hôm qua 3 điểm')).toBeInTheDocument();
   });
 
   it('renders a skeleton while the dashboard is loading', () => {

@@ -4,14 +4,20 @@ import { useTranslations } from 'use-intl';
 import type { Category } from '@skinny/shared/wire';
 import { RULEBOOK } from '@skinny/shared/scoring';
 import { AlertBanner, CategoryChip, StreakCounter, SurfaceCard, cn, filledDots } from '@skinny/ui';
-import { ChevronRightGlyph } from '@/app/icons';
+import {
+  ArrowDownRightGlyph,
+  ArrowUpRightGlyph,
+  CheckGlyph,
+  ChevronRightGlyph,
+  EqualGlyph,
+} from '@/app/icons';
 import { LargeTitle } from '@/app/large-title';
 import { describeError, useApi } from '@/lib/api';
 import { queryKeys } from '@/lib/query';
 import { Button } from '@/ui/button';
 
-/** The order the checklist and the chips read in — the rulebook's, so iOS and web agree. */
-const CATEGORY_ORDER: readonly Category[] = RULEBOOK.map((rule) => rule.category);
+/** The number size iOS's `DashboardView` passes both cards of the streak/rank pair. */
+const PAIR_NUMBER_SIZE = 30;
 
 /**
  * Tổng quan — the dashboard. Port of `DashboardView`
@@ -86,21 +92,14 @@ function TodayCard({
     <SurfaceCard as="section" className="flex flex-col gap-2">
       <CardLabel>{t('overview.todayPoints')}</CardLabel>
       <div className="flex items-baseline gap-3">
-        <span data-testid="today-points" className="type-display text-[44px] tabular-nums">
+        <span
+          data-testid="today-points"
+          className="type-display text-[44px] tabular-nums"
+          aria-label={t('overview.todayPointsOf', { 0: points })}
+        >
           {points}
         </span>
-        <span
-          data-testid="delta"
-          data-sign={delta > 0 ? 'up' : delta < 0 ? 'down' : 'flat'}
-          className={cn(
-            'type-caption',
-            delta > 0 ? 'text-success' : delta < 0 ? 'text-destructive' : 'text-foreground-subtle',
-          )}
-        >
-          {delta === 0
-            ? t('overview.sameAsYesterday')
-            : t('overview.vsYesterday', { 0: delta > 0 ? `+${delta}` : `${delta}` })}
-        </span>
+        <DeltaBadge delta={delta} />
       </div>
       {categories.length === 0 ? (
         <p data-testid="today-empty" className="type-caption text-foreground-secondary">
@@ -117,18 +116,53 @@ function TodayCard({
   );
 }
 
+/**
+ * The signed delta vs yesterday. The glyph carries the direction so colour is not the only
+ * signal, and the whole badge is one `aria-label` — `deltaBadge` on iOS, which combines its
+ * children for exactly the same reason.
+ */
+function DeltaBadge({ delta }: { delta: number }) {
+  const t = useTranslations();
+  const Glyph = delta > 0 ? ArrowUpRightGlyph : delta < 0 ? ArrowDownRightGlyph : EqualGlyph;
+  const label =
+    delta === 0
+      ? t('overview.sameAsYesterday')
+      : delta > 0
+        ? t('overview.moreThanYesterday', { 0: delta })
+        : t('overview.lessThanYesterday', { 0: -delta });
+  return (
+    <span
+      data-testid="delta"
+      data-sign={delta > 0 ? 'up' : delta < 0 ? 'down' : 'flat'}
+      aria-label={label}
+      className={cn(
+        'type-caption inline-flex items-center gap-1',
+        delta > 0 ? 'text-success' : delta < 0 ? 'text-destructive' : 'text-foreground-subtle',
+      )}
+    >
+      <Glyph className="size-3.5 shrink-0" />
+      {delta === 0
+        ? t('overview.sameAsYesterdayCaption')
+        : t('overview.vsYesterday', { 0: delta > 0 ? `+${delta}` : `${delta}` })}
+    </span>
+  );
+}
+
 function StreakCard({ current, longest }: { current: number; longest: number }) {
   const t = useTranslations();
   return (
     <SurfaceCard as="section" className="flex flex-col gap-3">
       <CardLabel>{t('overview.streak')}</CardLabel>
-      <StreakCounter
-        days={current}
-        longest={longest}
-        daysLabel={t('overview.streakDaysLabel')}
-        longestLabel={t('overview.longest', { 0: longest })}
-        dotsLabel={t('overview.streakDots', { 0: filledDots(current) })}
-      />
+      <div role="group" aria-label={t('overview.streakDays', { 0: current })}>
+        <StreakCounter
+          days={current}
+          longest={longest}
+          numberSize={PAIR_NUMBER_SIZE}
+          daysLabel={t('overview.streakDaysLabel')}
+          longestLabel={t('overview.longest', { 0: longest })}
+          dotsLabel={t('overview.streakDots', { 0: filledDots(current) })}
+        />
+      </div>
     </SurfaceCard>
   );
 }
@@ -167,28 +201,27 @@ function ChecklistCard({ capsHit }: { capsHit: Record<Category, boolean> }) {
     <SurfaceCard as="section" className="flex flex-col">
       <CardLabel>{t('overview.remaining')}</CardLabel>
       <ul className="pt-2">
-        {CATEGORY_ORDER.map((category, index) => {
-          const rule = RULEBOOK.find((entry) => entry.category === category);
+        {RULEBOOK.map(({ category, points, capPeriod }, index) => {
           const done = capsHit[category];
-          const period = rule?.capPeriod === 'week' ? 'overview.capPeriodWeek' : 'overview.capPeriodDay';
+          const period = capPeriod === 'week' ? 'overview.capPeriodWeek' : 'overview.capPeriodDay';
           return (
             <li
               key={category}
               data-testid="checklist-row"
               data-category={category}
               data-done={done ? 'true' : 'false'}
-              className={cn(
-                'flex min-h-11 items-center gap-3',
-                index > 0 && 'border-border border-t',
-              )}
+              className={cn('flex min-h-11 items-center gap-3', index > 0 && 'border-border border-t')}
             >
               <span
                 aria-hidden="true"
+                data-testid="checklist-mark"
                 className={cn(
-                  'size-[18px] shrink-0 rounded-full border-2',
-                  done ? 'border-success bg-success' : 'border-border-strong',
+                  'grid size-[18px] shrink-0 place-items-center rounded-full border-2',
+                  done ? 'border-success bg-success text-card' : 'border-border-strong',
                 )}
-              />
+              >
+                {done ? <CheckGlyph className="size-3" /> : null}
+              </span>
               <span
                 className={cn(
                   'type-body-medium min-w-0 flex-1 truncate',
@@ -198,9 +231,12 @@ function ChecklistCard({ capsHit }: { capsHit: Record<Category, boolean> }) {
                 {t(`categories.${category}`)}
               </span>
               <span
-                className={cn('type-caption shrink-0', done ? 'text-foreground-subtle' : 'text-foreground')}
+                className={cn(
+                  'type-caption shrink-0',
+                  done ? 'text-foreground-subtle' : 'text-foreground',
+                )}
               >
-                {done ? t('overview.capDone', { 0: t(period) }) : `+${rule?.points ?? 0}`}
+                {done ? t('overview.capDone', { 0: t(period) }) : `+${points}`}
               </span>
             </li>
           );
@@ -215,15 +251,28 @@ function TotalCard({ total, bonusPoints }: { total: number; bonusPoints: number 
   const t = useTranslations();
   return (
     <SurfaceCard as="section" accent className="flex items-center justify-between gap-3">
-      <div className="flex min-w-0 flex-col gap-1">
-        <CardLabel>{t('overview.challengeTotal')}</CardLabel>
-        <p className="type-caption text-foreground-secondary">
-          {t('overview.streakBonus', { 0: bonusPoints })}
-        </p>
+      <div
+        role="group"
+        aria-label={
+          bonusPoints === 0
+            ? t('overview.totalOf', { 0: total })
+            : t('overview.totalWithBonus', { 0: total, 1: bonusPoints })
+        }
+        className="flex flex-1 items-center justify-between gap-3"
+      >
+        <div className="flex min-w-0 flex-col gap-1">
+          <CardLabel>{t('overview.challengeTotal')}</CardLabel>
+          <p className="type-caption text-foreground-secondary">
+            {t('overview.streakBonus', { 0: bonusPoints })}
+          </p>
+        </div>
+        <span
+          data-testid="challenge-total"
+          className="type-display shrink-0 text-[30px] tabular-nums"
+        >
+          {total}
+        </span>
       </div>
-      <span data-testid="challenge-total" className="type-display shrink-0 text-[30px] tabular-nums">
-        {total}
-      </span>
     </SurfaceCard>
   );
 }
@@ -240,16 +289,18 @@ function FeedLinkCard() {
   );
 }
 
-/** Cards in outline while the dashboard loads — the layout does not jump when the data lands. */
+/** All five cards in outline while the dashboard loads — the layout does not jump when it lands. */
 function OverviewSkeleton() {
   return (
     <div data-testid="overview-skeleton" aria-busy="true" className="flex flex-col gap-4">
-      <div className="bg-surface-2 h-[132px] animate-pulse rounded-xl" />
+      <div className="bg-surface-2 h-[150px] animate-pulse rounded-xl" />
       <div className="grid grid-cols-2 gap-4">
         <div className="bg-surface-2 h-[140px] animate-pulse rounded-xl" />
         <div className="bg-surface-2 h-[140px] animate-pulse rounded-xl" />
       </div>
-      <div className="bg-surface-2 h-[180px] animate-pulse rounded-xl" />
+      <div className="bg-surface-2 h-[190px] animate-pulse rounded-xl" />
+      <div className="bg-surface-2 h-[84px] animate-pulse rounded-xl" />
+      <div className="bg-surface-2 h-[62px] animate-pulse rounded-xl" />
     </div>
   );
 }

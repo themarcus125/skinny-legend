@@ -137,3 +137,41 @@ export function ChevronRightGlyph(props: GlyphProps) {
     </Glyph>
   );
 }
+
+/** The tick inside a done checklist row's filled circle (`checkmark.circle.fill` on iOS). */
+export function CheckGlyph(props: GlyphProps) {
+  return (
+    <Glyph strokeWidth={2.75} {...props}>
+      <path d="m6.5 12.5 3.6 3.6L17.5 8.5" />
+    </Glyph>
+  );
+}
+
+/** The delta's direction, so the sign is not carried by colour alone (`arrow.up.right` on iOS). */
+export function ArrowUpRightGlyph(props: GlyphProps) {
+  return (
+    <Glyph strokeWidth={2.25} {...props}>
+      <path d="M7.5 16.5 16.5 7.5" />
+      <path d="M9 7.5h7.5V15" />
+    </Glyph>
+  );
+}
+
+export function ArrowDownRightGlyph(props: GlyphProps) {
+  return (
+    <Glyph strokeWidth={2.25} {...props}>
+      <path d="M7.5 7.5 16.5 16.5" />
+      <path d="M16.5 9v7.5H9" />
+    </Glyph>
+  );
+}
+
+/** The flat delta (`equal` on iOS). */
+export function EqualGlyph(props: GlyphProps) {
+  return (
+    <Glyph strokeWidth={2.25} {...props}>
+      <path d="M6.5 9.75h11" />
+      <path d="M6.5 14.25h11" />
+    </Glyph>
+  );
+}

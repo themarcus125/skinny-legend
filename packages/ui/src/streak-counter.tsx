@@ -8,6 +8,8 @@ export interface StreakCounterProps {
   longest: number;
   /** Defaults to the rulebook's 7-day bonus cycle. */
   cycle?: number;
+  /** The numeral's pixel size — iOS's `numberSize`. 30 is what the dashboard's card pair uses. */
+  numberSize?: number;
   /** e.g. "ngày liên tiếp" — the caption beside the number. */
   daysLabel: string;
   /** e.g. "Dài nhất: 9 ngày" — already formatted by the caller. */
@@ -42,6 +44,7 @@ export function StreakCounter({
   // `longest` stays in the props — it is what the caller formats `longestLabel` from, and
   // dropping it would break the parity with iOS's `StreakCounter` — but nothing here reads it.
   cycle = STREAK_CYCLE,
+  numberSize = 40,
   daysLabel,
   longestLabel,
   dotsLabel,
@@ -59,8 +62,11 @@ export function StreakCounter({
     >
       <div className="flex items-baseline gap-2">
         <span
+          // A runtime size, not a utility: iOS's `numberSize` is a free parameter, and Tailwind
+          // can only emit the arbitrary values it sees spelled out in the source.
+          style={{ fontSize: `${numberSize}px` }}
           className={cn(
-            'type-display text-[40px] tabular-nums',
+            'type-display leading-none tabular-nums',
             alive ? 'text-primary' : 'text-foreground-subtle',
           )}
         >
