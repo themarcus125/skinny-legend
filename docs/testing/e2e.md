@@ -19,7 +19,7 @@ prints one line per failure naming the fix.
 
 ```bash
 pnpm e2e                          # the whole suite
-pnpm e2e -- specs/api.spec.ts     # one spec
+pnpm --filter @skinny/e2e e2e specs/api.spec.ts   # one spec
 pnpm e2e:headed                   # watch the browser
 E2E_REUSE=1 pnpm e2e              # reuse the already-running stack, skip the builds
 pnpm e2e:down                     # remove the db and auth-emulator containers
@@ -45,7 +45,14 @@ emulator**. Never run it while a suite is running or against an emulator whose a
 - Every spec calls `resetAll()` in `beforeAll`: the per-run tables are emptied and the emulator's
   accounts are deleted. The seeded challenge and scoring rules survive.
 - Every object key the API creates starts with `e2e/` (`STORAGE_KEY_PREFIX`), which is what the
-  teardown sweep deletes.
+  teardown sweep deletes. That sweep removes **everything** under the prefix, so only one run may
+  use a given bucket at a time: CI queues its runs on a `concurrency` group, and locally you must
+  not start a second run (or share the bucket with a colleague's) while one is in flight.
+- The photo fixtures are generated, not committed. Global setup writes `e2e/.fixtures/` (gitignored)
+  with the EXIF `DateTimeOriginal` set to 00:05 today in Asia/Ho_Chi_Minh — the zone the Playwright
+  project is pinned to — so the entries the suite creates always land on today's `localDate`. Set
+  `E2E_FIXTURE_DATE=YYYY-MM-DD` to date them elsewhere; the specs read the same value, so a day
+  heading still matches and the dashboard's Today-card assertions stand down.
 - Members are created by `member({ name, email, status, role, locale })` from
   `e2e/src/helpers.ts`, which makes the emulator account and the `users` row in one call.
 
@@ -63,8 +70,6 @@ emulator**. Never run it while a suite is running or against an emulator whose a
 | `specs/api.spec.ts` | The API contract: 401s, 403s, `invalid_body`, CORS for the two UI origins |
 
 They run serially on one worker, in one Chromium project, sharing one database and one emulator.
-`onboarding.spec.ts` and `api.spec.ts` are in the tree today; the other six land with their
-flows and are listed here so the suite's shape is fixed before they arrive.
 
 ## Adding a flow
 
@@ -79,7 +84,9 @@ flows and are listed here so the suite's shape is fixed before they arrive.
 ## Artifacts
 
 - `e2e/logs/{api,admin,web}.log` — each service's stdout and stderr, and its build output.
-- `e2e/test-results/` — traces, screenshots and videos from the first retry.
+  Teardown redacts them before they can be uploaded: presigned-URL `X-Amz-*` query parameters and
+  `Authorization:` header values are replaced with `REDACTED`.
+- `e2e/test-results/` — screenshots of every failure; traces and videos from the first retry.
 - `e2e/playwright-report/` — the HTML report (`pnpm --filter @skinny/e2e exec playwright show-report`).
 
 ## CI
