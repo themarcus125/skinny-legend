@@ -21,6 +21,8 @@ export const queryKeys = {
   feed: ['feed'] as const,
   mapPins: (days: number) => ['map', days] as const,
   myEntries: ['entries', 'mine'] as const,
+  /** One heatmap square's rows: a bounded walk of `myEntries`, cached per day (Task 11). */
+  dayEntries: (date: string) => ['entries', 'mine', 'day', date] as const,
   userEntries: (id: string) => ['entries', 'user', id] as const,
   me: ['me'] as const,
   /** `GET /places/nearby` for one fix; the API caches by cell, so the key is the raw pair. */

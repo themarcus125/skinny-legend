@@ -209,7 +209,10 @@
     "dayEmpty": "You didn't track anything on this day.",
     "dayLoadFailed": "Couldn't load this day's activity.",
     "empty": "No activity yet",
-    "loadFailed": "Couldn't load trends."
+    "loadFailed": "Couldn't load trends.",
+    "mineSeries": "You",
+    "cellLabel": "{0}: {1} points",
+    "cellLabelEmpty": "{0}: no activity"
   },
   "account": {
     "title": "Account",

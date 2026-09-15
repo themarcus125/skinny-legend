@@ -209,7 +209,10 @@
     "dayEmpty": "Ngày này bạn chưa ghi nhận hoạt động nào.",
     "dayLoadFailed": "Không tải được hoạt động của ngày này.",
     "empty": "Chưa có hoạt động nào",
-    "loadFailed": "Không tải được xu hướng."
+    "loadFailed": "Không tải được xu hướng.",
+    "mineSeries": "Bạn",
+    "cellLabel": "{0}: {1} điểm",
+    "cellLabelEmpty": "{0}: không hoạt động"
   },
   "account": {
     "title": "Tài khoản",
