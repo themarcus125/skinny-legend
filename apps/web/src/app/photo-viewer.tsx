@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useTranslations } from 'use-intl';
 import { cn } from '@skinny/ui';
@@ -42,10 +42,38 @@ export function PhotoViewerProvider({ children }: { children: ReactNode }) {
   );
 }
 
+/** The fade's length; also how long a closing viewer stays mounted for the fade to play. */
+export const VIEWER_FADE_MS = 180;
+
+/**
+ * The overlay fades and scales in from the tap, and back out on dismissal: it mounts hidden,
+ * turns visible on the next frame so the transition has a start state, and on dismissal keeps
+ * rendering until the exit transition has played before `onDismiss` actually unmounts it.
+ * `motion-reduce` drops the transition, and the fallback timer still unmounts on time.
+ */
 function PhotoViewer({ photo, onDismiss }: { photo: ViewerPhoto; onDismiss: () => void }) {
   const t = useTranslations();
   const panel = useRef<HTMLDivElement>(null);
-  useModalSheet({ panelRef: panel, onDismiss });
+  const [visible, setVisible] = useState(false);
+  const closing = useRef(false);
+
+  useEffect(() => {
+    // Commit the hidden start state before flipping, or the browser sees only the end state
+    // and skips the transition: a forced style read, then the flip on the next frame.
+    panel.current?.getBoundingClientRect();
+    const frame = requestAnimationFrame(() => setVisible(true));
+    return () => cancelAnimationFrame(frame);
+  }, []);
+
+  const dismiss = useCallback(() => {
+    if (closing.current) return;
+    closing.current = true;
+    setVisible(false);
+    window.setTimeout(onDismiss, VIEWER_FADE_MS);
+  }, [onDismiss]);
+
+  useModalSheet({ panelRef: panel, onDismiss: dismiss });
+
   return (
     <div
       ref={panel}
@@ -54,20 +82,29 @@ function PhotoViewer({ photo, onDismiss }: { photo: ViewerPhoto; onDismiss: () =
       aria-label={photo.alt ?? t('common.viewPhoto')}
       tabIndex={-1}
       data-testid="photo-viewer"
-      onClick={onDismiss}
-      className="fixed inset-0 z-[60] flex items-center justify-center bg-black outline-none"
+      data-visible={visible ? 'true' : 'false'}
+      onClick={dismiss}
+      className={cn(
+        'fixed inset-0 z-[60] flex items-center justify-center bg-black outline-none',
+        'transition-opacity duration-[180ms] ease-out motion-reduce:transition-none',
+        visible ? 'opacity-100' : 'opacity-0',
+      )}
     >
       <img
         src={photo.src}
         alt={photo.alt ?? ''}
-        className="h-full w-full object-contain select-none"
+        className={cn(
+          'h-full w-full object-contain select-none',
+          'transition-transform duration-[180ms] ease-out motion-reduce:transition-none',
+          visible ? 'scale-100' : 'scale-95',
+        )}
         draggable={false}
       />
       <button
         type="button"
         aria-label={t('common.close')}
         data-testid="photo-viewer-close"
-        onClick={onDismiss}
+        onClick={dismiss}
         className="absolute top-[calc(env(safe-area-inset-top)+0.75rem)] right-3 grid size-11 place-items-center rounded-full bg-white/15 text-white backdrop-blur"
       >
         <CloseGlyph className="size-4" />

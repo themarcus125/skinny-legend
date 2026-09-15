@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import userEvent from '@testing-library/user-event';
-import { render, screen } from '@/test/intl';
+import { render, screen, waitFor } from '@/test/intl';
 import { PhotoButton, PhotoViewerProvider } from './photo-viewer';
 
 function renderPhoto() {
@@ -24,12 +24,14 @@ describe('the photo viewer', () => {
     expect(document.body).toHaveStyle({ overflow: 'hidden' });
 
     await userEvent.click(screen.getByTestId('photo-viewer-close'));
-    expect(screen.queryByTestId('photo-viewer')).toBeNull();
+    // The exit fade plays first: the viewer is still mounted, but already fading out.
+    expect(screen.getByTestId('photo-viewer')).toHaveAttribute('data-visible', 'false');
+    await waitFor(() => expect(screen.queryByTestId('photo-viewer')).toBeNull());
     expect(document.body.style.overflow).toBe('');
 
     await userEvent.click(screen.getByRole('button', { name: 'Xem ảnh' }));
     await userEvent.click(screen.getByTestId('photo-viewer'));
-    expect(screen.queryByTestId('photo-viewer')).toBeNull();
+    await waitFor(() => expect(screen.queryByTestId('photo-viewer')).toBeNull());
   });
 
   it('closes on Escape and gives focus back to the thumbnail', async () => {
@@ -39,8 +41,19 @@ describe('the photo viewer', () => {
     expect(document.activeElement).toBe(screen.getByTestId('photo-viewer'));
 
     await userEvent.keyboard('{Escape}');
-    expect(screen.queryByTestId('photo-viewer')).toBeNull();
+    await waitFor(() => expect(screen.queryByTestId('photo-viewer')).toBeNull());
     expect(document.activeElement).toBe(thumb);
+  });
+
+  it('fades in after mounting, and a second dismissal during the fade-out is ignored', async () => {
+    renderPhoto();
+    await userEvent.click(screen.getByRole('button', { name: 'Xem ảnh' }));
+    const viewer = screen.getByTestId('photo-viewer');
+    await waitFor(() => expect(viewer).toHaveAttribute('data-visible', 'true'));
+
+    await userEvent.click(screen.getByTestId('photo-viewer-close'));
+    await userEvent.click(screen.getByTestId('photo-viewer-close'));
+    await waitFor(() => expect(screen.queryByTestId('photo-viewer')).toBeNull());
   });
 
   it('falls back to the thumbnail when there is no larger photo, and to a no-op without a provider', async () => {
