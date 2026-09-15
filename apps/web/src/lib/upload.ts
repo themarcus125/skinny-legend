@@ -15,11 +15,23 @@ export const DIRECT_UPLOAD_TYPES: readonly UploadContentType[] = [
   'image/webp',
 ];
 
-/** JPEG quality for a converted photo — iOS's `ImagePipeline` compresses at the same 0.9. */
-const JPEG_QUALITY = 0.9;
+/**
+ * The byte budget for an entry photo. A 12 MP camera JPEG is 3–6 MB; the feed, the map and the
+ * vision model (which the API downsizes to 1200 px anyway) need nothing like that, and a member on
+ * mobile data uploads several a day. WhatsApp lands its photos at a few hundred KB by the same two
+ * moves — a ~1600 px long edge and a JPEG quality around 0.8 — so that is the target here.
+ */
+export const PHOTO_MAX_BYTES = 600 * 1024;
 
-/** The longest edge a converted photo keeps, matching iOS's `ImagePipeline.maxDimension`. */
-const MAX_DIMENSION = 2048;
+/** The longest edge an entry photo keeps. 1600 px is sharp on any phone and ~4× the API's 1200. */
+export const PHOTO_MAX_DIMENSION = 1600;
+
+/**
+ * JPEG qualities tried in order until the photo fits `PHOTO_MAX_BYTES`. The first is the
+ * WhatsApp-ish default; the rest only apply to a very noisy or very large photo. The last one is
+ * accepted whatever its size, since a slightly heavy photo beats a refused one.
+ */
+export const PHOTO_QUALITY_LADDER: readonly number[] = [0.82, 0.72, 0.62, 0.5];
 
 /**
  * The longest edge an avatar keeps — `ImagePipeline.prepareAvatar`'s. It is rendered at 96 px at
@@ -40,45 +52,73 @@ export interface Uploadable {
   contentType: UploadContentType;
 }
 
+/** Draws a decoded bitmap onto a canvas no larger than `maxDimension` and encodes it as JPEG. */
+function encodeJpeg(bitmap: ImageBitmap, maxDimension: number, quality: number): Promise<Blob> {
+  const scale = Math.min(1, maxDimension / Math.max(bitmap.width, bitmap.height));
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+  canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+  const context = canvas.getContext('2d');
+  if (!context) throw new Error('no 2d context');
+  context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  return new Promise<Blob>((resolve, reject) =>
+    canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error('canvas produced no blob'))), 'image/jpeg', quality),
+  );
+}
+
+/**
+ * Walks `ladder` until `encode` answers a blob within `maxBytes`, and settles for the last rung
+ * otherwise. Pure so the ladder can be tested without a canvas.
+ */
+export async function encodeWithinBudget(
+  encode: (quality: number) => Promise<Blob>,
+  maxBytes: number,
+  ladder: readonly number[] = PHOTO_QUALITY_LADDER,
+): Promise<Blob> {
+  let last: Blob | null = null;
+  for (const quality of ladder) {
+    last = await encode(quality);
+    if (last.size <= maxBytes) return last;
+  }
+  if (!last) throw new Error('empty quality ladder');
+  return last;
+}
+
 /**
  * Decodes a photo and re-encodes it as JPEG through a canvas — the only conversion a browser
  * can do without a wasm decoder. Safari decodes HEIC natively (it is the format its own camera
- * writes), which is exactly the browser that produces them.
+ * writes), which is exactly the browser that produces them. `createImageBitmap` applies the
+ * EXIF orientation while decoding, so the output is upright and needs no orientation tag.
+ *
+ * The bitmap is decoded once and encoded as many times as the quality ladder needs: encoding is
+ * cheap next to decoding a 12 MP HEIC on a phone.
  */
-async function canvasToJpeg(file: Blob, maxDimension = MAX_DIMENSION): Promise<Blob> {
+async function canvasToJpeg(file: Blob, maxDimension = PHOTO_MAX_DIMENSION, maxBytes = PHOTO_MAX_BYTES): Promise<Blob> {
   const bitmap = await createImageBitmap(file);
   try {
-    const scale = Math.min(1, maxDimension / Math.max(bitmap.width, bitmap.height));
-    const canvas = document.createElement('canvas');
-    canvas.width = Math.max(1, Math.round(bitmap.width * scale));
-    canvas.height = Math.max(1, Math.round(bitmap.height * scale));
-    const context = canvas.getContext('2d');
-    if (!context) throw new Error('no 2d context');
-    context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-    const blob = await new Promise<Blob | null>((resolve) =>
-      canvas.toBlob(resolve, 'image/jpeg', JPEG_QUALITY),
-    );
-    if (!blob) throw new Error('canvas produced no blob');
-    return blob;
+    return await encodeWithinBudget((quality) => encodeJpeg(bitmap, maxDimension, quality), maxBytes);
   } finally {
     bitmap.close();
   }
 }
 
 /**
- * The bytes and the content type to presign for, applying ruling R25.
+ * The bytes and the content type to presign for, applying ruling R25 and the byte budget.
  *
- * A JPEG, PNG or WebP goes up untouched — re-encoding it would only lose quality and strip the
- * EXIF block the caller has already read. Everything else (HEIC, an unlabelled file a browser
- * still decodes) is converted. A file nothing can decode fails as `photo_invalid`, the same
- * code the API would answer with, so the screen renders the catalog message it already has.
+ * A JPEG, PNG or WebP already within `PHOTO_MAX_BYTES` goes up untouched — re-encoding it would
+ * only lose quality. Anything heavier is downscaled and re-encoded as JPEG, whatever its type: the
+ * caller has already read the EXIF block it needs (Track reads capture time and GPS before it
+ * uploads), so stripping it costs nothing. Everything outside the renderable set (HEIC, an
+ * unlabelled file a browser still decodes) is converted regardless of size. A file nothing can
+ * decode fails as `photo_invalid`, the same code the API would answer with, so the screen renders
+ * the catalog message it already has.
  */
 export async function toUploadable(
   file: Blob,
   convert: (file: Blob) => Promise<Blob> = canvasToJpeg,
 ): Promise<Uploadable> {
   const type = file.type as UploadContentType;
-  if (DIRECT_UPLOAD_TYPES.includes(type)) return { blob: file, contentType: type };
+  if (DIRECT_UPLOAD_TYPES.includes(type) && file.size <= PHOTO_MAX_BYTES) return { blob: file, contentType: type };
   try {
     return { blob: await convert(file), contentType: 'image/jpeg' };
   } catch {
@@ -122,7 +162,7 @@ export async function uploadAvatar(
   file: Blob,
   onProgress: (fraction: number) => void,
   /** The conversion seam — injected in tests, where jsdom has no canvas to decode with. */
-  convert: (file: Blob) => Promise<Blob> = (source) => canvasToJpeg(source, AVATAR_MAX_DIMENSION),
+  convert: (file: Blob) => Promise<Blob> = (source) => canvasToJpeg(source, AVATAR_MAX_DIMENSION, Infinity),
 ): Promise<string> {
   if (file.size > MAX_UPLOAD_BYTES) {
     throw new ApiError(0, 'photo_invalid', 'The photo is too large to process');

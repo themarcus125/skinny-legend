@@ -5,6 +5,10 @@ import {
   AVATAR_MAX_DIMENSION,
   DIRECT_UPLOAD_TYPES,
   MAX_UPLOAD_BYTES,
+  PHOTO_MAX_BYTES,
+  PHOTO_MAX_DIMENSION,
+  PHOTO_QUALITY_LADDER,
+  encodeWithinBudget,
   toUploadable,
   uploadAvatar,
   uploadPhoto,
@@ -50,6 +54,13 @@ function withFakeXhr(): ApiClient {
 }
 
 const blob = (type: string) => new Blob([new Uint8Array([1, 2, 3])], { type });
+
+/** A blob that reports `size` bytes without allocating them. */
+function sized(type: string, size: number): Blob {
+  const b = blob(type);
+  Object.defineProperty(b, 'size', { value: size });
+  return b;
+}
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -97,12 +108,22 @@ describe('uploadToPresign against a fake XHR', () => {
 });
 
 describe('toUploadable (ruling R25)', () => {
-  it('sends a browser-renderable photo up untouched', async () => {
+  it('sends a browser-renderable photo within the byte budget up untouched', async () => {
     for (const type of DIRECT_UPLOAD_TYPES) {
-      const file = blob(type);
+      const file = sized(type, PHOTO_MAX_BYTES);
       const uploadable = await toUploadable(file);
       expect(uploadable.contentType).toBe(type);
       expect(uploadable.blob).toBe(file);
+    }
+  });
+
+  it('compresses a renderable photo over the byte budget to JPEG, whatever its type', async () => {
+    for (const type of DIRECT_UPLOAD_TYPES) {
+      const converted = blob('image/jpeg');
+      const convert = vi.fn(() => Promise.resolve(converted));
+      const uploadable = await toUploadable(sized(type, PHOTO_MAX_BYTES + 1), convert);
+      expect(convert).toHaveBeenCalledOnce();
+      expect(uploadable).toEqual({ blob: converted, contentType: 'image/jpeg' });
     }
   });
 
@@ -118,6 +139,29 @@ describe('toUploadable (ruling R25)', () => {
     await expect(
       toUploadable(blob('application/pdf'), () => Promise.reject(new Error('no decoder'))),
     ).rejects.toMatchObject({ code: 'photo_invalid' });
+  });
+});
+
+describe('the photo byte budget', () => {
+  it('targets a few hundred KB at a phone-sharp long edge, like a chat app', () => {
+    expect(PHOTO_MAX_BYTES).toBe(600 * 1024);
+    expect(PHOTO_MAX_DIMENSION).toBe(1600);
+    // Strictly descending, so every rung is smaller than the last.
+    expect([...PHOTO_QUALITY_LADDER].sort((a, b) => b - a)).toEqual([...PHOTO_QUALITY_LADDER]);
+  });
+
+  it('stops at the first quality that fits the budget', async () => {
+    const encode = vi.fn((quality: number) => Promise.resolve(sized('image/jpeg', Math.round(quality * 1000))));
+    const out = await encodeWithinBudget(encode, 700, [0.9, 0.8, 0.6, 0.4]);
+    expect(out.size).toBe(600);
+    expect(encode.mock.calls.map(([q]) => q)).toEqual([0.9, 0.8, 0.6]);
+  });
+
+  it('settles for the last rung when nothing fits, rather than refusing the photo', async () => {
+    const encode = vi.fn(() => Promise.resolve(sized('image/jpeg', 5000)));
+    const out = await encodeWithinBudget(encode, 700, [0.9, 0.5]);
+    expect(out.size).toBe(5000);
+    expect(encode).toHaveBeenCalledTimes(2);
   });
 });
 
