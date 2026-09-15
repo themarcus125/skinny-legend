@@ -9,10 +9,10 @@ test.beforeAll(async () => {
 });
 
 /**
- * The brief's Step 9 test ids (`pending-screen`, `disabled-screen`, `member-row`,
- * `member-status`, `member-action-*`) are not in the product code yet and this task may not edit
- * apps/web or apps/admin, so the two flows are asserted through the gate routes and the
- * Vietnamese copy the run's `vi-VN` context renders. Swap in the test ids once they land.
+ * The gate screens are asserted through the brief's Step 9 test ids (`pending-screen`,
+ * `disabled-screen`) plus the gate route, so neither flow depends on the Vietnamese copy the
+ * run's `vi-VN` context renders. The admin table still matches on copy — the member row's
+ * status and actions have no stable text-free handle in this spec.
  */
 test('a pending member waits, an admin approves, and the member reaches the overview', async ({
   browser,
@@ -33,7 +33,7 @@ test('a pending member waits, an admin approves, and the member reaches the over
   const memberPage = await memberContext.newPage();
   await signInWeb(memberPage, newcomer);
   await memberPage.waitForURL(`${WEB_URL}/pending`, { timeout: 30_000 });
-  await expect(memberPage.getByText('Tài khoản đang chờ duyệt.')).toBeVisible();
+  await expect(memberPage.getByTestId('pending-screen')).toBeVisible();
 
   const adminContext = await browser.newContext();
   const adminPage = await adminContext.newPage();
@@ -89,7 +89,7 @@ test('an admin disables a member and the member lands on the disabled screen', a
   const memberPage = await memberContext.newPage();
   await signInWeb(memberPage, target);
   await memberPage.waitForURL(`${WEB_URL}/disabled`, { timeout: 30_000 });
-  await expect(memberPage.getByText('Tài khoản đã bị khoá')).toBeVisible();
+  await expect(memberPage.getByTestId('disabled-screen')).toBeVisible();
 
   await memberContext.close();
   await adminContext.close();

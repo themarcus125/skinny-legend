@@ -39,7 +39,7 @@ export function EntriesTable({
         {entries.map((entry) => {
           const summary = verdictSummary(entry.verdict, t);
           return (
-            <TableRow key={entry.id}>
+            <TableRow key={entry.id} data-testid="entry-row" data-entry-id={entry.id}>
               <TableCell>
                 {entry.thumbUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element -- R2 serves short-lived signed URLs; next/image would need remotePatterns and would cache them.
@@ -65,6 +65,7 @@ export function EntriesTable({
               </TableCell>
               <TableCell>
                 <Badge
+                  data-testid="entry-status"
                   variant={
                     entry.status === 'confirmed' ? 'success' : entry.status === 'pending' ? 'warning' : 'destructive'
                   }
@@ -73,7 +74,7 @@ export function EntriesTable({
                 </Badge>
               </TableCell>
               <TableCell className="w-56 max-w-56">
-                <span className="block truncate text-sm text-foreground" title={summary}>
+                <span data-testid="entry-verdict" className="block truncate text-sm text-foreground" title={summary}>
                   {summary}
                 </span>
                 {entry.verdict?.reason ? (
@@ -83,10 +84,17 @@ export function EntriesTable({
                 ) : null}
               </TableCell>
               <TableCell className="space-x-2 text-right">
-                <Button size="sm" variant="outline" disabled={isMutating} onClick={() => onOverride(entry)}>
+                <Button
+                  data-testid="entry-edit"
+                  size="sm"
+                  variant="outline"
+                  disabled={isMutating}
+                  onClick={() => onOverride(entry)}
+                >
                   {t('entries.edit')}
                 </Button>
                 <Button
+                  data-testid="entry-reject"
                   size="sm"
                   variant="outline"
                   className="text-destructive hover:border-destructive hover:bg-destructive-soft"
