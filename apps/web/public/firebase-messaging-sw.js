@@ -74,11 +74,11 @@ if (config.apiKey && config.projectId && config.messagingSenderId && config.appI
   const messaging = firebase.messaging();
 
   /*
-   * The notification job sends DATA-ONLY messages (apps/api/src/jobs/notify.ts), so iOS can
-   * build its own presentation — which means the browser shows nothing by itself and this
-   * handler has to. A payload that does carry a `notification` block (the Firebase console's
-   * test send) is honoured the same way rather than being shown twice: `onBackgroundMessage`
-   * is not called for those, so there is no double-render to guard against.
+   * Web tokens receive DATA-ONLY messages (apps/api/src/services/push.ts `toFcmMessage`,
+   * platform 'web'): the browser shows nothing by itself, so this handler renders the
+   * notification with the app's icon, tag and deep link. iOS tokens keep the `notification`
+   * block for APNs. A payload that does carry `notification` (the Firebase console's test
+   * send) is displayed by the SDK itself and `onBackgroundMessage` is not called for it.
    */
   messaging.onBackgroundMessage((payload) => {
     const data = payload.data || {};
