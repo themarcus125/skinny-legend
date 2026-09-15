@@ -88,7 +88,7 @@ key the script prints how to get one and exits `1`.
 | `--models a,b,c` | every id in `models.json` | Ids not in `models.json` run fine but have no pricing |
 | `--locale vi\|en` | `vi` | Only switches the language of the model's `reason` sentence, exactly as production does |
 | `--concurrency N` | `2` | Requests in flight per model. Raise it carefully; OpenRouter rate-limits |
-| `--timeout-ms N` | `20000` | Production uses 8000. Run once at 20000 to see true latency, then once at 8000 to see how many calls the production budget would actually drop |
+| `--timeout-ms N` | `20000` | Production uses 12000. Run once at 20000 to see true latency, then once at 12000 to see how many calls the production budget would actually drop |
 | `--timestamp S` | now, ISO 8601 | Names `results/<timestamp>.json` |
 | `--dry-run` | off | Lists models and fixtures, calls nothing, needs no key |
 
@@ -135,7 +135,7 @@ error you will notice in the table — it returns HTTP 404, which the harness re
   model with great accuracy and a 15% fail rate is worse than the table's accuracy column
   makes it look. Failed calls also count as misses in the accuracy and recall columns.
 - **Mean latency / p95** — wall clock per call, from the same code path production uses.
-  Production times out at 8000 ms; anything with a p95 near that will drop calls under
+  Production times out at 12000 ms; anything with a p95 near that will drop calls under
   load.
 - **$/photo** — from OpenRouter's own `usage.cost` when the provider reports it (the
   harness opts every request into usage accounting). A trailing `*` means the number was
@@ -164,7 +164,7 @@ markdown table into the SKI-41 issue rather than committing the file.
 
 There is no automatic pass/fail. The shape of a shippable model:
 
-1. Fail rate under ~5% at `--timeout-ms 8000`.
+1. Fail rate under ~5% at `--timeout-ms 12000`.
 2. Precision on `exercise` at or near 100% — no free points for selfies.
 3. Healthy accuracy comfortably above chance on the six meal photos. Members can override,
    so this matters less than the category calls.

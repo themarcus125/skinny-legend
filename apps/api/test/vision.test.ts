@@ -96,4 +96,37 @@ describe('classifyPhoto locale instruction', () => {
     const system = JSON.parse(calls[0]!).messages[0].content as string;
     expect(system).toContain('in English');
   });
+
+  it('disables model reasoning and caps the output length', async () => {
+    const { calls, fetch } = capturingFetch();
+    await classifyPhoto(png, { fetch });
+    const body = JSON.parse(calls[0]!) as { reasoning?: unknown; max_tokens?: number; temperature?: number };
+    expect(body.reasoning).toEqual({ effort: 'none', exclude: true });
+    expect(body.max_tokens).toBe(300);
+    expect(body.temperature).toBe(0);
+  });
+});
+
+describe('classifyPhoto with a thinking model', () => {
+  it('parses the JSON content even when the reply carries a populated reasoning field', async () => {
+    const reply = (async () =>
+      new Response(
+        JSON.stringify({
+          choices: [
+            {
+              message: {
+                reasoning: 'Let me look at the photo. There is a plate of salad, so this is a meal and it looks healthy.',
+                content: '{"categories":["meal"],"healthy":true,"confidence":0.8,"reason":"Salad rau."}',
+              },
+            },
+          ],
+        }),
+        { status: 200 },
+      )) as unknown as typeof fetch;
+    const v = await classifyPhoto(png, { fetch: reply });
+    expect(v.failed).toBe(false);
+    expect(v.categories).toEqual(['meal']);
+    expect(v.healthy).toBe(true);
+    expect(v.reason).toBe('Salad rau.');
+  });
 });

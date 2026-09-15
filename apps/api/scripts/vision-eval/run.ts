@@ -52,7 +52,7 @@ function usage(): string {
     '  --models a,b,c      Model ids to evaluate (default: every id in models.json)',
     '  --locale vi|en      Language of the model\'s `reason` sentence (default: vi)',
     '  --concurrency N     Fixtures in flight per model (default: 2)',
-    '  --timeout-ms N      Per-request timeout (default: 20000; production uses 8000)',
+    '  --timeout-ms N      Per-request timeout (default: 20000; production uses 12000)',
     '  --timestamp S       Label for results/<timestamp>.json (default: now, ISO 8601)',
     '  --dry-run           List the fixtures and models that would run, call nothing',
     '  --help',
