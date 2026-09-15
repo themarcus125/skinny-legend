@@ -7,8 +7,9 @@ Since the `@skinny/api-client` migration the dashboard *does* depend on workspac
 `@skinny/api-client` ships TypeScript source, so Next compiles it through
 `transpilePackages` in `apps/admin/next.config.ts` — nothing to build. Its own dependency
 `@skinny/shared` resolves from `dist/`, so that one package **must be built before
-`next build`**; that is the only cross-package build step, and it is why the Build Command
-below is no longer the default. Nothing drizzle-shaped reaches the browser: the client
+`next build`**. The admin's `prebuild` script (`pnpm --filter @skinny/shared build`) does
+that, so Vercel's default `pnpm run build` works; without it the build dies with
+`Module not found` on every `@skinny/shared/*` import. Nothing drizzle-shaped reaches the browser: the client
 imports only `@skinny/shared/wire`, `/scoring` and `/dates`, never the package root (an
 ESLint `no-restricted-imports` rule in `packages/api-client` enforces it).
 
@@ -22,7 +23,7 @@ Vercel → **Add New → Project** → import this repository, then:
 | **Root Directory** | **`apps/admin`** |
 | Include source files outside of the Root Directory | **enabled** (the pnpm lockfile lives at the repo root) |
 | Install Command | `pnpm install --frozen-lockfile` (Vercel runs it from the workspace root) |
-| **Build Command** | **`pnpm --filter @skinny/shared build && next build`** (Vercel runs it from `apps/admin`; the filter still resolves against the workspace root) |
+| Build Command | default (`pnpm run build`; the admin's `prebuild` script builds `@skinny/shared` first) |
 | Output Directory | default |
 | Node.js Version | 22.x |
 
