@@ -51,6 +51,26 @@ export default tseslint.config(
     },
   },
   {
+    /*
+     * The FCM background worker (`public/firebase-messaging-sw.js`) is plain JS copied verbatim
+     * into the build — never bundled, never type-checked — and runs in a ServiceWorkerGlobalScope
+     * rather than a window. See `src/push/messaging.ts` for why it is a second service worker.
+     */
+    files: ['public/**/*.js'],
+    languageOptions: {
+      ecmaVersion: 'latest',
+      sourceType: 'script',
+      globals: {
+        self: 'readonly',
+        clients: 'readonly',
+        importScripts: 'readonly',
+        firebase: 'readonly',
+        URL: 'readonly',
+        console: 'readonly',
+      },
+    },
+  },
+  {
     files: ['**/*.ts', '**/*.tsx'],
     extends: [
       ...tseslint.configs.recommended,

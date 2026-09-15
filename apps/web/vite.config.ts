@@ -63,6 +63,19 @@ export default defineConfig({
       workbox: {
         // The app shell is precached; a navigation to any route falls back to it (SPA routing).
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
+        /*
+         * The FCM background worker is the site's *second* service worker and must stay out of
+         * Workbox's hands entirely. Workbox owns `/sw.js` at scope `/`; `public/firebase-
+         * messaging-sw.js` is served from the site root and registered by `src/push/messaging.ts`
+         * at the narrower `/firebase-cloud-messaging-push-scope`, which is what lets the two
+         * coexist (two registrations at the same scope replace one another).
+         *
+         * Precaching it would be actively wrong: the browser must fetch the worker script
+         * itself, and a precached copy would let a stale revision keep answering pushes after a
+         * deploy. It is the `js` extension in `globPatterns` above that would otherwise sweep it
+         * in, since everything in `public/` is copied into the build output.
+         */
+        globIgnores: ['**/firebase-messaging-sw.js'],
         navigateFallback: 'index.html',
         // Never hand an API URL the shell: those are fetches, not navigations, but a bad
         // denylist entry is cheaper to reason about than a mis-served HTML body.

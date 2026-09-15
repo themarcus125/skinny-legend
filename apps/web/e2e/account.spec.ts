@@ -15,6 +15,17 @@ test.describe('Tài khoản', () => {
     // The settings card, in the order `AccountView` lists them.
     await expect(page.getByTestId('language-picker').getByRole('radio')).toHaveCount(3);
     await expect(page.getByTestId('theme-picker').getByRole('radio')).toHaveCount(3);
+
+    // "Nhắc nhở" sits between the appearance picker and the group fund, as in `AccountView`.
+    // Headless WebKit exposes no `PushManager` and the preview has no Firebase project, so the
+    // row is in its `unsupported` state — the switch disabled with the explanation under it.
+    const reminders = page.getByTestId('reminders-row');
+    await expect(reminders.getByRole('switch', { name: 'Nhắc nhở' })).toBeDisabled();
+    await expect(reminders.getByTestId('alert-banner')).toContainText(
+      'chưa hỗ trợ thông báo đẩy',
+    );
+    await reminders.scrollIntoViewIfNeeded();
+    await page.screenshot({ path: `${SHOTS}/web-account-reminders.png`, fullPage: true });
     await expect(page.getByRole('link', { name: 'Quỹ nhóm' })).toHaveAttribute(
       'href',
       'https://quy.momo.vn/v2/GZqk7REIhy?cover=f131',

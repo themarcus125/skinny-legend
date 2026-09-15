@@ -15,6 +15,7 @@ import { FeedbackSheet } from './feedback-sheet';
 import { AccountHistory } from './history';
 import { LanguagePicker } from './language-picker';
 import { ProfileEditSheet } from './profile-edit';
+import { RemindersRow } from './reminders-row';
 import { SettingRow } from './settings-row';
 import { ThemePicker } from './theme-picker';
 
@@ -32,9 +33,9 @@ const HEADER_AVATAR = 56;
  *
  * - **Giao diện** is web-only. iOS follows the system appearance; a browser tab wants an override
  *   (see `theme-picker.tsx`).
- * - **Nhắc nhở** is not here yet. Web push is Task 13, and a toggle that cannot toggle is worse
- *   than no row at all, so the seam is marked below rather than rendered disabled — the catalog
- *   has no "coming soon" string to render honestly with, and Vietnamese is authored upstream.
+ * - **Nhắc nhở** carries one state iOS cannot: `unsupported`. A browser that cannot take web push
+ *   at all gets the switch disabled with an explanation instead of iOS's "Mở Cài đặt", which has
+ *   no web equivalent (see `reminders-row.tsx`).
  *
  * `/me` knows the avatar as a storage key, not a URL, so the header's face (and the rank and
  * total beside the name) come from this member's own leaderboard row, exactly as `AccountModel`
@@ -110,13 +111,7 @@ export function Account() {
         <SurfaceCard as="section" padding="none" className="overflow-hidden">
           <LanguagePicker />
           <ThemePicker />
-          {/*
-           * Task 13 (web push) drops the "Nhắc nhở" row in here, between the appearance picker
-           * and the group fund, to keep the order of `AccountView`'s settings section: a toggle
-           * bound to the registrar's `isEnabled`, disabled while it is busy or permission is
-           * denied, with the `push.denied` / `push.unsupported` notes underneath. The catalog
-           * already carries `account.reminders`, `account.remindersHint` and every `push.*` key.
-           */}
+          <RemindersRow />
           <ActionRow
             label={t('account.fund')}
             hint={t('account.fundLink')}

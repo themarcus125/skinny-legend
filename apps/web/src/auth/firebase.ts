@@ -1,5 +1,7 @@
+import type { FirebaseApp } from 'firebase/app';
 import type { Auth } from 'firebase/auth';
-import { firebaseOptions } from './firebase-config';
+import type { Messaging } from 'firebase/messaging';
+import { firebaseOptions, hasFirebaseConfig as isConfigured } from './firebase-config';
 
 export { hasFirebaseConfig } from './firebase-config';
 
@@ -40,6 +42,7 @@ function errorCode(error: unknown): string {
 type AuthModule = typeof import('firebase/auth');
 
 interface FirebaseSdk {
+  app: FirebaseApp;
   auth: Auth;
   mod: AuthModule;
 }
@@ -71,6 +74,7 @@ export function loadFirebase(): Promise<FirebaseSdk> {
     const instance = app.getApps().length ? app.getApp() : app.initializeApp(firebaseOptions());
     return {
       mod,
+      app: instance,
       auth: mod.initializeAuth(instance, {
         persistence: mod.indexedDBLocalPersistence,
         popupRedirectResolver: mod.browserPopupRedirectResolver,
@@ -80,6 +84,48 @@ export function loadFirebase(): Promise<FirebaseSdk> {
   sdk = pending;
   pending.catch(() => {
     if (sdk === pending) sdk = null;
+  });
+  return pending;
+}
+
+type MessagingModule = typeof import('firebase/messaging');
+
+export interface MessagingSdk {
+  messaging: Messaging;
+  mod: MessagingModule;
+}
+
+let messagingSdk: Promise<MessagingSdk | null> | null = null;
+
+/**
+ * Loads `firebase/messaging` on first use, or resolves `null` when this browser cannot take web
+ * push at all.
+ *
+ * Its own dynamic `import()`, for the same reason `firebase/auth` has one and then some: nothing
+ * on the critical path needs it. Only the Account reminders row and the post-first-entry prompt
+ * ever reach it, so the SDK must never appear in the entry chunk — a member who never turns
+ * reminders on never downloads it.
+ *
+ * `isSupported()` is the SDK's own check (service worker, `PushManager`, IndexedDB, and the
+ * webviews it knows are lying) and is asked *before* `getMessaging`, which throws outright on an
+ * unsupported browser. A project with no `VITE_FIREBASE_*` — mock mode, a preview — resolves
+ * `null` rather than standing an unconfigured app up.
+ *
+ * The in-flight promise is memoised, but a **rejected** one is not: a load that failed offline
+ * must not poison the toggle until a full reload.
+ */
+export function loadMessaging(): Promise<MessagingSdk | null> {
+  if (messagingSdk) return messagingSdk;
+  const pending = (async (): Promise<MessagingSdk | null> => {
+    if (!isConfigured) return null;
+    const mod = await import('firebase/messaging');
+    if (!(await mod.isSupported())) return null;
+    const { app } = await loadFirebase();
+    return { mod, messaging: mod.getMessaging(app) };
+  })();
+  messagingSdk = pending;
+  pending.catch(() => {
+    if (messagingSdk === pending) messagingSdk = null;
   });
   return pending;
 }

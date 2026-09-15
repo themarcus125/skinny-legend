@@ -1,4 +1,5 @@
 import { Outlet } from 'react-router';
+import { PushToastHost } from '@/push/toast';
 import { SCROLL_CONTAINER_ATTR } from './large-title';
 import { TabBar } from './tab-bar';
 
@@ -22,6 +23,8 @@ export function AppShell() {
         <Outlet />
       </main>
       <TabBar />
+      {/* Foreground pushes: the browser shows nothing while the tab is in front. */}
+      <PushToastHost />
     </div>
   );
 }

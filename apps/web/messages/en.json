@@ -258,6 +258,7 @@
   "push": {
     "enableFailed": "Couldn't turn on notifications, please try again.",
     "denied": "Notifications are off in Settings. Turn them back on there to get reminders.",
+    "deniedExplanation": "This browser is blocking notifications for this site. Turn them back on in your browser's site settings to get reminders.",
     "openSettings": "Open Settings",
     "openSettingsHint": "Opens Settings so you can turn notifications back on",
     "unsupported": "This browser doesn't support push notifications."

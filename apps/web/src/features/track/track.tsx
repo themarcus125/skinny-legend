@@ -5,11 +5,13 @@ import { useTranslations } from 'use-intl';
 import { AlertBanner, ProgressBar, SurfaceCard } from '@skinny/ui';
 import { CameraGlyph, CloseGlyph, PhotoStackGlyph } from '@/app/icons';
 import { LargeTitle } from '@/app/large-title';
+import { useSession } from '@/auth/session';
 import { describeError, useApi } from '@/lib/api';
 import { readExif } from '@/lib/exif';
 import { currentPosition } from '@/lib/geo';
 import { queryKeys } from '@/lib/query';
 import { uploadPhoto } from '@/lib/upload';
+import { usePush } from '@/push/use-push';
 import { Button } from '@/ui/button';
 import { VerdictSheet } from './verdict-sheet';
 import {
@@ -350,5 +352,27 @@ export function Track({ onTracked }: TrackProps) {
   );
 }
 
+/**
+ * The routed screen: `Track` with the push prompt hung off `onTracked`.
+ *
+ * Spec §E asks for the notification prompt after the member's *first confirmed entry*, never at
+ * launch, and `requestAfterFirstConfirmedEntry` is the once-per-user-id guard — so every tracked
+ * entry can call it and only the first one prompts. The plain `Track` stays prop-driven so the
+ * feature tests never stand a registrar up.
+ */
+export function TrackScreen() {
+  const session = useSession();
+  const { registrar } = usePush();
+  const userId =
+    session.status === 'active' || session.status === 'pending' ? session.user.id : null;
+
+  const onTracked = useCallback(() => {
+    if (userId === null) return;
+    void registrar.requestAfterFirstConfirmedEntry(userId);
+  }, [registrar, userId]);
+
+  return <Track onTracked={onTracked} />;
+}
+
 /** React Router 7's lazy-route convention. */
-export const Component = Track;
+export const Component = TrackScreen;

@@ -263,7 +263,9 @@ describe('the account screen', () => {
         expect.objectContaining({ message: 'Ứng dụng rất tốt' }),
       ),
     );
-    expect(await screen.findByRole('status')).toHaveTextContent('Đã gửi góp ý');
+    // The reminders row renders its own `role="status"` banner (jsdom has no push support), so
+    // the confirmation is found by its copy rather than by being the only status on the screen.
+    expect(await screen.findByText('Đã gửi góp ý')).toBeInTheDocument();
   });
 
   it('signs out only after the confirmation', async () => {

@@ -67,12 +67,20 @@ export type SessionValue = SessionState & SessionActions;
 const SessionContext = createContext<SessionValue | null>(null);
 
 /**
- * Cleanup the rest of the app registers for sign-out — clearing the install-scoped push flags
- * and the stored locale choice, mirroring `PushRegistrar.resetForSignOut` /
- * `clearLocalState()` on iOS. Task 13 registers the push half; the array is the seam so
- * `session.tsx` never has to import it.
+ * Cleanup the rest of the app registers for sign-out — clearing the install-scoped push flags,
+ * mirroring `PushRegistrar.resetForSignOut` / `clearLocalState()` on iOS. `src/push/use-push.ts`
+ * registers the push half; the set is the seam, so `session.tsx` never imports the registrar
+ * (and a tree that never mounts the reminders row never loads it).
+ *
+ * Which of the two teardowns is running. They are *not* the same call, which is why the reason
+ * is passed rather than inferred: a deliberate sign-out still holds a valid ID token, so the
+ * push registration is dropped server-side (`resetForSignOut`), while a 401 means the token is
+ * already gone — there is nothing left to authenticate a `DELETE /me/devices` with, so the
+ * registrar only forgets it locally (`clearLocalState`) and the notification job drops the row
+ * the first time FCM reports the token as unregistered.
  */
-type SignOutCleanup = () => void | Promise<void>;
+export type SignOutReason = 'signOut' | 'unauthorized';
+type SignOutCleanup = (reason: SignOutReason) => void | Promise<void>;
 const cleanups = new Set<SignOutCleanup>();
 
 /** Registers a sign-out cleanup. Returns the unregister. */
@@ -81,10 +89,10 @@ export function onSignOut(cleanup: SignOutCleanup): () => void {
   return () => cleanups.delete(cleanup);
 }
 
-async function runCleanups(): Promise<void> {
+async function runCleanups(reason: SignOutReason): Promise<void> {
   for (const cleanup of cleanups) {
     try {
-      await cleanup();
+      await cleanup(reason);
     } catch (error) {
       console.error('[auth] sign-out cleanup failed', error);
     }
@@ -159,7 +167,7 @@ export function SessionProvider({ children, auth }: { children: ReactNode; auth?
       // 401 anywhere means the token is gone or revoked: sign out rather than show an error,
       // and clear the install-scoped local state so it cannot leak into the next account.
       if (error instanceof ApiError && error.status === 401) {
-        await runCleanups();
+        await runCleanups('unauthorized');
         queryClient.clear();
         try {
           await port.signOut();
@@ -231,7 +239,7 @@ export function SessionProvider({ children, auth }: { children: ReactNode; auth?
     setIsWorking(true);
     generation.current += 1;
     try {
-      await runCleanups();
+      await runCleanups('signOut');
       queryClient.clear();
       await port.signOut();
       setState({ status: 'signedOut' });

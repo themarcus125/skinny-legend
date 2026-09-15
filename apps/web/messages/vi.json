@@ -258,6 +258,7 @@
   "push": {
     "enableFailed": "Không bật được thông báo, hãy thử lại.",
     "denied": "Thông báo đang tắt trong Cài đặt. Bật lại ở đó để nhận nhắc nhở.",
+    "deniedExplanation": "Trình duyệt đang chặn thông báo cho trang này. Bật lại trong phần cài đặt trang web của trình duyệt để nhận nhắc nhở.",
     "openSettings": "Mở Cài đặt",
     "openSettingsHint": "Mở Cài đặt để bật lại thông báo",
     "unsupported": "Trình duyệt này chưa hỗ trợ thông báo đẩy."
