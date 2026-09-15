@@ -1,5 +1,14 @@
 import { expect, test } from '@playwright/test';
 
+/** Only the fields this spec asserts on — enough to keep `response.json()` off `any`. */
+interface WebManifest {
+  name: string;
+  short_name: string;
+  display: string;
+  start_url: string;
+  icons: Array<{ src: string; sizes: string; purpose?: string }>;
+}
+
 test.describe('the shell', () => {
   test('boots in mock mode with the tab bar and the camera bubble', async ({ page }) => {
     await page.goto('/');
@@ -21,6 +30,15 @@ test.describe('the shell', () => {
     expect(box?.width ?? 0).toBeGreaterThanOrEqual(44);
     expect(box?.height ?? 0).toBeGreaterThanOrEqual(44);
 
+    // iOS parity (MainTabView's `role: .search` tab): the bubble sits at the TRAILING end,
+    // inline with the capsule — same vertical centre, clear of it horizontally.
+    const navBox = await nav.boundingBox();
+    expect(navBox).not.toBeNull();
+    expect(box!.x).toBeGreaterThan(navBox!.x + navBox!.width - 1);
+    const bubbleCentre = box!.y + box!.height / 2;
+    const navCentre = navBox!.y + navBox!.height / 2;
+    expect(Math.abs(bubbleCentre - navCentre)).toBeLessThanOrEqual(2);
+
     await nav.getByRole('link', { name: 'Xếp hạng' }).click();
     await expect(page).toHaveURL(/\/leaderboard$/);
     await expect(page.getByRole('heading', { level: 1, name: 'Xếp hạng' })).toBeVisible();
@@ -37,19 +55,19 @@ test.describe('the shell', () => {
 
     const response = await request.get(href!);
     expect(response.ok()).toBe(true);
-    const manifest = await response.json();
+    const manifest = (await response.json()) as WebManifest;
     expect(manifest.name).toBe('Skinny Legend');
     expect(manifest.short_name).toBe('Skinny Legend');
     expect(manifest.display).toBe('standalone');
     expect(manifest.start_url).toBe('/');
-    expect(manifest.icons.map((icon: { sizes: string }) => icon.sizes)).toEqual([
+    expect(manifest.icons.map((icon) => icon.sizes)).toEqual([
       '192x192',
       '512x512',
       '512x512',
     ]);
-    expect(manifest.icons.some((icon: { purpose?: string }) => icon.purpose === 'maskable')).toBe(true);
+    expect(manifest.icons.some((icon) => icon.purpose === 'maskable')).toBe(true);
 
-    for (const icon of manifest.icons as Array<{ src: string }>) {
+    for (const icon of manifest.icons) {
       expect((await request.get(`/${icon.src.replace(/^\//, '')}`)).ok()).toBe(true);
     }
 

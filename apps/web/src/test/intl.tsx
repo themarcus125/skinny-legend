@@ -13,7 +13,7 @@ import type { Locale } from '@/i18n/locale';
  */
 export function render(
   ui: ReactElement,
-  { locale = 'vi' as Locale, wrapper: Wrapper, ...options }: RenderOptions & { locale?: Locale } = {},
+  { locale = 'vi', wrapper: Wrapper, ...options }: RenderOptions & { locale?: Locale } = {},
 ) {
   return rtlRender(ui, {
     wrapper: ({ children }) => (

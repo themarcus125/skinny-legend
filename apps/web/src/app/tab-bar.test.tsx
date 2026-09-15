@@ -33,4 +33,27 @@ describe('TabBar', () => {
     expect(bubble.closest('nav')).toBeNull();
     expect(screen.getByRole('navigation', { name: 'Điều hướng chính' })).not.toContainElement(bubble);
   });
+
+  it('puts the bubble at the trailing end of the same row as the capsule', () => {
+    renderAt('/');
+    const nav = screen.getByRole('navigation', { name: 'Điều hướng chính' });
+    const bubble = screen.getByRole('link', { name: 'Ghi nhận' });
+
+    // Same flex row, centred together — not a bubble floating above the bar (iOS parity).
+    const row = bubble.parentElement;
+    expect(row).not.toBeNull();
+    expect(row).toContainElement(nav);
+    expect(row?.className).toContain('items-center');
+
+    // Trailing: the nav comes first in DOM order, the bubble last.
+    expect(Array.from(row!.children).indexOf(nav)).toBeLessThan(
+      Array.from(row!.children).indexOf(bubble),
+    );
+    expect(nav.compareDocumentPosition(bubble) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+    // The safe-area padding is on the row, once — the old per-element hack is gone.
+    expect(row?.className).toContain('pb-[env(safe-area-inset-bottom)]');
+    expect(bubble.className).not.toContain('fixed');
+    expect(bubble.className).toContain('size-14');
+  });
 });

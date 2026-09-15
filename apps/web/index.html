@@ -22,6 +22,24 @@
     <link rel="icon" type="image/png" href="/icons/icon-192.png" />
 
     <title>Skinny Legend</title>
+
+    <!-- Appearance before first paint. React applies the same rule (src/app/theme-provider.tsx),
+         but it only runs after hydration, which is one painted light frame too late on a dark
+         phone. Keep the storage key and the resolution rule in sync with src/app/theme.ts. -->
+    <script>
+      (function () {
+        try {
+          var choice = localStorage.getItem('skinny.theme');
+          var dark =
+            choice === 'dark' ||
+            (choice !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+          document.documentElement.classList.toggle('dark', dark);
+          document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
+        } catch (error) {
+          /* Private mode or a blocked store: fall through to the light default. */
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
