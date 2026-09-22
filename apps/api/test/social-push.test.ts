@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
+import { eq } from 'drizzle-orm';
 import { schema } from '@skinny/shared';
 import { db } from '../src/db.js';
 import { fakeSender } from '../src/services/push.js';
@@ -41,6 +42,21 @@ describe('notifyEntryOwner', () => {
     expect(log[0]).toMatchObject({ userId: owner.id, kind: 'heart', entryId: entry.id, sentAt: NOW });
   });
 
+  it('renders in the owner\'s users.locale, not the device locale', async () => {
+    const owner = (await asUser('owner', { activate: true, name: 'Khoa' })).user;
+    const actor = (await asUser('actor', { activate: true, name: 'Linh' })).user;
+    await db.update(schema.users).set({ locale: 'en' }).where(eq(schema.users.id, owner.id));
+    // The device disagrees with the account: the account has to win.
+    await db.insert(schema.deviceTokens).values({ userId: owner.id, token: 't1', platform: 'ios', locale: 'vi' });
+    const entry = await confirmedEntry(owner.id);
+    const sender = fakeSender();
+
+    expect(await notifyEntryOwner({ entry, actor, kind: 'heart' }, { sender, now: () => NOW })).toEqual({ sent: 1, skipped: null });
+    expect(sender.sent[0]).toMatchObject({ title: 'Linh sent a heart' });
+    const [log] = await db.select().from(schema.notificationLog);
+    expect(log!.payloadJson).toMatchObject({ locale: 'en', title: 'Linh sent a heart' });
+  });
+
   it('is silent when the actor owns the entry', async () => {
     const owner = (await asUser('owner', { activate: true })).user;
     await db.insert(schema.deviceTokens).values({ userId: owner.id, token: 't1', platform: 'ios', locale: 'vi' });
@@ -62,6 +78,11 @@ describe('notifyEntryOwner', () => {
     expect(await notifyEntryOwner({ entry, actor, kind: 'heart' }, { sender, now: () => soon })).toEqual({ sent: 0, skipped: 'deduped' });
     // A different kind on the same entry is not deduped against the heart.
     expect((await notifyEntryOwner({ entry, actor, kind: 'comment', excerpt: 'Hay' }, { sender, now: () => soon })).sent).toBe(1);
+    // The excerpt the route computed travels into the rendered body, in curly quotes.
+    expect(sender.sent.at(-1)).toMatchObject({
+      body: '“Hay”',
+      data: { deepLink: 'feed', kind: 'comment', entryId: entry.id },
+    });
     const later = new Date(NOW.getTime() + SOCIAL_DEDUPE_MS + 1000);
     expect((await notifyEntryOwner({ entry, actor, kind: 'heart' }, { sender, now: () => later })).sent).toBe(1);
     expect(sender.sent).toHaveLength(3);
