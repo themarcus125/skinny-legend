@@ -203,7 +203,29 @@
     "entryCount": "{0} mục ghi",
     "noPlace": "không có địa điểm",
     "empty": "Khi cả nhóm ghi nhận hoạt động, chúng sẽ xuất hiện ở đây.",
-    "loadFailed": "Không tải được nhật ký nhóm."
+    "loadFailed": "Không tải được nhật ký nhóm.",
+    "heart": "Thả tim",
+    "unheart": "Bỏ tim",
+    "heartCount": "{0} tim",
+    "comments": "Bình luận",
+    "commentCount": "{0} bình luận",
+    "edit": "Sửa",
+    "heartFailed": "Không thả tim được, hãy thử lại."
+  },
+  "comments": {
+    "title": "Bình luận",
+    "empty": "Chưa có bình luận nào. Hãy là người đầu tiên!",
+    "placeholder": "Viết bình luận…",
+    "send": "Gửi",
+    "loadFailed": "Không tải được bình luận.",
+    "postFailed": "Không gửi được bình luận, hãy thử lại.",
+    "deleteFailed": "Không xoá được bình luận."
+  },
+  "time": {
+    "now": "Vừa xong",
+    "minutes": "{0} phút",
+    "hours": "{0} giờ",
+    "days": "{0} ngày"
   },
   "map": {
     "title": "Bản đồ",

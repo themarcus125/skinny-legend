@@ -227,3 +227,21 @@ export function PhotoStackGlyph(props: GlyphProps) {
     </Glyph>
   );
 }
+
+/** The feed card's heart (`heart` / `heart.fill` on iOS). `filled` swaps the stroke for a fill. */
+export function HeartGlyph({ filled = false, ...props }: GlyphProps & { filled?: boolean }) {
+  return (
+    <Glyph {...props} {...(filled ? { fill: 'currentColor' } : {})}>
+      <path d="M12 20.5s-7.5-4.6-7.5-10A4.3 4.3 0 0 1 12 8a4.3 4.3 0 0 1 7.5 2.5c0 5.4-7.5 10-7.5 10z" />
+    </Glyph>
+  );
+}
+
+/** The feed card's comment bubble (`bubble.right` on iOS). */
+export function CommentGlyph(props: GlyphProps) {
+  return (
+    <Glyph {...props}>
+      <path d="M4.5 5.5h15v10h-8l-4 3.5v-3.5h-3z" />
+    </Glyph>
+  );
+}
