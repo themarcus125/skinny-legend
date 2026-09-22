@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
+import { eq } from 'drizzle-orm';
 import { schema } from '@skinny/shared';
 import { db } from '../src/db.js';
 import { createApp } from '../src/app.js';
@@ -18,6 +19,8 @@ async function entryFor(userId: string, status: 'confirmed' | 'pending' = 'confi
   await db.insert(schema.entryCategories).values({ entryId: row!.id, category: 'exercise', source: 'user' });
   return row!;
 }
+
+const json = (headers: Record<string, string>) => ({ ...headers, 'content-type': 'application/json' });
 
 beforeEach(async () => { await resetDb(); sender.reset(); clock = NOW; });
 
@@ -83,5 +86,79 @@ describe('hearts', () => {
     const pending = await asUser('newbie', { pending: true });
     const entry = await entryFor(owner.user.id);
     expect((await app.request(`/entries/${entry.id}/heart`, { method: 'PUT', headers: pending.headers })).status).toBe(403);
+  });
+});
+
+describe('comments', () => {
+  it('posts, lists oldest first, and marks what I may delete', async () => {
+    const owner = await asUser('owner', { activate: true, name: 'Khoa' });
+    const me = await asUser('me', { activate: true, name: 'Linh' });
+    const entry = await entryFor(owner.user.id);
+
+    const posted = await app.request(`/entries/${entry.id}/comments`, { method: 'POST', headers: json(me.headers), body: JSON.stringify({ body: '  Giỏi quá!  ' }) });
+    expect(posted.status).toBe(201);
+    const first = await posted.json();
+    expect(first.commentCount).toBe(1);
+    expect(first.comment).toMatchObject({ entryId: entry.id, body: 'Giỏi quá!', canDelete: true, user: { id: me.user.id, displayName: 'Linh' } });
+
+    clock = new Date(NOW.getTime() + 1000);
+    await app.request(`/entries/${entry.id}/comments`, { method: 'POST', headers: json(owner.headers), body: JSON.stringify({ body: 'Cảm ơn!' }) });
+
+    const mine = await (await app.request(`/entries/${entry.id}/comments`, { headers: me.headers })).json();
+    expect(mine.comments.map((c: { body: string }) => c.body)).toEqual(['Giỏi quá!', 'Cảm ơn!']);
+    expect(mine.comments.map((c: { canDelete: boolean }) => c.canDelete)).toEqual([true, false]);
+
+    // The owner may delete anything on their entry.
+    const owners = await (await app.request(`/entries/${entry.id}/comments`, { headers: owner.headers })).json();
+    expect(owners.comments.map((c: { canDelete: boolean }) => c.canDelete)).toEqual([true, true]);
+  });
+
+  it('pushes the owner with the excerpt, once per ten minutes', async () => {
+    const owner = await asUser('owner', { activate: true });
+    // The push renders in the OWNER's `users.locale`, so pin it rather than lean on the default.
+    await db.update(schema.users).set({ locale: 'en' }).where(eq(schema.users.id, owner.user.id));
+    await db.insert(schema.deviceTokens).values({ userId: owner.user.id, token: 't1', platform: 'ios', locale: 'en' });
+    const me = await asUser('me', { activate: true, name: 'Linh' });
+    const entry = await entryFor(owner.user.id);
+    const long = 'b'.repeat(100);
+    await app.request(`/entries/${entry.id}/comments`, { method: 'POST', headers: json(me.headers), body: JSON.stringify({ body: long }) });
+    await app.request(`/entries/${entry.id}/comments`, { method: 'POST', headers: json(me.headers), body: JSON.stringify({ body: 'again' }) });
+    expect(sender.sent).toHaveLength(1);
+    expect(sender.sent[0]).toMatchObject({ title: 'Linh commented', body: `“${'b'.repeat(80)}…”`, data: { kind: 'comment', entryId: entry.id } });
+  });
+
+  it('lets the author and the owner delete, and nobody else', async () => {
+    const owner = await asUser('owner', { activate: true });
+    const author = await asUser('author', { activate: true });
+    const stranger = await asUser('stranger', { activate: true });
+    const entry = await entryFor(owner.user.id);
+    const make = async () => (await (await app.request(`/entries/${entry.id}/comments`, { method: 'POST', headers: json(author.headers), body: JSON.stringify({ body: 'x' }) })).json()).comment.id as string;
+
+    const c1 = await make();
+    expect((await app.request(`/comments/${c1}`, { method: 'DELETE', headers: stranger.headers })).status).toBe(403);
+    expect((await app.request(`/comments/${c1}`, { method: 'DELETE', headers: author.headers })).status).toBe(204);
+    const c2 = await make();
+    expect((await app.request(`/comments/${c2}`, { method: 'DELETE', headers: owner.headers })).status).toBe(204);
+    expect((await app.request(`/comments/${c2}`, { method: 'DELETE', headers: owner.headers })).status).toBe(404);
+    const left = await (await app.request(`/entries/${entry.id}/comments`, { headers: owner.headers })).json();
+    expect(left.comments).toEqual([]);
+  });
+
+  it('rejects whitespace and over-long bodies, and pending entries', async () => {
+    const owner = await asUser('owner', { activate: true });
+    const me = await asUser('me', { activate: true });
+    const entry = await entryFor(owner.user.id);
+    const post = (body: string) => app.request(`/entries/${entry.id}/comments`, { method: 'POST', headers: json(me.headers), body: JSON.stringify({ body }) });
+    expect((await post('   ')).status).toBe(400);
+    expect((await post('x'.repeat(501))).status).toBe(400);
+    expect((await post('x'.repeat(500))).status).toBe(201);
+    const pending = await entryFor(owner.user.id, 'pending');
+    expect((await app.request(`/entries/${pending.id}/comments`, { headers: me.headers })).status).toBe(404);
+  });
+
+  // `r.use('/comments/:id', …)` is an exact-path pattern; prove it really guards the delete.
+  it('requires authentication on DELETE /comments/:id', async () => {
+    const res = await app.request('/comments/00000000-0000-4000-8000-000000000000', { method: 'DELETE' });
+    expect(res.status).toBe(401);
   });
 });
