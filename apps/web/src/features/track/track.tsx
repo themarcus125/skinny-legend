@@ -24,6 +24,7 @@ import {
   initVerdictState,
   needsSave,
   outcome,
+  patchBody,
   projectedPoints,
   type VerdictState,
 } from './verdict-model';
@@ -146,6 +147,8 @@ export function Track({ onTracked }: TrackProps) {
             projectedPoints: response.projectedPoints,
             placeName: response.entry.placeName,
             placeSource: response.entry.placeSource,
+            title: response.entry.title,
+            note: response.entry.note,
           }),
         );
       } catch (error) {
@@ -203,11 +206,7 @@ export function Track({ onTracked }: TrackProps) {
     const saving = beginSave(sheet);
     setSheet(saving);
     void api
-      .confirmEntry(saving.entry.id, {
-        categories: saving.selected,
-        placeName: saving.placeName,
-        placeSource: saving.placeSource,
-      })
+      .confirmEntry(saving.entry.id, patchBody(saving))
       .then((response) => {
         if (alive.current) dismiss(adoptConfirmation(saving, response));
       })

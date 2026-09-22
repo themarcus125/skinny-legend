@@ -11,10 +11,18 @@ export const createEntryBody = z.object({
 });
 export type CreateEntryInput = z.infer<typeof createEntryBody>;
 
+/** Strava's "Night Run" line: one short heading the member gives the entry. */
+export const ENTRY_TITLE_MAX = 80;
+/** Strava's "How'd it go?" box. */
+export const ENTRY_NOTE_MAX = 500;
+
 export const patchEntryBody = z.object({
   categories: z.array(categorySchema).min(1).max(3),
   placeName: z.string().max(120).nullable().optional(),
   placeSource: placeSourceSchema.optional(),
+  /** Omitted leaves the stored value alone; null or '' clears it. */
+  title: z.string().max(ENTRY_TITLE_MAX).nullable().optional(),
+  note: z.string().max(ENTRY_NOTE_MAX).nullable().optional(),
 });
 export type PatchEntryInput = z.infer<typeof patchEntryBody>;
 
@@ -36,6 +44,9 @@ export interface EntryDto {
   categories: Category[];
   placeName: string | null;
   placeSource: PlaceSource;
+  /** The member's own heading and note, both null until typed on the verdict sheet. */
+  title: string | null;
+  note: string | null;
   createdAt: string;
 }
 

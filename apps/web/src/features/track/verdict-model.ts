@@ -32,6 +32,9 @@ export interface VerdictModelInit {
   projectedPoints: number;
   placeName: string | null;
   placeSource: PlaceSource;
+  /** The member's heading and note, both null until typed. Strava's title and description. */
+  title: string | null;
+  note: string | null;
 }
 
 /** How the sheet ended, for the screen to act on after dismissal. Swift's `Outcome`. */
@@ -49,6 +52,8 @@ export interface VerdictState extends VerdictModelInit {
   initialSelection: Category[];
   initialPlaceName: string | null;
   initialPlaceSource: PlaceSource;
+  initialTitle: string | null;
+  initialNote: string | null;
 }
 
 /** Selections are compared as sets, but stored in rulebook order so equality is plain. */
@@ -82,6 +87,8 @@ export function initVerdictState(init: VerdictModelInit): VerdictState {
     initialSelection: starting,
     initialPlaceName: init.placeName,
     initialPlaceSource: init.placeSource,
+    initialTitle: init.title,
+    initialNote: init.note,
   };
 }
 
@@ -99,12 +106,20 @@ export function isAlreadyTracked(state: VerdictState): boolean {
   return state.mode.kind === 'created' && state.entry.status === 'confirmed' && !state.mode.verdict.failed;
 }
 
-/** Whether the user has changed the categories or the place since the sheet opened. */
+/** What the server will store for a typed field: trimmed, and null when nothing is left. */
+export function normalizeText(value: string | null): string | null {
+  const trimmed = value?.trim() ?? '';
+  return trimmed === '' ? null : trimmed;
+}
+
+/** Whether the user has changed the categories, the place, the title or the note since the sheet opened. */
 export function hasChanges(state: VerdictState): boolean {
   return (
     !sameSet(state.selected, state.initialSelection) ||
     state.placeName !== state.initialPlaceName ||
-    state.placeSource !== state.initialPlaceSource
+    state.placeSource !== state.initialPlaceSource ||
+    normalizeText(state.title) !== normalizeText(state.initialTitle) ||
+    normalizeText(state.note) !== normalizeText(state.initialNote)
   );
 }
 
@@ -208,6 +223,29 @@ export function applyPlace(state: VerdictState, name: string | null, source: Pla
   return { ...state, placeName: name, placeSource: name === null ? 'none' : source, errorKey: null };
 }
 
+/**
+ * The text is kept exactly as typed while the sheet is open — trimming on every keystroke would
+ * eat the space the member is about to follow with a word — and only normalised on the way out.
+ */
+export function applyTitle(state: VerdictState, title: string): VerdictState {
+  return { ...state, title, errorKey: null };
+}
+
+export function applyNote(state: VerdictState, note: string): VerdictState {
+  return { ...state, note, errorKey: null };
+}
+
+/** The `PATCH /entries/:id` body this sheet's state amounts to. */
+export function patchBody(state: VerdictState) {
+  return {
+    categories: state.selected,
+    placeName: state.placeName,
+    placeSource: state.placeSource,
+    title: normalizeText(state.title),
+    note: normalizeText(state.note),
+  };
+}
+
 export function beginSave(state: VerdictState): VerdictState {
   return { ...state, isSaving: true, errorKey: null };
 }
@@ -233,10 +271,14 @@ export function adoptConfirmation(state: VerdictState, response: EntryMutationRe
     projectedPoints: response.projectedPoints,
     placeName: response.entry.placeName,
     placeSource: response.entry.placeSource,
+    title: response.entry.title,
+    note: response.entry.note,
     selected,
     initialSelection: selected,
     initialPlaceName: response.entry.placeName,
     initialPlaceSource: response.entry.placeSource,
+    initialTitle: response.entry.title,
+    initialNote: response.entry.note,
     hasConfirmedProjection: true,
   };
 }

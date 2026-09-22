@@ -18,6 +18,7 @@ import {
   failSave,
   initVerdictState,
   needsSave,
+  patchBody,
   type VerdictState,
 } from '@/features/track/verdict-model';
 
@@ -130,6 +131,8 @@ export function AccountHistory({ pageSize = TRACK_HISTORY_PAGE_SIZE }: { pageSiz
         projectedPoints: entry.points ?? 0,
         placeName: entry.placeName,
         placeSource: entry.placeSource,
+        title: entry.title,
+        note: entry.note,
       }),
     );
   };
@@ -173,11 +176,7 @@ export function AccountHistory({ pageSize = TRACK_HISTORY_PAGE_SIZE }: { pageSiz
     const saving = beginSave(sheet);
     setSheet(saving);
     void api
-      .confirmEntry(saving.entry.id, {
-        categories: saving.selected,
-        placeName: saving.placeName,
-        placeSource: saving.placeSource,
-      })
+      .confirmEntry(saving.entry.id, patchBody(saving))
       .then(() => {
         if (!alive.current) return;
         // The response's own projection is not adopted into a sheet that is closing: the refetch
@@ -338,6 +337,11 @@ function HistoryRow({
         className="flex min-w-0 flex-1 items-center gap-3 py-4 pr-4 text-left outline-ring"
       >
       <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+        {entry.title ? (
+          <p data-testid="history-title" className="type-body-medium truncate font-medium">
+            {entry.title}
+          </p>
+        ) : null}
         <div className="flex flex-wrap gap-1.5">
           {entry.categories.length > 0 ? (
             entry.categories.map((category) => (

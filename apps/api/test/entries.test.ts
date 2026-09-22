@@ -212,6 +212,38 @@ describe('PATCH /entries/:id', () => {
     expect(cats.every((c) => c.source === 'user')).toBe(true);
   });
 
+  it('stores a title and a note, trims them, and clears them on null or blank', async () => {
+    const { headers } = await asUser('u1', { activate: true });
+    const h = { ...headers, 'content-type': 'application/json' };
+    const key = await uploadPhoto(headers);
+    const created = await (await post(headers, { photoKey: key, takenAt: '2026-09-10T01:00:00Z' })).json();
+    expect(created.entry).toMatchObject({ title: null, note: null });
+
+    const saved = await (await app.request(`/entries/${created.entry.id}`, { method: 'PATCH', headers: h, body: JSON.stringify({ categories: ['exercise'], title: '  Chạy bộ buổi sáng ', note: 'Hơi mệt.\n' }) })).json();
+    expect(saved.entry).toMatchObject({ title: 'Chạy bộ buổi sáng', note: 'Hơi mệt.' });
+
+    // Omitting both leaves them alone — a category-only correction must not wipe the text.
+    const kept = await (await app.request(`/entries/${created.entry.id}`, { method: 'PATCH', headers: h, body: JSON.stringify({ categories: ['meal'] }) })).json();
+    expect(kept.entry).toMatchObject({ title: 'Chạy bộ buổi sáng', note: 'Hơi mệt.' });
+
+    const cleared = await (await app.request(`/entries/${created.entry.id}`, { method: 'PATCH', headers: h, body: JSON.stringify({ categories: ['meal'], title: '   ', note: null }) })).json();
+    expect(cleared.entry).toMatchObject({ title: null, note: null });
+
+    const history = await (await app.request('/entries/mine', { headers })).json();
+    expect(history.entries[0]).toMatchObject({ title: null, note: null });
+  });
+
+  it('rejects a title over 80 characters and a note over 500', async () => {
+    const { headers } = await asUser('u1', { activate: true });
+    const h = { ...headers, 'content-type': 'application/json' };
+    const key = await uploadPhoto(headers);
+    const created = await (await post(headers, { photoKey: key, takenAt: '2026-09-10T01:00:00Z' })).json();
+    const long = await app.request(`/entries/${created.entry.id}`, { method: 'PATCH', headers: h, body: JSON.stringify({ categories: ['exercise'], title: 'x'.repeat(81) }) });
+    expect(long.status).toBe(400);
+    const longNote = await app.request(`/entries/${created.entry.id}`, { method: 'PATCH', headers: h, body: JSON.stringify({ categories: ['exercise'], note: 'x'.repeat(501) }) });
+    expect(longNote.status).toBe(400);
+  });
+
   it('confirms a pending entry, replacing the AI categories with the member\'s', async () => {
     classify.mockResolvedValue({ ...okVerdict, categories: ['exercise', 'group'] });
     const { headers } = await asUser('u1', { activate: true });

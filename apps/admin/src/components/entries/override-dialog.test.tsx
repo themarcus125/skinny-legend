@@ -16,6 +16,8 @@ function entry(overrides: Partial<AdminEntry> = {}): AdminEntry {
     categories: ['exercise'],
     placeName: null,
     placeSource: 'none',
+    title: null,
+    note: null,
     createdAt: '2026-09-08T06:30:00+07:00',
     user: { id: 'u-1', displayName: 'Minh' },
     lat: null,

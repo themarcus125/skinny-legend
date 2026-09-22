@@ -37,6 +37,8 @@ export async function toEntryDto(row: EntryRow, categories: Category[]): Promise
     categories,
     placeName: row.placeName,
     placeSource: row.placeSource,
+    title: row.title,
+    note: row.note,
     createdAt: row.createdAt.toISOString(),
   };
 }
@@ -162,6 +164,9 @@ export function entryRoutes(deps: EntryDeps) {
         updatedAt: new Date(),
         ...(body.placeName !== undefined ? { placeName: body.placeName } : {}),
         ...(body.placeSource ? { placeSource: body.placeSource } : {}),
+        // Whitespace-only text is the same as none: the feed must never show a blank heading.
+        ...(body.title !== undefined ? { title: body.title?.trim() || null } : {}),
+        ...(body.note !== undefined ? { note: body.note?.trim() || null } : {}),
       }).where(eq(schema.entries.id, entry.id)).returning();
     });
 

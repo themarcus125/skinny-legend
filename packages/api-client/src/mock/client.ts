@@ -79,6 +79,8 @@ function toEntryDto(entry: AdminEntry): EntryDto {
     categories: [...entry.categories],
     placeName: entry.placeName,
     placeSource: entry.placeSource,
+    title: entry.title,
+    note: entry.note,
     createdAt: entry.createdAt,
   };
 }
@@ -435,6 +437,8 @@ export class MockApiClient implements ApiClient {
       categories: [...suggested],
       placeName: body.placeName ?? null,
       placeSource: body.placeSource ?? (body.placeName ? 'manual' : 'none'),
+      title: null,
+      note: null,
       createdAt: new Date().toISOString(),
       user: { id: me.id, displayName: me.displayName },
       lat: body.lat ?? null,
@@ -475,6 +479,9 @@ export class MockApiClient implements ApiClient {
     entry.status = 'confirmed';
     if (body.placeName !== undefined) entry.placeName = body.placeName;
     if (body.placeSource !== undefined) entry.placeSource = body.placeSource;
+    // Mirrors the server: whitespace-only text is stored as null.
+    if (body.title !== undefined) entry.title = body.title?.trim() || null;
+    if (body.note !== undefined) entry.note = body.note?.trim() || null;
     return {
       entry: toEntryDto(entry),
       ...this.project(entry.id, entry.categories, entry.localDate, entry.takenAt),
