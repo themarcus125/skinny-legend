@@ -174,5 +174,53 @@
   "auth.emulatorFailed": {
     "vi": "Đăng nhập bằng email thất bại. Kiểm tra Auth Emulator ở cổng 9099.",
     "en": "Email sign-in failed. Check the Auth Emulator on port 9099."
+  },
+  "track.titleLabel": {
+    "vi": "Tiêu đề",
+    "en": "Title"
+  },
+  "track.titlePlaceholder": {
+    "vi": "VD: Chạy bộ buổi sáng",
+    "en": "e.g. Morning run"
+  },
+  "track.noteLabel": {
+    "vi": "Ghi chú",
+    "en": "Notes"
+  },
+  "track.notePlaceholder": {
+    "vi": "Hôm nay thế nào? Kể thêm về hoạt động của bạn.",
+    "en": "How'd it go? Share more about your activity."
+  },
+  "common.pullToRefresh": {
+    "vi": "Kéo xuống để làm mới",
+    "en": "Pull down to refresh"
+  },
+  "common.releaseToRefresh": {
+    "vi": "Thả để làm mới",
+    "en": "Release to refresh"
+  },
+  "common.refreshing": {
+    "vi": "Đang làm mới…",
+    "en": "Refreshing…"
+  },
+  "common.viewPhoto": {
+    "vi": "Xem ảnh",
+    "en": "View photo"
+  },
+  "overview.dailyMax": {
+    "vi": "trên tối đa {0} điểm mỗi ngày",
+    "en": "of a {0}-point daily maximum"
+  },
+  "track.pickOneToConfirm": {
+    "vi": "Chọn ít nhất một hạng mục để xác nhận.",
+    "en": "Pick at least one category to confirm."
+  },
+  "feed.viewOnMap": {
+    "vi": "Xem bản đồ",
+    "en": "View on map"
+  },
+  "account.historyEmptyBody": {
+    "vi": "Chụp ảnh bên trên để ghi nhận hoạt động đầu tiên.",
+    "en": "Take a photo above to track your first activity."
   }
 }

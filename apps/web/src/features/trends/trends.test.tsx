@@ -89,6 +89,8 @@ function historyEntry(id: string, localDate: string, placeName: string | null) {
     thumbUrl: null,
     placeName,
     placeSource: placeName ? ('osm' as const) : ('none' as const),
+    title: null,
+    note: null,
     lat: null,
     lng: null,
     points: 5,

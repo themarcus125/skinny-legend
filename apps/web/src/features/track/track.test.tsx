@@ -160,6 +160,43 @@ describe('the Track screen', () => {
     });
   });
 
+  it('sends a typed title and note with the PATCH, trimmed, and null when left blank', async () => {
+    const api = createMockApiClient({ seed: makeSeed(SEED_DAY) });
+    const confirmEntry = vi.spyOn(api, 'confirmEntry');
+    renderTrack(api);
+    pick('library-input');
+    await screen.findByRole('dialog');
+
+    const title = screen.getByTestId('verdict-title');
+    fireEvent.change(title, { target: { value: '  Chạy bộ buổi sáng ' } });
+    expect(title).toHaveValue('  Chạy bộ buổi sáng ');
+    // The note is left empty on purpose: it must reach the server as null, not ''.
+    fireEvent.click(screen.getByTestId('verdict-primary'));
+
+    await waitFor(() => expect(confirmEntry).toHaveBeenCalled());
+    expect(confirmEntry.mock.calls[0]?.[1]).toMatchObject({ title: 'Chạy bộ buổi sáng', note: null });
+    // And the mock stored it, so the history and feed will carry it.
+    const saved = await (confirmEntry.mock.results[0]!.value as ReturnType<ApiClient['confirmEntry']>);
+    expect(saved.entry).toMatchObject({ title: 'Chạy bộ buổi sáng', note: null });
+  });
+
+  it('keeps the text in the note field while typing, and sends it', async () => {
+    const api = createMockApiClient({ seed: makeSeed(SEED_DAY) });
+    const confirmEntry = vi.spyOn(api, 'confirmEntry');
+    renderTrack(api);
+    pick('library-input');
+    await screen.findByRole('dialog');
+
+    const note = screen.getByTestId('verdict-note');
+    fireEvent.change(note, { target: { value: 'Hơi mệt ' } });
+    fireEvent.change(note, { target: { value: 'Hơi mệt nhưng vẫn đủ 5 km.' } });
+    expect(note).toHaveValue('Hơi mệt nhưng vẫn đủ 5 km.');
+    fireEvent.click(screen.getByTestId('verdict-primary'));
+
+    await waitFor(() => expect(confirmEntry).toHaveBeenCalled());
+    expect(confirmEntry.mock.calls[0]?.[1]).toMatchObject({ note: 'Hơi mệt nhưng vẫn đủ 5 km.' });
+  });
+
   it('keeps focus and the text in the manual place field while typing', async () => {
     renderTrack(createMockApiClient({ seed: makeSeed(SEED_DAY) }));
     pick('library-input');

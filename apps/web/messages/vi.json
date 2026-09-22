@@ -172,7 +172,11 @@
     "celebration": "Đã ghi nhận +{0} điểm!",
     "distanceApprox": "≈ {0} m",
     "photoAlt": "Ảnh hoạt động vừa ghi nhận",
-    "placeSheetLabel": "Địa điểm của hoạt động"
+    "placeSheetLabel": "Địa điểm của hoạt động",
+    "titleLabel": "Tiêu đề",
+    "titlePlaceholder": "VD: Chạy bộ buổi sáng",
+    "noteLabel": "Ghi chú",
+    "notePlaceholder": "Hôm nay thế nào? Kể thêm về hoạt động của bạn."
   },
   "leaderboard": {
     "title": "Xếp hạng",

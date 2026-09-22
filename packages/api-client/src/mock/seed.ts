@@ -103,6 +103,10 @@ const OTHERS: AdminUser[] = [
 ];
 
 /** The six seeded places and their HCMC coordinates — same table as `MockSeed.swift`. */
+/** Strava-style headings a few seeded entries carry; Vietnamese, like the rest of the seed. */
+export const MEMBER_TITLES = ['Chạy bộ buổi sáng', 'Buổi tập chân', 'Cơm trưa healthy', 'Đạp xe cùng team'];
+export const MEMBER_NOTES = ['Hơi mệt nhưng vẫn hoàn thành đủ 5 km.', 'Ăn nhiều rau, ít tinh bột.'];
+
 export const MEMBER_PLACES: SeedPlace[] = [
   { name: 'Phòng gym California Fitness', lat: 10.7769, lng: 106.7009 },
   { name: 'Sân cầu lông Tân Bình', lat: 10.801, lng: 106.652 },
@@ -178,6 +182,10 @@ export function makeSeed(today: LocalDate = todayLocal()): Seed {
           categories: [...pattern],
           placeName: hidden ? null : place.name,
           placeSource: hidden ? 'none' : 'poi',
+          // Every third entry carries a title and every sixth a note, so the feed and history
+          // fixtures exercise both the titled and the untitled card.
+          title: counter % 3 === 0 ? MEMBER_TITLES[(counter / 3) % MEMBER_TITLES.length]! : null,
+          note: counter % 6 === 0 ? MEMBER_NOTES[(counter / 6) % MEMBER_NOTES.length]! : null,
           createdAt: takenAt,
           user: { id: member.id, displayName: member.displayName },
           lat: hidden ? null : place.lat,

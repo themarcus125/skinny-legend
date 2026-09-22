@@ -5,7 +5,9 @@ import { createMockApiClient, makeSeed } from '@skinny/api-client/mock';
 import { translator } from '@/test/intl';
 import {
   adoptConfirmation,
+  applyNote,
   applyPlace,
+  applyTitle,
   beginSave,
   blockedCategories,
   canSave,
@@ -18,6 +20,7 @@ import {
   isCapped,
   needsSave,
   outcome,
+  patchBody,
   projectedPoints,
   toggleCategory,
   verdictOf,
@@ -44,6 +47,8 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
   categories: ['exercise'],
   placeName: null,
   placeSource: 'none',
+  title: null,
+  note: null,
   createdAt: '2026-09-14T03:00:01.000Z',
   ...over,
 });
@@ -69,6 +74,8 @@ const created = (over: Partial<VerdictModelInit> = {}): VerdictState =>
     projectedPoints: 2,
     placeName: null,
     placeSource: 'none',
+    title: null,
+    note: null,
     ...over,
   });
 
@@ -124,6 +131,8 @@ describe('opening state', () => {
       projectedPoints: 2,
       placeName: 'Cơm tấm Ba Ghiền',
       placeSource: 'poi',
+      title: null,
+      note: null,
     });
     expect(s.selected).toEqual(['meal']);
     expect(verdictOf(s)).toBeNull();
@@ -179,6 +188,8 @@ describe('already-tracked entries', () => {
         projectedPoints: 2,
         placeName: null,
         placeSource: 'none',
+      title: null,
+      note: null,
       }),
       'meal',
     );
@@ -195,6 +206,8 @@ describe('already-tracked entries', () => {
       projectedPoints: 2,
       placeName: null,
       placeSource: 'none',
+      title: null,
+      note: null,
     });
     expect(isAlreadyTracked(s)).toBe(false);
     expect(hasChanges(s)).toBe(false);
@@ -211,6 +224,51 @@ describe('place', () => {
 
   it('clearing the place name forces the source back to none', () => {
     expect(applyPlace(created(), null, 'osm').placeSource).toBe('none');
+  });
+});
+
+describe('title and note', () => {
+  it('open on the entry\'s own text and count as no change until edited', () => {
+    const s = created({ title: 'Chạy bộ', note: 'Mệt.' });
+    expect(s.title).toBe('Chạy bộ');
+    expect(hasChanges(s)).toBe(false);
+    expect(hasChanges(applyTitle(s, 'Chạy bộ buổi sáng'))).toBe(true);
+    expect(hasChanges(applyNote(s, 'Rất mệt.'))).toBe(true);
+  });
+
+  it('ignore whitespace-only edits, so a stray space never lights up "Lưu thay đổi"', () => {
+    const tracked = created({ entry: entry({ status: 'confirmed' }) });
+    expect(needsSave(applyTitle(tracked, '   '))).toBe(false);
+    expect(needsSave(applyNote(tracked, '\n'))).toBe(false);
+    expect(needsSave(applyTitle(tracked, 'Buổi tập chân'))).toBe(true);
+  });
+
+  it('are sent trimmed and null when empty', () => {
+    const s = applyNote(applyTitle(created(), '  Buổi tập chân '), '');
+    expect(patchBody(s)).toMatchObject({
+      categories: ['exercise'],
+      title: 'Buổi tập chân',
+      note: null,
+    });
+  });
+
+  it('clear the last save error when edited', () => {
+    const failed = failSave(beginSave(created()), new Error('x'));
+    expect(failed.errorKey).not.toBeNull();
+    expect(applyTitle(failed, 'x').errorKey).toBeNull();
+    expect(applyNote(failed, 'x').errorKey).toBeNull();
+  });
+
+  it('adopt the server\'s stored text as the new baseline after a save', () => {
+    const s = applyTitle(created(), 'Chạy bộ');
+    const adopted = adoptConfirmation(s, {
+      entry: entry({ status: 'confirmed', title: 'Chạy bộ', note: null }),
+      projectedPoints: 2,
+      capsHit: noCaps,
+      cappedCategories: [],
+    });
+    expect(adopted.title).toBe('Chạy bộ');
+    expect(hasChanges(adopted)).toBe(false);
   });
 });
 
@@ -292,6 +350,8 @@ describe('caps and projection', () => {
       projectedPoints: 0,
       placeName: null,
       placeSource: 'none',
+      title: null,
+      note: null,
     });
     expect(blockedCategories(s)).toEqual([]);
     expect(needsSave(s)).toBe(true);
@@ -328,6 +388,8 @@ describe('saving against the mock client', () => {
       projectedPoints: response.projectedPoints,
       placeName: null,
       placeSource: 'none',
+      title: null,
+      note: null,
     });
     expect(isAlreadyTracked(s)).toBe(true);
     expect(needsSave(s)).toBe(false);
@@ -362,6 +424,8 @@ describe('saving against the mock client', () => {
       projectedPoints: response.projectedPoints,
       placeName: null,
       placeSource: 'none',
+      title: null,
+      note: null,
     });
     expect(isAlreadyTracked(s)).toBe(false);
     expect(s.isEditingCategories).toBe(true);

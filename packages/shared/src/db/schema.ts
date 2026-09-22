@@ -57,6 +57,9 @@ export const entries = pgTable('entries', {
   lng: doublePrecision('lng'),
   placeName: text('place_name'),
   placeSource: placeSourceEnum('place_source').notNull().default('none'),
+  /** Strava-style free text the member types on the verdict sheet; null until they do. */
+  title: text('title'),
+  note: text('note'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [index('entries_user_date_idx').on(t.userId, t.localDate), index('entries_status_created_idx').on(t.status, t.createdAt)]);

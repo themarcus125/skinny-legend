@@ -1,14 +1,16 @@
 import { useId, useRef } from 'react';
 import { useTranslations } from 'use-intl';
 import { AlertBanner, CategoryChip, SurfaceCard, cn } from '@skinny/ui';
-import { CATEGORIES } from '@skinny/shared/wire';
+import { CATEGORIES, ENTRY_NOTE_MAX, ENTRY_TITLE_MAX } from '@skinny/shared/wire';
 import { CloseGlyph, QuestionGlyph, SparklesGlyph } from '@/app/icons';
 import { PhotoButton } from '@/app/photo-viewer';
 import { useModalSheet } from '@/app/use-modal-sheet';
 import { Button } from '@/ui/button';
 import { PlaceChip } from './place-chip';
 import {
+  applyNote,
   applyPlace,
+  applyTitle,
   canSave,
   capWarnings,
   hasChanges,
@@ -64,6 +66,8 @@ export function VerdictSheet({
 }: VerdictSheetProps) {
   const t = useTranslations();
   const titleId = useId();
+  const titleFieldId = useId();
+  const noteFieldId = useId();
   const panel = useRef<HTMLDivElement>(null);
   const verdict = verdictOf(state);
   const tracked = isAlreadyTracked(state);
@@ -192,6 +196,45 @@ export function VerdictSheet({
               </div>
             </SurfaceCard>
           ) : null}
+
+          {/*
+           * Strava's title and "How'd it go?" box, in that order, ahead of the structured fields.
+           * Both are optional: the feed falls back to its usual heading when the title is empty.
+           */}
+          <SurfaceCard as="section" className="flex flex-col gap-3">
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor={titleFieldId} className="type-label text-foreground-subtle">
+                {t('track.titleLabel')}
+              </label>
+              <input
+                id={titleFieldId}
+                type="text"
+                data-testid="verdict-title"
+                value={state.title ?? ''}
+                maxLength={ENTRY_TITLE_MAX}
+                placeholder={t('track.titlePlaceholder')}
+                autoComplete="off"
+                enterKeyHint="next"
+                onChange={(event) => onChange(applyTitle(state, event.target.value))}
+                className="border-border bg-card text-foreground type-body-medium outline-ring placeholder:text-foreground-subtle h-11 rounded-md border px-3"
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor={noteFieldId} className="type-label text-foreground-subtle">
+                {t('track.noteLabel')}
+              </label>
+              <textarea
+                id={noteFieldId}
+                data-testid="verdict-note"
+                value={state.note ?? ''}
+                maxLength={ENTRY_NOTE_MAX}
+                placeholder={t('track.notePlaceholder')}
+                rows={3}
+                onChange={(event) => onChange(applyNote(state, event.target.value))}
+                className="border-border bg-card text-foreground type-body-medium outline-ring placeholder:text-foreground-subtle min-h-[84px] resize-none rounded-md border px-3 py-2"
+              />
+            </div>
+          </SurfaceCard>
 
           <SurfaceCard as="section" className="flex flex-col gap-3">
             <div className="flex items-center justify-between gap-2">

@@ -170,7 +170,8 @@ export function FeedSection() {
 
 /**
  * One entry, `FeedRow`'s anatomy: the photo full-bleed across the card, then the author's avatar
- * and name, the category chips, and the place name when there is one — the place being the tap
+ * and name, the member's own title and note when they wrote one, the category chips, and the
+ * place name when there is one — the place being the tap
  * target that opens this entry on the map.
  */
 function FeedRow({ entry }: { entry: FeedEntryDto }) {
@@ -190,6 +191,19 @@ function FeedRow({ entry }: { entry: FeedEntryDto }) {
               {entry.user.displayName}
             </p>
           </div>
+          {entry.title ? (
+            <p data-testid="feed-title" className="type-body-medium font-medium">
+              {entry.title}
+            </p>
+          ) : null}
+          {entry.note ? (
+            <p
+              data-testid="feed-note"
+              className="type-caption text-foreground-secondary whitespace-pre-line"
+            >
+              {entry.note}
+            </p>
+          ) : null}
           <div className="flex flex-wrap gap-2">
             {entry.categories.map((category) => (
               <CategoryChip key={category} category={category} label={t(`categories.${category}`)} />

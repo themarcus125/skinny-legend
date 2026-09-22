@@ -172,7 +172,11 @@
     "celebration": "Tracked, +{0} points!",
     "distanceApprox": "≈ {0} m away",
     "photoAlt": "The activity photo you just tracked",
-    "placeSheetLabel": "The activity's place"
+    "placeSheetLabel": "The activity's place",
+    "titleLabel": "Title",
+    "titlePlaceholder": "e.g. Morning run",
+    "noteLabel": "Notes",
+    "notePlaceholder": "How'd it go? Share more about your activity."
   },
   "leaderboard": {
     "title": "Leaderboard",

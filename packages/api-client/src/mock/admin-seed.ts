@@ -85,6 +85,8 @@ function seedEntries(): AdminEntry[] {
       categories: [...pattern.categories],
       placeName,
       placeSource: hasPlace ? 'poi' : 'none',
+      title: null,
+      note: null,
       createdAt: takenAt,
       user: { id: member.id, displayName: member.displayName },
       lat: coords?.lat ?? null,

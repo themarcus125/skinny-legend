@@ -111,6 +111,28 @@ describe('the group feed on Trang chủ', () => {
     );
   });
 
+  it('shows the member\'s title and note on the card, and nothing when they wrote none', async () => {
+    const page = await seeded().feed();
+    renderFeed(
+      stubApi({
+        feed: () =>
+          Promise.resolve({
+            entries: [
+              { ...page.entries[0]!, id: 'titled', title: 'Chạy bộ buổi sáng', note: 'Mệt nhưng vui.' },
+              { ...page.entries[1]!, id: 'plain', title: null, note: null },
+            ],
+            nextCursor: null,
+          }),
+      }),
+    );
+
+    const rows = await screen.findAllByTestId('feed-row');
+    expect(within(rows[0]!).getByTestId('feed-title')).toHaveTextContent('Chạy bộ buổi sáng');
+    expect(within(rows[0]!).getByTestId('feed-note')).toHaveTextContent('Mệt nhưng vui.');
+    expect(within(rows[1]!).queryByTestId('feed-title')).not.toBeInTheDocument();
+    expect(within(rows[1]!).queryByTestId('feed-note')).not.toBeInTheDocument();
+  });
+
   it('leaves a row with no location untappable', async () => {
     // The seed's own first entry with its place stripped — a real `FeedEntryDto`, minus a place.
     const page = await seeded().feed();
