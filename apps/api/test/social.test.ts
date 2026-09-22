@@ -162,3 +162,24 @@ describe('comments', () => {
     expect(res.status).toBe(401);
   });
 });
+
+describe('GET /feed social fields', () => {
+  it('carries counts and my own heart flag, computed per page', async () => {
+    const owner = await asUser('owner', { activate: true });
+    const me = await asUser('me', { activate: true });
+    const other = await asUser('other', { activate: true });
+    const hearted = await entryFor(owner.user.id);
+    const plain = await entryFor(owner.user.id);
+    await app.request(`/entries/${hearted.id}/heart`, { method: 'PUT', headers: me.headers });
+    await app.request(`/entries/${hearted.id}/heart`, { method: 'PUT', headers: other.headers });
+    await app.request(`/entries/${hearted.id}/comments`, { method: 'POST', headers: json(other.headers), body: JSON.stringify({ body: 'hi' }) });
+
+    const feed = await (await app.request('/feed', { headers: me.headers })).json();
+    const byId = Object.fromEntries(feed.entries.map((e: { id: string }) => [e.id, e]));
+    expect(byId[hearted.id]).toMatchObject({ heartCount: 2, commentCount: 1, heartedByMe: true });
+    expect(byId[plain.id]).toMatchObject({ heartCount: 0, commentCount: 0, heartedByMe: false });
+
+    const theirs = await (await app.request('/feed', { headers: owner.headers })).json();
+    expect(theirs.entries.find((e: { id: string }) => e.id === hearted.id)).toMatchObject({ heartCount: 2, heartedByMe: false });
+  });
+});
