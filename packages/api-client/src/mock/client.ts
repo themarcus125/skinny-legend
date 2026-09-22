@@ -1,8 +1,10 @@
 import { addDays, isoWeekKey, toLocalDate, type LocalDate } from '@skinny/shared/dates';
 import { computeScore, type ConfirmedEntry, type ScoreResult } from '@skinny/shared/scoring';
-import { CATEGORIES } from '@skinny/shared/wire';
+import { CATEGORIES, ENTRY_COMMENT_MAX } from '@skinny/shared/wire';
 import type {
   Category,
+  CommentDto,
+  CommentsResponse,
   CreateEntryInput,
   DashboardDto,
   DeviceDto,
@@ -10,6 +12,7 @@ import type {
   EntryMutationResponse,
   FeedEntryDto,
   FeedResponse,
+  HeartResponse,
   HistoryEntryDto,
   HistoryResponse,
   LeaderboardRowDto,
@@ -17,6 +20,7 @@ import type {
   NearbyPlacesResponse,
   PatchEntryInput,
   PatchMeInput,
+  PostCommentResponse,
   PresignInput,
   PresignResponse,
   RegisterDeviceInput,
@@ -42,7 +46,7 @@ import type {
   TestSendResult,
   UserPatch,
 } from '../types';
-import { CHALLENGE_TIMEZONE, makeSeed, svgImage, type Seed } from './seed';
+import { CHALLENGE_TIMEZONE, makeSeed, svgImage, type Seed, type SeedComment } from './seed';
 
 export { makeSeed, svgImage, type Seed, type SeedPlace } from './seed';
 export { makeAdminSeed } from './admin-seed';
@@ -330,7 +334,17 @@ export class MockApiClient implements ApiClient {
     const page = paginate(visible, cursor, this.feedPageSize, 'createdAt');
     const entries = page.items.flatMap<FeedEntryDto>((entry) => {
       const author = this.state.users.find((user) => user.id === entry.userId);
-      return author ? [{ ...toEntryDto(entry), user: summary(author) }] : [];
+      if (!author) return [];
+      const hearts = this.state.hearts.filter((h) => h.entryId === entry.id);
+      return [
+        {
+          ...toEntryDto(entry),
+          user: summary(author),
+          heartCount: hearts.length,
+          commentCount: this.state.comments.filter((c) => c.entryId === entry.id).length,
+          heartedByMe: hearts.some((h) => h.userId === this.state.me.id),
+        },
+      ];
     });
     return { entries, nextCursor: page.nextCursor };
   }
@@ -493,6 +507,92 @@ export class MockApiClient implements ApiClient {
     const entry = this.state.entries.find((row) => row.id === id && row.userId === this.state.me.id);
     if (!entry) throw new ApiError(404, 'not_found', 'Entry not found');
     entry.status = 'rejected';
+  }
+
+  // MARK: - Hearts & comments
+
+  private confirmedEntry(id: string): AdminEntry {
+    const entry = this.state.entries.find((row) => row.id === id && row.status === 'confirmed');
+    if (!entry) throw new ApiError(404, 'not_found', 'Entry not found');
+    return entry;
+  }
+
+  private heartState(entryId: string): HeartResponse {
+    const hearts = this.state.hearts.filter((h) => h.entryId === entryId);
+    return { heartCount: hearts.length, heartedByMe: hearts.some((h) => h.userId === this.state.me.id) };
+  }
+
+  async heartEntry(id: string): Promise<HeartResponse> {
+    await this.delay();
+    const entry = this.confirmedEntry(id);
+    if (!this.state.hearts.some((h) => h.entryId === entry.id && h.userId === this.state.me.id)) {
+      this.state.hearts.push({ entryId: entry.id, userId: this.state.me.id, createdAt: new Date().toISOString() });
+    }
+    return this.heartState(entry.id);
+  }
+
+  async unheartEntry(id: string): Promise<HeartResponse> {
+    await this.delay();
+    const entry = this.confirmedEntry(id);
+    this.state.hearts = this.state.hearts.filter(
+      (h) => !(h.entryId === entry.id && h.userId === this.state.me.id),
+    );
+    return this.heartState(entry.id);
+  }
+
+  private toCommentDto(row: SeedComment, entryOwnerId: string): CommentDto {
+    const author = this.state.users.find((u) => u.id === row.userId) ?? this.state.me;
+    return {
+      id: row.id,
+      entryId: row.entryId,
+      user: summary(author),
+      body: row.body,
+      createdAt: row.createdAt,
+      canDelete: row.userId === this.state.me.id || entryOwnerId === this.state.me.id,
+    };
+  }
+
+  async comments(entryId: string): Promise<CommentsResponse> {
+    await this.delay();
+    const entry = this.confirmedEntry(entryId);
+    const comments = this.state.comments
+      .filter((c) => c.entryId === entry.id)
+      .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+      .map((c) => this.toCommentDto(c, entry.userId));
+    return { comments };
+  }
+
+  async postComment(entryId: string, body: string): Promise<PostCommentResponse> {
+    await this.delay();
+    const entry = this.confirmedEntry(entryId);
+    const trimmed = body.trim();
+    if (trimmed.length === 0 || trimmed.length > ENTRY_COMMENT_MAX) {
+      throw new ApiError(400, 'invalid_body', 'Comment body is invalid');
+    }
+    this.counter += 1;
+    const row: SeedComment = {
+      id: `dddddddd-0000-4000-8000-${String(this.counter).padStart(12, '0')}`,
+      entryId: entry.id,
+      userId: this.state.me.id,
+      body: trimmed,
+      createdAt: new Date().toISOString(),
+    };
+    this.state.comments.push(row);
+    return {
+      comment: this.toCommentDto(row, entry.userId),
+      commentCount: this.state.comments.filter((c) => c.entryId === entry.id).length,
+    };
+  }
+
+  async deleteComment(id: string): Promise<void> {
+    await this.delay();
+    const row = this.state.comments.find((c) => c.id === id);
+    if (!row) throw new ApiError(404, 'not_found', 'Comment not found');
+    const entry = this.state.entries.find((e) => e.id === row.entryId);
+    if (row.userId !== this.state.me.id && entry?.userId !== this.state.me.id) {
+      throw new ApiError(403, 'forbidden', 'Not your comment');
+    }
+    this.state.comments = this.state.comments.filter((c) => c.id !== id);
   }
 
   async nearbyPlaces(lat: number, lng: number): Promise<NearbyPlacesResponse> {

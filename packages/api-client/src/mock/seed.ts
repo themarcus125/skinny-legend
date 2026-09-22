@@ -23,6 +23,12 @@ export interface SeedPlace {
   lng: number;
 }
 
+export interface SeedHeart { entryId: string; userId: string; createdAt: string }
+export interface SeedComment { id: string; entryId: string; userId: string; body: string; createdAt: string }
+
+/** Vietnamese, like the rest of the seed; cycled onto every fourth confirmed entry. */
+export const MEMBER_COMMENTS = ['Giỏi quá!', 'Mai chạy chung không?', 'Nhìn ngon ghê.', 'Cố lên nha!'];
+
 /**
  * Everything `createMockApiClient` needs to answer every endpoint. Two factories produce one:
  * `makeSeed()` (the member/iOS fixture) and `makeAdminSeed()` (the admin console's fixture).
@@ -37,6 +43,8 @@ export interface Seed {
   users: AdminUser[];
   entries: AdminEntry[];
   places: SeedPlace[];
+  hearts: SeedHeart[];
+  comments: SeedComment[];
   feedback: FeedbackItem[];
   notifications: NotificationLogItem[];
 }
@@ -198,15 +206,44 @@ export function makeSeed(today: LocalDate = todayLocal()): Seed {
 
   entries.sort((a, b) => (a.takenAt < b.takenAt ? 1 : a.takenAt > b.takenAt ? -1 : 0));
 
+  const hearts: SeedHeart[] = [];
+  const comments: SeedComment[] = [];
+  const me = users[0]!;
+  entries.forEach((entry, index) => {
+    if (entry.status !== 'confirmed') return;
+    // Every second entry is hearted by one to three *other* members, the first of whom is me
+    // when I am not the author — so "hearted by me", "hearted by others" and "no hearts" all
+    // appear on the first page.
+    if (index % 2 === 0) {
+      const others = users.filter((u) => u.id !== entry.userId).slice(0, 1 + (index % 3));
+      for (const u of others) hearts.push({ entryId: entry.id, userId: u.id, createdAt: entry.createdAt });
+    }
+    // Comments are seeded only on *other* members' entries and never by me, so every seeded
+    // comment is one I may neither have written nor own the entry of — the fixture the mock's
+    // 403 path needs. My own comments come from `postComment` at runtime.
+    if (index % 4 === 1 && entry.userId !== me.id) {
+      const author = users.find((u) => u.id !== entry.userId && u.id !== me.id)!;
+      comments.push({
+        id: `cccccccc-0000-4000-8000-${String(index).padStart(12, '0')}`,
+        entryId: entry.id,
+        userId: author.id,
+        body: MEMBER_COMMENTS[index % MEMBER_COMMENTS.length]!,
+        createdAt: entry.createdAt,
+      });
+    }
+  });
+
   const challenge = defaultChallenge();
   return {
     today: end,
     challenge,
     rules: defaultRules(challenge.id),
-    me: users[0]!,
+    me,
     users,
     entries,
     places: MEMBER_PLACES.map((place) => ({ ...place })),
+    hearts,
+    comments,
     feedback: [],
     notifications: [],
   };

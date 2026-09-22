@@ -177,6 +177,8 @@ export function makeAdminSeed(today: LocalDate = todayLocal()): Seed {
     users,
     entries: seedEntries(),
     places: ADMIN_PLACES.map((place) => ({ ...place })),
+    hearts: [],
+    comments: [],
     feedback: seedFeedback(),
     notifications: seedNotifications(),
   };

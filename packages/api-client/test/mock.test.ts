@@ -189,3 +189,46 @@ describe('mock client', () => {
     await expect(api.deleteEntry('nope')).rejects.toMatchObject({ status: 404, code: 'not_found' });
   });
 });
+
+describe('hearts and comments', () => {
+  it('seeds hearted entries and comments so every feed state appears', async () => {
+    const api = fixed();
+    const { entries } = await api.feed();
+    expect(entries.some((e) => e.heartCount > 0)).toBe(true);
+    expect(entries.some((e) => e.heartedByMe)).toBe(true);
+    expect(entries.some((e) => e.heartCount === 0 && e.commentCount === 0)).toBe(true);
+    expect(entries.some((e) => e.commentCount > 0)).toBe(true);
+  });
+
+  it('hearts idempotently and unhearts', async () => {
+    const api = fixed();
+    const target = (await api.feed()).entries.find((e) => !e.heartedByMe)!;
+    const before = target.heartCount;
+    expect(await api.heartEntry(target.id)).toEqual({ heartCount: before + 1, heartedByMe: true });
+    expect(await api.heartEntry(target.id)).toEqual({ heartCount: before + 1, heartedByMe: true });
+    expect(await api.unheartEntry(target.id)).toEqual({ heartCount: before, heartedByMe: false });
+    expect((await api.feed()).entries.find((e) => e.id === target.id)!.heartedByMe).toBe(false);
+  });
+
+  it('posts, lists oldest first with canDelete, and deletes', async () => {
+    const api = fixed();
+    const target = (await api.feed()).entries.find((e) => e.commentCount === 0 && e.userId !== api.seed.me.id)!;
+    const posted = await api.postComment(target.id, '  Giỏi quá  ');
+    expect(posted.comment).toMatchObject({ body: 'Giỏi quá', canDelete: true, user: { id: api.seed.me.id } });
+    expect(posted.commentCount).toBe(1);
+    const list = await api.comments(target.id);
+    expect(list.comments.map((c) => c.id)).toEqual([posted.comment.id]);
+    await api.deleteComment(posted.comment.id);
+    expect((await api.comments(target.id)).comments).toEqual([]);
+    expect((await api.feed()).entries.find((e) => e.id === target.id)!.commentCount).toBe(0);
+  });
+
+  it('refuses a stranger delete with 403 and a non-confirmed entry with 404', async () => {
+    const api = fixed();
+    const seeded = api.seed.comments.find((c) => c.userId !== api.seed.me.id)!;
+    const entry = api.seed.entries.find((e) => e.id === seeded.entryId)!;
+    if (entry.userId === api.seed.me.id) throw new Error('pick a seeded comment on someone else’s entry');
+    await expect(api.deleteComment(seeded.id)).rejects.toMatchObject({ status: 403 });
+    await expect(api.heartEntry('00000000-0000-4000-8000-000000000000')).rejects.toMatchObject({ status: 404 });
+  });
+});
