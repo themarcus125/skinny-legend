@@ -16,6 +16,11 @@ export const ENTRY_TITLE_MAX = 80;
 /** Strava's "How'd it go?" box. */
 export const ENTRY_NOTE_MAX = 500;
 
+/** A comment on a feed entry; whitespace-only is refused by `.min(1)` after the trim. */
+export const ENTRY_COMMENT_MAX = 500;
+export const commentBody = z.object({ body: z.string().trim().min(1).max(ENTRY_COMMENT_MAX) });
+export type CommentInput = z.infer<typeof commentBody>;
+
 export const patchEntryBody = z.object({
   categories: z.array(categorySchema).min(1).max(3),
   placeName: z.string().max(120).nullable().optional(),

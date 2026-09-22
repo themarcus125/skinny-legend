@@ -70,6 +70,21 @@ export const entryCategories = pgTable('entry_categories', {
   source: categorySourceEnum('source').notNull(),
 }, (t) => [primaryKey({ columns: [t.entryId, t.category] })]);
 
+/** One row per member who hearted an entry; the primary key is what makes a heart idempotent. */
+export const entryHearts = pgTable('entry_hearts', {
+  entryId: uuid('entry_id').notNull().references(() => entries.id, { onDelete: 'cascade' }),
+  userId: uuid('user_id').notNull().references(() => users.id),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [primaryKey({ columns: [t.entryId, t.userId] })]);
+
+export const entryComments = pgTable('entry_comments', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  entryId: uuid('entry_id').notNull().references(() => entries.id, { onDelete: 'cascade' }),
+  userId: uuid('user_id').notNull().references(() => users.id),
+  body: text('body').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [index('entry_comments_entry_created_idx').on(t.entryId, t.createdAt)]);
+
 export const aiVerdicts = pgTable('ai_verdicts', {
   id: uuid('id').primaryKey().defaultRandom(),
   entryId: uuid('entry_id').notNull().references(() => entries.id, { onDelete: 'cascade' }),
@@ -99,7 +114,7 @@ export const feedback = pgTable('feedback', {
  */
 export const deviceLocaleEnum = pgEnum('device_locale', ['vi', 'en']);
 export const devicePlatformEnum = pgEnum('device_platform', ['ios', 'web']);
-export const notificationKindEnum = pgEnum('notification_kind', ['inactive_1d', 'inactive_3d', 'inactive_7d', 'rank_nudge']);
+export const notificationKindEnum = pgEnum('notification_kind', ['inactive_1d', 'inactive_3d', 'inactive_7d', 'rank_nudge', 'heart', 'comment']);
 
 export const deviceTokens = pgTable('device_tokens', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -116,6 +131,8 @@ export const notificationLog = pgTable('notification_log', {
   id: uuid('id').primaryKey().defaultRandom(),
   userId: uuid('user_id').notNull().references(() => users.id),
   kind: notificationKindEnum('kind').notNull(),
+  /** The entry a heart/comment push is about; null for the planner's reminders. */
+  entryId: uuid('entry_id').references(() => entries.id, { onDelete: 'set null' }),
   payloadJson: jsonb('payload_json')
     .$type<{ title: string; body: string; locale: 'vi' | 'en'; vars: Record<string, string | number> }>()
     .notNull(),

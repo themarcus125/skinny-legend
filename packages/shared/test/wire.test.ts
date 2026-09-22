@@ -149,3 +149,14 @@ describe('browser safety', () => {
     expect(pkg.exports['.']).toEqual({ types: './dist/index.d.ts', import: './dist/index.js' });
   });
 });
+
+import { commentBody, ENTRY_COMMENT_MAX } from '../src/wire/entries.js';
+
+describe('commentBody', () => {
+  it('trims and accepts 1..500 characters', () => {
+    expect(commentBody.parse({ body: '  Giỏi quá!  ' })).toEqual({ body: 'Giỏi quá!' });
+    expect(commentBody.safeParse({ body: '   ' }).success).toBe(false);
+    expect(commentBody.safeParse({ body: 'x'.repeat(ENTRY_COMMENT_MAX) }).success).toBe(true);
+    expect(commentBody.safeParse({ body: 'x'.repeat(ENTRY_COMMENT_MAX + 1) }).success).toBe(false);
+  });
+});

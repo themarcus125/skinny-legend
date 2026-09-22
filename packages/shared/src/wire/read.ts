@@ -44,6 +44,35 @@ export interface TrendsResponse {
 
 export interface FeedEntryDto extends EntryDto {
   user: UserSummaryDto;
+  heartCount: number;
+  commentCount: number;
+  /** Whether the requesting member has hearted this entry. */
+  heartedByMe: boolean;
+}
+
+/** `PUT`/`DELETE /entries/:id/heart` — the truth after the call, for the client to settle on. */
+export interface HeartResponse {
+  heartCount: number;
+  heartedByMe: boolean;
+}
+
+export interface CommentDto {
+  id: string;
+  entryId: string;
+  user: UserSummaryDto;
+  body: string;
+  createdAt: string;
+  /** Author or entry owner, decided server-side. */
+  canDelete: boolean;
+}
+
+export interface CommentsResponse {
+  comments: CommentDto[];
+}
+
+export interface PostCommentResponse {
+  comment: CommentDto;
+  commentCount: number;
 }
 
 export interface FeedResponse {
