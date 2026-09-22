@@ -5,6 +5,7 @@ import {
   PLACE_SOURCES, DEVICE_PLATFORMS, CATEGORIES, USER_LOCALES, ENTRY_STATUSES, UPLOAD_CONTENT_TYPES,
   type EntryDto,
 } from '../src/index.js';
+import { commentBody, ENTRY_COMMENT_MAX } from '../src/wire/entries.js';
 
 describe('createEntryBody', () => {
   const valid = { photoKey: 'photos/u/a.jpg', takenAt: '2026-09-14T03:00:00.000Z' };
@@ -149,8 +150,6 @@ describe('browser safety', () => {
     expect(pkg.exports['.']).toEqual({ types: './dist/index.d.ts', import: './dist/index.js' });
   });
 });
-
-import { commentBody, ENTRY_COMMENT_MAX } from '../src/wire/entries.js';
 
 describe('commentBody', () => {
   it('trims and accepts 1..500 characters', () => {

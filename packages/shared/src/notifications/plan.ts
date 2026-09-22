@@ -2,17 +2,17 @@ import type { LocalDate } from '../dates.js';
 import { renderNotification } from './templates.js';
 import type {
   LeaderboardStanding,
-  NotificationKind,
   NotificationVars,
   PlanInput,
   Planned,
+  PlannerNotificationKind,
   PlannerUser,
 } from './types.js';
 
 const DEDUPE_WINDOW_MS = 24 * 60 * 60 * 1000;
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 /** Spec §E: only a gap of exactly 1, 3 or 7 days triggers an inactivity reminder. */
-const INACTIVE_BY_GAP: Record<number, NotificationKind | undefined> = {
+const INACTIVE_BY_GAP: Record<number, PlannerNotificationKind | undefined> = {
   1: 'inactive_1d',
   3: 'inactive_3d',
   7: 'inactive_7d',
@@ -22,7 +22,7 @@ const RANK_NUDGE_MAX_RANK = 5;
 const RANK_NUDGE_MAX_GAP = 15;
 
 interface Candidate {
-  kind: NotificationKind;
+  kind: PlannerNotificationKind;
   vars: NotificationVars;
 }
 

@@ -29,6 +29,14 @@ const VI: Record<NotificationKind, Template> = {
         ? `Còn ${v.gap} điểm là vượt ${v.name}.`
         : `Còn ${v.gap} điểm là vượt ${v.name}. ${v.gapToTop} điểm nữa để dẫn đầu.`,
   }),
+  heart: (v) => ({
+    title: `${v.name ?? ''} đã thả tim`.trim(),
+    body: `${v.name ?? ''} thích hoạt động của bạn.`.trim(),
+  }),
+  comment: (v) => ({
+    title: `${v.name ?? ''} đã bình luận`.trim(),
+    body: `“${v.excerpt ?? ''}”`,
+  }),
 };
 
 const EN: Record<NotificationKind, Template> = {
@@ -51,6 +59,14 @@ const EN: Record<NotificationKind, Template> = {
         ? `${v.gap} points behind ${v.name}.`
         : `${v.gap} points behind ${v.name}. ${v.gapToTop} points from the top.`,
   }),
+  heart: (v) => ({
+    title: `${v.name ?? ''} sent a heart`.trim(),
+    body: `${v.name ?? ''} liked your activity.`.trim(),
+  }),
+  comment: (v) => ({
+    title: `${v.name ?? ''} commented`.trim(),
+    body: `“${v.excerpt ?? ''}”`,
+  }),
 };
 
 const TEMPLATES: Record<NotificationLocale, Record<NotificationKind, Template>> = { vi: VI, en: EN };
@@ -60,6 +76,13 @@ export const TEST_NOTIFICATION: Record<NotificationLocale, RenderedNotification>
   vi: { title: 'Thử thông báo', body: 'Đây là thông báo thử từ bảng quản trị.' },
   en: { title: 'Test notification', body: 'This is a test push from the admin dashboard.' },
 };
+
+/** What a comment push shows of the body: whitespace collapsed, at most 80 characters plus "…". */
+export const COMMENT_EXCERPT_MAX = 80;
+export function commentExcerpt(body: string): string {
+  const collapsed = body.replace(/\s+/g, ' ').trim();
+  return collapsed.length > COMMENT_EXCERPT_MAX ? `${collapsed.slice(0, COMMENT_EXCERPT_MAX)}…` : collapsed;
+}
 
 /**
  * Renders one notification. `locale` is typed but arrives from a database column, so an
