@@ -21,7 +21,7 @@ describe('POST /uploads/presign', () => {
   });
 
   it('pending users may upload avatars but not photos', async () => {
-    const { headers } = await asUser('u1');
+    const { headers } = await asUser('u1', { pending: true });
     const ok = await app.request('/uploads/presign', { method: 'POST', headers: { ...headers, 'content-type': 'application/json' }, body: JSON.stringify({ kind: 'avatar', contentType: 'image/jpeg' }) });
     expect(ok.status).toBe(200);
     const no = await app.request('/uploads/presign', { method: 'POST', headers: { ...headers, 'content-type': 'application/json' }, body: JSON.stringify({ kind: 'photo', contentType: 'image/jpeg' }) });

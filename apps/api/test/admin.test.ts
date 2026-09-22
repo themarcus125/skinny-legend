@@ -60,7 +60,7 @@ describe('admin guard', () => {
 describe('admin users', () => {
   it('activates a pending user and audits it', async () => {
     const admin = await asUser('adm', { admin: true });
-    const pending = await asUser('p');
+    const pending = await asUser('p', { pending: true });
     const res = await app.request(`/admin/users/${pending.user.id}`, { method: 'PATCH', headers: json(admin.headers), body: JSON.stringify({ status: 'active' }) });
     expect(res.status).toBe(200);
     expect((await res.json()).user.status).toBe('active');

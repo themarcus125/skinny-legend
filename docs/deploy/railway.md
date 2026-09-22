@@ -122,8 +122,9 @@ Notes:
 ## 4. Promote the first admin
 
 `users.role` is a Postgres enum `role` (`'member' | 'admin'`) and `users.status` is
-`user_status` (`'pending' | 'active' | 'disabled'`); new rows default to `member` / `pending`.
-Roles are only editable through the admin API, so the first admin is promoted by hand.
+`user_status` (`'pending' | 'active' | 'disabled'`). A first sign-in creates the row as
+`member` / `active`, so there is no approval step for new members. Roles are only editable
+through the admin API, so the first admin is promoted by hand.
 
 Sign in once from the iOS app or the admin dashboard to create the row, then run against the
 production database (Railway → Postgres service → *Data* tab, or `psql "<production url>"`):
@@ -133,10 +134,10 @@ production database (Railway → Postgres service → *Data* tab, or `psql "<pro
 SELECT id, firebase_uid, display_name, role, status, created_at FROM users ORDER BY created_at DESC;
 
 -- promote it
-UPDATE users SET role = 'admin', status = 'active' WHERE firebase_uid = '<your firebase uid>';
+UPDATE users SET role = 'admin' WHERE firebase_uid = '<your firebase uid>';
 ```
 
-Until this runs, the dashboard shows `/not-authorized` and the app account stays `pending`.
+Until this runs, the dashboard shows `/not-authorized`.
 
 ## 5. Domain
 

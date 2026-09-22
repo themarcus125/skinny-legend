@@ -35,14 +35,18 @@ async function identify(headers: Headers): Promise<{ uid: string; name: string; 
   }
 }
 
-/** Verifies identity and upserts the user row. */
+/**
+ * Verifies identity and upserts the user row. A first sign-in creates the member as `active`
+ * straight away: there is no admin approval step. `pending` remains in the enum so an admin can
+ * still park an account by hand, and `requireActive` keeps gating it.
+ */
 export const authenticate = createMiddleware<AuthEnv>(async (c, next) => {
   const id = await identify(c.req.raw.headers);
   let [user] = await db.select().from(schema.users).where(eq(schema.users.firebaseUid, id.uid));
   if (!user) {
     [user] = await db
       .insert(schema.users)
-      .values({ firebaseUid: id.uid, displayName: id.name })
+      .values({ firebaseUid: id.uid, displayName: id.name, status: 'active' })
       .onConflictDoNothing()
       .returning();
     if (!user) {

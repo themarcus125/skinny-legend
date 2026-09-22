@@ -53,7 +53,7 @@ describe('GET /leaderboard', () => {
 
   it('excludes pending users', async () => {
     const a = await asUser('a', { activate: true });
-    await asUser('p');
+    await asUser('p', { pending: true });
     const body = await (await app.request('/leaderboard', { headers: a.headers })).json();
     expect(body.leaderboard).toHaveLength(1);
   });

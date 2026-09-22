@@ -82,7 +82,7 @@ describe('POST /me/devices', () => {
   });
 
   it('rejects a pending user with 403', async () => {
-    const { headers } = await asUser('p');
+    const { headers } = await asUser('p', { pending: true });
     const res = await app.request('/me/devices', {
       method: 'POST', headers: json(headers), body: JSON.stringify({ token: TOKEN, platform: 'ios' }),
     });

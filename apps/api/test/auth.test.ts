@@ -7,11 +7,17 @@ import { app, resetDb, asUser } from './helpers.js';
 beforeEach(resetDb);
 
 describe('POST /auth/session', () => {
-  it('creates a pending user on first login', async () => {
+  it('creates an active member on first login, with no approval step', async () => {
     const res = await app.request('/auth/session', { method: 'POST', headers: { 'x-test-uid': 'u1', 'x-test-name': 'Khoa' } });
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body.user).toMatchObject({ displayName: 'Khoa', status: 'pending', role: 'member' });
+    expect(body.user).toMatchObject({ displayName: 'Khoa', status: 'active', role: 'member' });
+  });
+
+  it('a first login can use active-only routes straight away', async () => {
+    const { headers } = await asUser('u1');
+    const res = await app.request('/leaderboard', { headers });
+    expect(res.status).toBe(200);
   });
 
   it('returns the same user on second login', async () => {
@@ -37,7 +43,7 @@ describe('POST /auth/session', () => {
 
 describe('GET /me and PATCH /me', () => {
   it('pending users can read and update their profile', async () => {
-    const { headers } = await asUser('u1', { name: 'Khoa' });
+    const { headers } = await asUser('u1', { name: 'Khoa', pending: true });
     const res = await app.request('/me', { method: 'PATCH', headers: { ...headers, 'content-type': 'application/json' }, body: JSON.stringify({ displayName: 'Khoa N' }) });
     expect(res.status).toBe(200);
     const me = await (await app.request('/me', { headers })).json();
@@ -45,7 +51,7 @@ describe('GET /me and PATCH /me', () => {
   });
 
   it('pending users cannot access active-only routes', async () => {
-    const { headers } = await asUser('u1');
+    const { headers } = await asUser('u1', { pending: true });
     const res = await app.request('/leaderboard', { headers });
     expect(res.status).toBe(403);
   });

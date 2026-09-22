@@ -123,7 +123,7 @@ describe('runNotifyJob', () => {
   });
 
   it('ignores members who are not active', async () => {
-    const pending = await asUser('p');
+    const pending = await asUser('p', { pending: true });
     await logExercise(pending.user.id, '2026-09-19');
     await registerDevice(pending.user.id, 'tok-pending');
     const sender = fakeSender();

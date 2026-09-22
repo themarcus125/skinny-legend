@@ -187,7 +187,7 @@ describe('GET /places/nearby', () => {
   });
 
   it('rejects a pending member with 403 and an anonymous caller with 401', async () => {
-    const { headers } = await asUser('p');
+    const { headers } = await asUser('p', { pending: true });
     expect((await app.request(`/places/nearby?lat=${HCMC.lat}&lng=${HCMC.lng}`, { headers })).status).toBe(403);
     expect((await app.request(`/places/nearby?lat=${HCMC.lat}&lng=${HCMC.lng}`)).status).toBe(401);
   });
