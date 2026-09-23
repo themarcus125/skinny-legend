@@ -1,14 +1,21 @@
 import type { LocalDate } from '../dates.js';
 import type { ChallengeConfig } from '../scoring/types.js';
 
-/** The four reminder kinds from spec §E. Mirrors the `notification_kind` pg enum. */
-export type NotificationKind = 'inactive_1d' | 'inactive_3d' | 'inactive_7d' | 'rank_nudge';
-export const NOTIFICATION_KINDS: readonly NotificationKind[] = [
+/** The four reminder kinds from spec §E — the planner's own. */
+export type PlannerNotificationKind = 'inactive_1d' | 'inactive_3d' | 'inactive_7d' | 'rank_nudge';
+export const NOTIFICATION_KINDS: readonly PlannerNotificationKind[] = [
   'inactive_1d',
   'inactive_3d',
   'inactive_7d',
   'rank_nudge',
 ] as const;
+
+/** Sent from the social routes, never by the planner (feed social spec §C). */
+export type SocialNotificationKind = 'heart' | 'comment';
+export const SOCIAL_NOTIFICATION_KINDS: readonly SocialNotificationKind[] = ['heart', 'comment'] as const;
+
+/** Mirrors the `notification_kind` pg enum. */
+export type NotificationKind = PlannerNotificationKind | SocialNotificationKind;
 
 /** Vietnamese is the source of truth; `en` is a full translation, not a fallback. */
 export type NotificationLocale = 'vi' | 'en';
@@ -19,10 +26,12 @@ export interface NotificationVars {
   days?: number;
   /** rank_nudge: points behind the member at the next rank up. */
   gap?: number;
-  /** rank_nudge: display name of that member. */
+  /** rank_nudge / heart / comment: display name of that member, or the actor's. */
   name?: string;
   /** rank_nudge: points behind rank 1. Absent when the user is rank 2 (spec §E). */
   gapToTop?: number;
+  /** comment: the first 80 characters of the body, whitespace collapsed, "…" when cut. */
+  excerpt?: string;
 }
 
 /** One candidate for a reminder. `lastConfirmedDate` is null when the user never logged anything. */

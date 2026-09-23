@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { and, desc, eq, gte, isNotNull, lt } from 'drizzle-orm';
+import { and, count, desc, eq, gte, inArray, isNotNull, lt } from 'drizzle-orm';
 import {
   isoWeekKey, addDays, schema, feedQuery, mapQuery, historyQuery, CATEGORIES,
   type Category, type DashboardDto, type FeedEntryDto, type FeedResponse, type HistoryResponse,
@@ -101,10 +101,27 @@ readRoutes.get('/feed', validate('query', feedQuery), async (c) => {
   const rows = await db.select({ entry: schema.entries, user: schema.users })
     .from(schema.entries).innerJoin(schema.users, eq(schema.users.id, schema.entries.userId))
     .where(where).orderBy(desc(schema.entries.createdAt)).limit(30);
+  const ids = rows.map(({ entry }) => entry.id);
+  const me = c.get('user');
+  const [heartRows, commentRows, mine] = ids.length === 0 ? [[], [], []] : await Promise.all([
+    db.select({ entryId: schema.entryHearts.entryId, n: count() }).from(schema.entryHearts).where(inArray(schema.entryHearts.entryId, ids)).groupBy(schema.entryHearts.entryId),
+    db.select({ entryId: schema.entryComments.entryId, n: count() }).from(schema.entryComments).where(inArray(schema.entryComments.entryId, ids)).groupBy(schema.entryComments.entryId),
+    db.select({ entryId: schema.entryHearts.entryId }).from(schema.entryHearts).where(and(inArray(schema.entryHearts.entryId, ids), eq(schema.entryHearts.userId, me.id))),
+  ]);
+  const hearts = new Map(heartRows.map((r) => [r.entryId, r.n]));
+  const comments = new Map(commentRows.map((r) => [r.entryId, r.n]));
+  const hearted = new Set(mine.map((r) => r.entryId));
+
   const entries: FeedEntryDto[] = [];
   for (const { entry, user } of rows) {
     const cats = (await db.select().from(schema.entryCategories).where(eq(schema.entryCategories.entryId, entry.id))).map((r) => r.category as Category);
-    entries.push({ ...(await toEntryDto(entry, cats)), user: await userDto(user) });
+    entries.push({
+      ...(await toEntryDto(entry, cats)),
+      user: await userDto(user),
+      heartCount: hearts.get(entry.id) ?? 0,
+      commentCount: comments.get(entry.id) ?? 0,
+      heartedByMe: hearted.has(entry.id),
+    });
   }
   const nextCursor = rows.length === 30 ? rows[rows.length - 1]!.entry.createdAt.toISOString() : null;
   return c.json({ entries, nextCursor } satisfies FeedResponse);

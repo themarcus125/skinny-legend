@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { renderNotification, TEST_NOTIFICATION } from '../src/notifications/templates.js';
+import { commentExcerpt, renderNotification, TEST_NOTIFICATION } from '../src/notifications/templates.js';
 import { NOTIFICATION_KINDS, type NotificationLocale } from '../src/notifications/types.js';
 
 const LOCALES: NotificationLocale[] = ['vi', 'en'];
@@ -38,5 +38,33 @@ describe('renderNotification', () => {
   it('exposes admin test-send copy in both locales', () => {
     expect(TEST_NOTIFICATION.vi.title).toBe('Thử thông báo');
     expect(TEST_NOTIFICATION.en.title).toBe('Test notification');
+  });
+});
+
+describe('social templates', () => {
+  it('renders a heart in both languages with the actor name', () => {
+    expect(renderNotification('heart', 'vi', { name: 'Linh' })).toEqual({
+      title: 'Linh đã thả tim',
+      body: 'Linh thích hoạt động của bạn.',
+    });
+    expect(renderNotification('heart', 'en', { name: 'Linh' })).toEqual({
+      title: 'Linh sent a heart',
+      body: 'Linh liked your activity.',
+    });
+  });
+
+  it('renders a comment with the quoted excerpt', () => {
+    expect(renderNotification('comment', 'vi', { name: 'Linh', excerpt: 'Giỏi quá' })).toEqual({
+      title: 'Linh đã bình luận',
+      body: '“Giỏi quá”',
+    });
+    expect(renderNotification('comment', 'en', { name: 'Linh', excerpt: 'Nice' }).title).toBe('Linh commented');
+  });
+
+  it('commentExcerpt collapses whitespace and cuts at 80 characters with an ellipsis', () => {
+    expect(commentExcerpt('  hai \n dòng  ')).toBe('hai dòng');
+    const long = 'a'.repeat(100);
+    expect(commentExcerpt(long)).toBe('a'.repeat(80) + '…');
+    expect(commentExcerpt('a'.repeat(80))).toBe('a'.repeat(80));
   });
 });

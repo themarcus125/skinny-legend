@@ -222,5 +222,77 @@
   "account.historyEmptyBody": {
     "vi": "Chụp ảnh bên trên để ghi nhận hoạt động đầu tiên.",
     "en": "Take a photo above to track your first activity."
+  },
+  "feed.heart": {
+    "vi": "Thả tim",
+    "en": "Send a heart"
+  },
+  "feed.unheart": {
+    "vi": "Bỏ tim",
+    "en": "Remove heart"
+  },
+  "feed.heartCount": {
+    "vi": "{0} tim",
+    "en": "{0} hearts"
+  },
+  "feed.comments": {
+    "vi": "Bình luận",
+    "en": "Comments"
+  },
+  "feed.commentCount": {
+    "vi": "{0} bình luận",
+    "en": "{0} comments"
+  },
+  "feed.edit": {
+    "vi": "Sửa",
+    "en": "Edit"
+  },
+  "feed.heartFailed": {
+    "vi": "Không thả tim được, hãy thử lại.",
+    "en": "Couldn't send the heart, please try again."
+  },
+  "comments.title": {
+    "vi": "Bình luận",
+    "en": "Comments"
+  },
+  "comments.empty": {
+    "vi": "Chưa có bình luận nào. Hãy là người đầu tiên!",
+    "en": "No comments yet. Be the first!"
+  },
+  "comments.placeholder": {
+    "vi": "Viết bình luận…",
+    "en": "Write a comment…"
+  },
+  "comments.send": {
+    "vi": "Gửi",
+    "en": "Send"
+  },
+  "comments.loadFailed": {
+    "vi": "Không tải được bình luận.",
+    "en": "Couldn't load the comments."
+  },
+  "comments.postFailed": {
+    "vi": "Không gửi được bình luận, hãy thử lại.",
+    "en": "Couldn't post the comment, please try again."
+  },
+  "comments.deleteFailed": {
+    "vi": "Không xoá được bình luận.",
+    "en": "Couldn't delete the comment."
+  },
+  "time.now": {
+    "vi": "Vừa xong",
+    "en": "Just now"
+  },
+  "time.minutes": {
+    "vi": "{0} phút",
+    "en": "{0} min"
+  },
+  "time.hours": {
+    "vi": "{0} giờ",
+    "en": "{0} h"
+  },
+  "time.days": {
+    "vi": "{0} ngày",
+    "en": "{0} d"
   }
 }

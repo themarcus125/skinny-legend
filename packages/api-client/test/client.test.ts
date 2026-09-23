@@ -73,6 +73,41 @@ describe('createApiClient', () => {
     ]);
   });
 
+  it('pins the social endpoints the feed calls live', async () => {
+    const calls: string[] = [];
+    const bodies: (BodyInit | null | undefined)[] = [];
+    const api = createApiClient(
+      opts(
+        stub(200, { heartCount: 0, heartedByMe: false, comments: [], comment: {}, commentCount: 0 }, (u, init) => {
+          calls.push(`${init.method ?? 'GET'} ${u}`);
+          bodies.push(init.body);
+        }),
+      ),
+    );
+    await api.heartEntry('e1');
+    await api.unheartEntry('e1');
+    await api.comments('e1');
+    await api.postComment('e1', 'Hay');
+    expect(calls).toEqual([
+      'PUT https://api.test/entries/e1/heart',
+      'DELETE https://api.test/entries/e1/heart',
+      'GET https://api.test/entries/e1/comments',
+      'POST https://api.test/entries/e1/comments',
+    ]);
+    expect(bodies[3]).toBe('{"body":"Hay"}');
+
+    // The delete answers 204, so it is pinned against a stub that sends no body at all.
+    const deleting = createApiClient(
+      opts(
+        stub(204, null, (u, init) => {
+          calls.push(`${init.method ?? 'GET'} ${u}`);
+        }),
+      ),
+    );
+    await expect(deleting.deleteComment('c1')).resolves.toBeUndefined();
+    expect(calls[4]).toBe('DELETE https://api.test/comments/c1');
+  });
+
   it('sends Content-Type only when there is a body', async () => {
     const seen: RequestInit[] = [];
     const api = createApiClient(

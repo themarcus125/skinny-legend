@@ -1,11 +1,12 @@
 import type { ReactNode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider } from '@tanstack/react-query';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, useLocation } from 'react-router';
 import type { ApiClient } from '@skinny/api-client';
 import { createMockApiClient, makeSeed } from '@skinny/api-client/mock';
 import { ApiProvider } from '@/lib/api';
+import { makeQueryClient } from '@/lib/query';
 import { stubApi } from '@/test/session';
 import { render, screen, waitFor, within } from '@/test/intl';
 import { FeedSection } from './feed';
@@ -21,9 +22,14 @@ function Here() {
   return <p data-testid="here">{`${location.pathname}${location.search}`}</p>;
 }
 
-function renderFeed(api: ApiClient) {
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+function renderFeed(api: ApiClient, meId: string | null = null) {
+  // The app's own client, so its `staleTime` is in play here too — see `comment-sheet.test.tsx`.
+  const queryClient = makeQueryClient();
+  const defaults = queryClient.getDefaultOptions();
+  queryClient.setDefaultOptions({
+    ...defaults,
+    queries: { ...defaults.queries, retry: false },
+    mutations: { ...defaults.mutations, retry: false },
   });
   const Wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={queryClient}>
@@ -35,7 +41,7 @@ function renderFeed(api: ApiClient) {
       </ApiProvider>
     </QueryClientProvider>
   );
-  return render(<FeedSection />, { wrapper: Wrapper });
+  return render(<FeedSection meId={meId} />, { wrapper: Wrapper });
 }
 
 /**
@@ -148,8 +154,11 @@ describe('the group feed on Trang chủ', () => {
 
     expect(await screen.findByTestId('feed-row')).toBeInTheDocument();
     expect(screen.queryByTestId('feed-place')).not.toBeInTheDocument();
-    // The photo is a button (it opens the viewer); nothing else in the row may be.
-    const buttons = screen.queryAllByRole('button').filter((b) => b.getAttribute('data-testid') !== 'photo-button');
+    // The photo, the heart and the comment count are buttons; nothing else in the row may be.
+    const chrome = new Set(['photo-button', 'feed-heart', 'feed-comment']);
+    const buttons = screen
+      .queryAllByRole('button')
+      .filter((b) => !chrome.has(b.getAttribute('data-testid') ?? ''));
     expect(buttons).toHaveLength(0);
   });
 
@@ -210,5 +219,106 @@ describe('the group feed on Trang chủ', () => {
     await waitFor(() => {
       expect(calls).toBeGreaterThan(1);
     });
+  });
+
+  it('shows the seeded heart and comment counts and my pressed state', async () => {
+    renderFeed(seeded());
+    const rows = await screen.findAllByTestId('feed-row');
+    const hearted = rows.find((row) => within(row).getByTestId('feed-heart').getAttribute('aria-pressed') === 'true');
+    expect(hearted).toBeDefined();
+    const count = Number(within(hearted!).getByTestId('feed-heart-count').textContent);
+    expect(count).toBeGreaterThan(0);
+    // The count is inside the button, where the label would silence it — so the name carries it.
+    expect(within(hearted!).getByTestId('feed-heart')).toHaveAccessibleName(
+      expect.stringContaining(String(count)),
+    );
+    const commented = rows.find((row) => within(row).queryByTestId('feed-comment-count'));
+    expect(commented).toBeDefined();
+  });
+
+  it('a tap flips the heart at once and the mock keeps it', async () => {
+    const api = seeded();
+    renderFeed(api);
+    const rows = await screen.findAllByTestId('feed-row');
+    const row = rows.find((r) => within(r).getByTestId('feed-heart').getAttribute('aria-pressed') === 'false')!;
+    const button = within(row).getByTestId('feed-heart');
+    const before = Number(within(row).queryByTestId('feed-heart-count')?.textContent ?? '0');
+
+    await userEvent.click(button);
+    expect(button).toHaveAttribute('aria-pressed', 'true');
+    expect(within(row).getByTestId('feed-heart-count')).toHaveTextContent(String(before + 1));
+
+    await waitFor(() => expect(api.seed.hearts.some((h) => h.entryId === row.getAttribute('data-entry-id') && h.userId === api.seed.me.id)).toBe(true));
+    expect(button).toHaveAttribute('aria-pressed', 'true');
+
+    await userEvent.click(button);
+    expect(button).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  it('rolls the heart back and shows a banner when the request fails', async () => {
+    const api = seeded();
+    vi.spyOn(api, 'heartEntry').mockRejectedValue(new TypeError('offline'));
+    renderFeed(api);
+    const rows = await screen.findAllByTestId('feed-row');
+    const row = rows.find((r) => within(r).getByTestId('feed-heart').getAttribute('aria-pressed') === 'false')!;
+    const button = within(row).getByTestId('feed-heart');
+    await userEvent.click(button);
+    await screen.findByTestId('feed-heart-error');
+    expect(button).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  it('offers "Sửa" only on my own rows and opens the edit sheet with the title prefilled', async () => {
+    const api = seeded();
+    const mine = api.seed.entries.find((e) => e.status === 'confirmed' && e.userId === api.seed.me.id)!;
+    mine.title = 'Chạy bộ tối';
+    renderFeed(api, api.seed.me.id);
+    const rows = await screen.findAllByTestId('feed-row');
+    const myRow = rows.find((r) => r.getAttribute('data-entry-id') === mine.id)!;
+    const theirRow = rows.find((r) => r.getAttribute('data-entry-id') !== mine.id && !within(r).queryByTestId('feed-edit'))!;
+    expect(theirRow).toBeDefined();
+
+    await userEvent.click(within(myRow).getByTestId('feed-edit'));
+    const sheet = await screen.findByTestId('verdict-sheet');
+    expect(within(sheet).getByTestId('verdict-title')).toHaveValue('Chạy bộ tối');
+  });
+
+  it('surfaces a failed delete from the edit sheet', async () => {
+    const api = seeded();
+    const mine = api.seed.entries.find((e) => e.status === 'confirmed' && e.userId === api.seed.me.id)!;
+    vi.spyOn(api, 'deleteEntry').mockRejectedValue(new TypeError('offline'));
+    renderFeed(api, api.seed.me.id);
+    const rows = await screen.findAllByTestId('feed-row');
+    const myRow = rows.find((r) => r.getAttribute('data-entry-id') === mine.id)!;
+
+    await userEvent.click(within(myRow).getByTestId('feed-edit'));
+    await userEvent.click(await screen.findByTestId('verdict-delete'));
+    const dialog = await screen.findByTestId('confirm-dialog');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Xoá' }));
+
+    // The hook closes both modals, so the banner on the section is the only thing left to say it.
+    expect(await screen.findByTestId('feed-delete-error')).toBeVisible();
+    expect(screen.queryByTestId('confirm-dialog')).toBeNull();
+    expect(screen.queryByTestId('verdict-sheet')).toBeNull();
+    expect(
+      screen.getAllByTestId('feed-row').some((r) => r.getAttribute('data-entry-id') === mine.id),
+    ).toBe(true);
+  });
+
+  it('renders no "Sửa" at all without a signed-in id', async () => {
+    renderFeed(seeded());
+    await screen.findAllByTestId('feed-row');
+    expect(screen.queryByTestId('feed-edit')).not.toBeInTheDocument();
+  });
+
+  it('opens the comment sheet from the bubble and the card count follows a post', async () => {
+    const api = seeded();
+    renderFeed(api);
+    const rows = await screen.findAllByTestId('feed-row');
+    const row = rows.find((r) => !within(r).queryByTestId('feed-comment-count'))!;
+    await userEvent.click(within(row).getByTestId('feed-comment'));
+    await screen.findByTestId('comment-sheet');
+    await userEvent.type(screen.getByTestId('comment-input'), 'hi');
+    await userEvent.click(screen.getByTestId('comment-send'));
+    await waitFor(() => expect(within(row).getByTestId('feed-comment-count')).toHaveTextContent('1'));
   });
 });

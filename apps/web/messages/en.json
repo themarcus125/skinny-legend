@@ -203,7 +203,29 @@
     "entryCount": "{0} entries",
     "noPlace": "no place",
     "empty": "When the group tracks activities, they'll show up here.",
-    "loadFailed": "Couldn't load the group feed."
+    "loadFailed": "Couldn't load the group feed.",
+    "heart": "Send a heart",
+    "unheart": "Remove heart",
+    "heartCount": "{0} hearts",
+    "comments": "Comments",
+    "commentCount": "{0} comments",
+    "edit": "Edit",
+    "heartFailed": "Couldn't send the heart, please try again."
+  },
+  "comments": {
+    "title": "Comments",
+    "empty": "No comments yet. Be the first!",
+    "placeholder": "Write a comment…",
+    "send": "Send",
+    "loadFailed": "Couldn't load the comments.",
+    "postFailed": "Couldn't post the comment, please try again.",
+    "deleteFailed": "Couldn't delete the comment."
+  },
+  "time": {
+    "now": "Just now",
+    "minutes": "{0} min",
+    "hours": "{0} h",
+    "days": "{0} d"
   },
   "map": {
     "title": "Map",

@@ -56,6 +56,10 @@ export type {
   TrendsResponse,
   FeedEntryDto,
   FeedResponse,
+  HeartResponse,
+  CommentDto,
+  CommentsResponse,
+  PostCommentResponse,
   MapPinDto,
   MapResponse,
   // Uploads
@@ -203,7 +207,7 @@ export interface EntryPatch {
 }
 
 /** Mirrors `notification_kind` in packages/shared/src/db/schema.ts. */
-export const NOTIFICATION_KINDS = ['inactive_1d', 'inactive_3d', 'inactive_7d', 'rank_nudge'] as const;
+export const NOTIFICATION_KINDS = ['inactive_1d', 'inactive_3d', 'inactive_7d', 'rank_nudge', 'heart', 'comment'] as const;
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
 
 /** `notification_log.payload_json`, written by apps/api/src/jobs/notify.ts. */

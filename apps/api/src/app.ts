@@ -10,10 +10,12 @@ import { readRoutes } from './routes/read.js';
 import { feedbackRoutes } from './routes/feedback.js';
 import { adminRoutes } from './routes/admin.js';
 import { placeRoutes, type PlaceDeps } from './routes/places.js';
+import { socialRoutes } from './routes/social.js';
 import { classifyPhoto } from './services/vision.js';
+import { type SocialPushDeps } from './services/social-push.js';
 import { type AuthEnv } from './middleware/auth.js';
 
-export function createApp(deps: Partial<EntryDeps & PlaceDeps> = {}) {
+export function createApp(deps: Partial<EntryDeps & PlaceDeps & SocialPushDeps> = {}) {
   const app = new Hono<AuthEnv>();
   app.onError(errorHandler);
 
@@ -42,6 +44,7 @@ export function createApp(deps: Partial<EntryDeps & PlaceDeps> = {}) {
   app.route('/feedback', feedbackRoutes);
   app.route('/admin', adminRoutes);
   app.route('/places', placeRoutes({ nearby: deps.nearby }));
+  app.route('/', socialRoutes({ sender: deps.sender, now: deps.now }));
   app.route('/', readRoutes);
   return app;
 }

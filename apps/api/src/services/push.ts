@@ -124,3 +124,36 @@ export function localeFor(devices: Array<{ locale: NotificationLocale; lastSeenA
   if (devices.length === 0) return 'vi';
   return devices.reduce((latest, d) => (d.lastSeenAt > latest.lastSeenAt ? d : latest)).locale;
 }
+
+/**
+ * FCM's `sendEach` rejects batches over 500 messages. One member rarely has more than a
+ * handful of devices, but fcmSender() does not chunk, so the caller guarantees the limit here.
+ */
+const SEND_BATCH_MAX = 500;
+
+function chunk<T>(items: T[], size: number): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < items.length; i += size) out.push(items.slice(i, i + size));
+  return out;
+}
+
+/**
+ * Sends one member's messages in FCM-sized batches. fcmSender() throws on a whole-batch
+ * failure (network, auth) where fakeSender never does; a throw here becomes an ordinary
+ * per-token failure so one outage neither aborts the run nor skips the log rows of members
+ * whose sends did land. Dead-token detection needs a per-token response, so a thrown batch
+ * never marks tokens unregistered.
+ */
+export async function sendInBatches(sender: PushSender, userId: string, messages: PushMessage[]): Promise<PushResult[]> {
+  const results: PushResult[] = [];
+  for (const batch of chunk(messages, SEND_BATCH_MAX)) {
+    try {
+      results.push(...(await sender.send(batch)));
+    } catch (err) {
+      const error = err instanceof Error ? err.message : String(err);
+      console.error(`notify: send failed for user ${userId} (${batch.length} devices): ${error}`);
+      results.push(...batch.map((m) => ({ token: m.token, ok: false, unregistered: false, error })));
+    }
+  }
+  return results;
+}

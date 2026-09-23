@@ -1,8 +1,7 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
+import { useCallback } from 'react';
+import { useInfiniteQuery } from '@tanstack/react-query';
 import { useLocale, useTranslations } from 'use-intl';
-import type { Category, EntryDto, HistoryEntryDto } from '@skinny/shared/wire';
-import { CATEGORIES } from '@skinny/shared/wire';
+import type { HistoryEntryDto } from '@skinny/shared/wire';
 import { AlertBanner, CategoryChip, EmptyState, SurfaceCard, cn } from '@skinny/ui';
 import { CameraGlyph, MapPinGlyph } from '@/app/icons';
 import { PhotoButton } from '@/app/photo-viewer';
@@ -11,27 +10,13 @@ import { formatLocalDay } from '@/lib/local-day';
 import { queryKeys } from '@/lib/query';
 import { useEndSentinel } from '@/lib/use-end-sentinel';
 import { Button } from '@/ui/button';
-import { ConfirmDialog } from './confirm-dialog';
-import { VerdictSheet } from '@/features/track/verdict-sheet';
-import {
-  beginSave,
-  failSave,
-  initVerdictState,
-  needsSave,
-  patchBody,
-  type VerdictState,
-} from '@/features/track/verdict-model';
+import { useEntryEditor } from '@/features/track/use-entry-editor';
 
 export interface DaySection {
   date: string;
   points: number;
   entries: HistoryEntryDto[];
 }
-
-/** No cap is known for a past day until the edit's `PATCH` answers — ruling 2 (Task 8). */
-const NO_CAPS: Record<Category, boolean> = Object.fromEntries(
-  CATEGORIES.map((category) => [category, false]),
-) as Record<Category, boolean>;
 
 /**
  * Port of `AccountModel.sections`: newest day first, and newest entry first inside a day. Pure so
@@ -70,19 +55,7 @@ export function AccountHistory({ pageSize = TRACK_HISTORY_PAGE_SIZE }: { pageSiz
   const t = useTranslations();
   const locale = useLocale();
   const api = useApi();
-  const queryClient = useQueryClient();
-  const [sheet, setSheet] = useState<VerdictState | null>(null);
-  /** The entry the delete confirmation is standing over; null while nothing is being deleted. */
-  const [deleting, setDeleting] = useState<EntryDto | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [deleteErrorKey, setDeleteErrorKey] = useState<string | null>(null);
-  const alive = useRef(true);
-  useEffect(() => {
-    alive.current = true;
-    return () => {
-      alive.current = false;
-    };
-  }, []);
+  const { openEdit, element: editor, deleteErrorKey } = useEntryEditor();
 
   const history = useInfiniteQuery({
     queryKey: queryKeys.myEntries,
@@ -100,95 +73,6 @@ export function AccountHistory({ pageSize = TRACK_HISTORY_PAGE_SIZE }: { pageSiz
     if (hasMore && !isFetchingNextPage) void fetchNextPage();
   }, [fetchNextPage, hasMore, isFetchingNextPage]);
   const sentinel = useEndSentinel(hasMore && !isFetchingNextPage, onReachEnd);
-
-  /**
-   * An edit can move points for every other entry in the same day and week (a cap that was full
-   * may not be any more), so the whole history is refetched rather than patched in place — and so
-   * is everything else that scores: the board, the dashboard, the trends, the feed and the map.
-   */
-  const invalidateScoring = useCallback(() => {
-    for (const key of [
-      queryKeys.myEntries,
-      queryKeys.dashboard,
-      queryKeys.leaderboard,
-      queryKeys.trends,
-      queryKeys.feed,
-      queryKeys.map,
-    ]) {
-      void queryClient.invalidateQueries({ queryKey: key });
-    }
-  }, [queryClient]);
-
-  const openEdit = (entry: HistoryEntryDto) => {
-    setSheet(
-      initVerdictState({
-        entry,
-        mode: { kind: 'edit' },
-        // Placeholders until the PATCH answers with the real projection (ruling 2): the sheet
-        // renders "điểm sẽ được máy chủ tính lại" instead of a local estimate in the meantime.
-        capsHit: NO_CAPS,
-        cappedCategories: [],
-        projectedPoints: entry.points ?? 0,
-        placeName: entry.placeName,
-        placeSource: entry.placeSource,
-        title: entry.title,
-        note: entry.note,
-      }),
-    );
-  };
-
-  /**
-   * `DELETE /entries/:id` — a soft delete on the server (the row goes `rejected`, spec §6), and the
-   * iOS swipe action's counterpart. It is behind the same `ConfirmDialog` the sign-out row uses:
-   * the entry's own day is the question, "Xoá" the answer.
-   */
-  const confirmDelete = () => {
-    const entry = deleting;
-    if (!entry) return;
-    setIsDeleting(true);
-    setDeleteErrorKey(null);
-    void api
-      .deleteEntry(entry.id)
-      .then(() => {
-        if (!alive.current) return;
-        setIsDeleting(false);
-        setDeleting(null);
-        setSheet(null);
-        invalidateScoring();
-      })
-      .catch((error: unknown) => {
-        if (!alive.current) return;
-        setIsDeleting(false);
-        setDeleting(null);
-        // The banner lives on the screen, *behind* two modals — so the modals go first. Leaving
-        // the verdict sheet up would render the failure where nobody can see it.
-        setSheet(null);
-        setDeleteErrorKey(describeError(error));
-      });
-  };
-
-  const primary = () => {
-    if (!sheet) return;
-    if (!needsSave(sheet)) {
-      setSheet(null);
-      return;
-    }
-    const saving = beginSave(sheet);
-    setSheet(saving);
-    void api
-      .confirmEntry(saving.entry.id, patchBody(saving))
-      .then(() => {
-        if (!alive.current) return;
-        // The response's own projection is not adopted into a sheet that is closing: the refetch
-        // below is what re-renders the row, and it carries the server's numbers for the whole
-        // day, not just this entry (an edit can move its neighbours' points too).
-        setSheet(null);
-        invalidateScoring();
-      })
-      .catch((error: unknown) => {
-        if (alive.current) setSheet(failSave(saving, error));
-      });
-  };
 
   return (
     <>
@@ -277,31 +161,7 @@ export function AccountHistory({ pageSize = TRACK_HISTORY_PAGE_SIZE }: { pageSiz
         </div>
       ) : null}
 
-      {sheet ? (
-        <VerdictSheet
-          state={sheet}
-          onChange={setSheet}
-          // A past entry's coordinates are not in the history payload, so the place list has no
-          // fix to search from — the same `placeResolver: nil` the iOS Account sheet passes.
-          lat={null}
-          lng={null}
-          onDismiss={() => setSheet(null)}
-          onPrimary={primary}
-          // `VerdictState.entry` is the row the sheet was opened over — its id and day are all the
-          // deletion needs, so there is no second copy of the entry to keep in sync.
-          onDelete={() => setDeleting(sheet.entry)}
-        />
-      ) : null}
-
-      {deleting ? (
-        <ConfirmDialog
-          title={formatLocalDay(deleting.localDate, locale)}
-          confirmLabel={t('common.delete')}
-          busy={isDeleting}
-          onCancel={() => setDeleting(null)}
-          onConfirm={confirmDelete}
-        />
-      ) : null}
+      {editor}
     </>
   );
 }

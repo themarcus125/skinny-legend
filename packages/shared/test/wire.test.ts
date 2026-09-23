@@ -5,6 +5,7 @@ import {
   PLACE_SOURCES, DEVICE_PLATFORMS, CATEGORIES, USER_LOCALES, ENTRY_STATUSES, UPLOAD_CONTENT_TYPES,
   type EntryDto,
 } from '../src/index.js';
+import { commentBody, ENTRY_COMMENT_MAX } from '../src/wire/entries.js';
 
 describe('createEntryBody', () => {
   const valid = { photoKey: 'photos/u/a.jpg', takenAt: '2026-09-14T03:00:00.000Z' };
@@ -147,5 +148,14 @@ describe('browser safety', () => {
     expect(pkg.exports['./scoring']).toEqual({ types: './dist/scoring/index.d.ts', import: './dist/scoring/index.js' });
     expect(pkg.exports['./dates']).toEqual({ types: './dist/dates.d.ts', import: './dist/dates.js' });
     expect(pkg.exports['.']).toEqual({ types: './dist/index.d.ts', import: './dist/index.js' });
+  });
+});
+
+describe('commentBody', () => {
+  it('trims and accepts 1..500 characters', () => {
+    expect(commentBody.parse({ body: '  Giỏi quá!  ' })).toEqual({ body: 'Giỏi quá!' });
+    expect(commentBody.safeParse({ body: '   ' }).success).toBe(false);
+    expect(commentBody.safeParse({ body: 'x'.repeat(ENTRY_COMMENT_MAX) }).success).toBe(true);
+    expect(commentBody.safeParse({ body: 'x'.repeat(ENTRY_COMMENT_MAX + 1) }).success).toBe(false);
   });
 });

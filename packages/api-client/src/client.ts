@@ -1,15 +1,18 @@
 import type {
+  CommentsResponse,
   CreateEntryInput,
   DashboardDto,
   DeviceDto,
   EntryDto,
   EntryMutationResponse,
   FeedResponse,
+  HeartResponse,
   HistoryResponse,
   LeaderboardRowDto,
   NearbyPlacesResponse,
   PatchEntryInput,
   PatchMeInput,
+  PostCommentResponse,
   PresignInput,
   PresignResponse,
   RegisterDeviceInput,
@@ -62,6 +65,11 @@ export interface ApiClient {
   leaderboard(): Promise<LeaderboardRowDto[]>;
   trends(): Promise<TrendsResponse>;
   feed(cursor?: string): Promise<FeedResponse>;
+  heartEntry(id: string): Promise<HeartResponse>;
+  unheartEntry(id: string): Promise<HeartResponse>;
+  comments(entryId: string): Promise<CommentsResponse>;
+  postComment(entryId: string, body: string): Promise<PostCommentResponse>;
+  deleteComment(id: string): Promise<void>;
   /** `limit` is the page size; omitted, the server's default (50). */
   myEntries(cursor?: string, limit?: number): Promise<HistoryResponse>;
   userEntries(userId: string, cursor?: string, limit?: number): Promise<HistoryResponse>;
@@ -200,6 +208,29 @@ export class LiveApiClient implements ApiClient {
 
   feed(cursor?: string): Promise<FeedResponse> {
     return this.request<FeedResponse>(`/feed${query({ cursor })}`);
+  }
+
+  heartEntry(id: string): Promise<HeartResponse> {
+    return this.request<HeartResponse>(`/entries/${id}/heart`, { method: 'PUT' });
+  }
+
+  unheartEntry(id: string): Promise<HeartResponse> {
+    return this.request<HeartResponse>(`/entries/${id}/heart`, { method: 'DELETE' });
+  }
+
+  comments(entryId: string): Promise<CommentsResponse> {
+    return this.request<CommentsResponse>(`/entries/${entryId}/comments`);
+  }
+
+  postComment(entryId: string, body: string): Promise<PostCommentResponse> {
+    return this.request<PostCommentResponse>(`/entries/${entryId}/comments`, {
+      method: 'POST',
+      body: JSON.stringify({ body }),
+    });
+  }
+
+  async deleteComment(id: string): Promise<void> {
+    await this.request<void>(`/comments/${id}`, { method: 'DELETE' });
   }
 
   myEntries(cursor?: string, limit?: number): Promise<HistoryResponse> {

@@ -217,7 +217,9 @@
       "inactive_1d": "Vắng 1 ngày",
       "inactive_3d": "Vắng 3 ngày",
       "inactive_7d": "Vắng 7 ngày",
-      "rank_nudge": "Bám sát thứ hạng"
+      "rank_nudge": "Bám sát thứ hạng",
+      "heart": "Thả tim",
+      "comment": "Bình luận"
     },
     "platform": {
       "ios": "iOS",
