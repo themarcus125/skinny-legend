@@ -281,4 +281,16 @@ describe('the group feed on Trang chủ', () => {
     await screen.findAllByTestId('feed-row');
     expect(screen.queryByTestId('feed-edit')).not.toBeInTheDocument();
   });
+
+  it('opens the comment sheet from the bubble and the card count follows a post', async () => {
+    const api = seeded();
+    renderFeed(api);
+    const rows = await screen.findAllByTestId('feed-row');
+    const row = rows.find((r) => !within(r).queryByTestId('feed-comment-count'))!;
+    await userEvent.click(within(row).getByTestId('feed-comment'));
+    await screen.findByTestId('comment-sheet');
+    await userEvent.type(screen.getByTestId('comment-input'), 'hi');
+    await userEvent.click(screen.getByTestId('comment-send'));
+    await waitFor(() => expect(within(row).getByTestId('feed-comment-count')).toHaveTextContent('1'));
+  });
 });

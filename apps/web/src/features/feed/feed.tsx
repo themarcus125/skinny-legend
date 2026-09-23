@@ -13,7 +13,13 @@ import { PhotoButton } from '@/app/photo-viewer';
 import { queryKeys } from '@/lib/query';
 import { useEndSentinel } from '@/lib/use-end-sentinel';
 import { Button } from '@/ui/button';
-import { settleHeartInFeed, toggleHeartInFeed, type FeedPages } from './feed-model';
+import { CommentSheet } from './comment-sheet';
+import {
+  setCommentCountInFeed,
+  settleHeartInFeed,
+  toggleHeartInFeed,
+  type FeedPages,
+} from './feed-model';
 
 /** Avatar diameter on a feed row — `FeedRow`'s 34. */
 const ROW_AVATAR = 34;
@@ -64,9 +70,8 @@ export function FeedSection({ meId = null }: { meId?: string | null } = {}) {
   const api = useApi();
   const queryClient = useQueryClient();
   const editor = useEntryEditor();
-  // The entry whose comment thread is open. Nothing reads it yet: the sheet itself is Task 12,
-  // which replaces this with `const [commenting, setCommenting]` and renders `<CommentSheet />`.
-  const [, setCommenting] = useState<string | null>(null);
+  // The entry whose comment thread is open, or null when the sheet is down.
+  const [commenting, setCommenting] = useState<string | null>(null);
   const [heartErrorKey, setHeartErrorKey] = useState<string | null>(null);
 
   const feed = useInfiniteQuery({
@@ -226,6 +231,26 @@ export function FeedSection({ meId = null }: { meId?: string | null } = {}) {
       ) : null}
 
       {editor.element}
+
+      {/*
+       * The sheet reports the thread's new size and the card's count follows it here, rather
+       * than refetching the whole feed for one number.
+       */}
+      {commenting ? (
+        <CommentSheet
+          entryId={commenting}
+          onDismiss={() => setCommenting(null)}
+          onCountChange={(count) => {
+            const current = queryClient.getQueryData<FeedPages>(queryKeys.feed);
+            if (current) {
+              queryClient.setQueryData<FeedPages>(
+                queryKeys.feed,
+                setCommentCountInFeed(current, commenting, count),
+              );
+            }
+          }}
+        />
+      ) : null}
     </section>
   );
 }
