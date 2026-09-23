@@ -282,6 +282,28 @@ describe('the group feed on Trang chủ', () => {
     expect(within(sheet).getByTestId('verdict-title')).toHaveValue('Chạy bộ tối');
   });
 
+  it('surfaces a failed delete from the edit sheet', async () => {
+    const api = seeded();
+    const mine = api.seed.entries.find((e) => e.status === 'confirmed' && e.userId === api.seed.me.id)!;
+    vi.spyOn(api, 'deleteEntry').mockRejectedValue(new TypeError('offline'));
+    renderFeed(api, api.seed.me.id);
+    const rows = await screen.findAllByTestId('feed-row');
+    const myRow = rows.find((r) => r.getAttribute('data-entry-id') === mine.id)!;
+
+    await userEvent.click(within(myRow).getByTestId('feed-edit'));
+    await userEvent.click(await screen.findByTestId('verdict-delete'));
+    const dialog = await screen.findByTestId('confirm-dialog');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Xoá' }));
+
+    // The hook closes both modals, so the banner on the section is the only thing left to say it.
+    expect(await screen.findByTestId('feed-delete-error')).toBeVisible();
+    expect(screen.queryByTestId('confirm-dialog')).toBeNull();
+    expect(screen.queryByTestId('verdict-sheet')).toBeNull();
+    expect(
+      screen.getAllByTestId('feed-row').some((r) => r.getAttribute('data-entry-id') === mine.id),
+    ).toBe(true);
+  });
+
   it('renders no "Sửa" at all without a signed-in id', async () => {
     renderFeed(seeded());
     await screen.findAllByTestId('feed-row');

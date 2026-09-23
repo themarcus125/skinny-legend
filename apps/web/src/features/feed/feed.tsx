@@ -166,6 +166,17 @@ export function FeedSection({ meId = null }: { meId?: string | null } = {}) {
         </div>
       ) : null}
 
+      {/* "Sửa → Xoá" fails behind two modals the hook closes, so the feed owns the banner too. */}
+      {editor.deleteErrorKey ? (
+        <div data-testid="feed-delete-error">
+          <AlertBanner
+            tone="destructive"
+            title={t('account.deleteFailed')}
+            description={t(editor.deleteErrorKey)}
+          />
+        </div>
+      ) : null}
+
       {entries.length === 0 && isPending ? (
         <div data-testid="feed-skeleton" aria-busy="true" className="flex flex-col gap-3.5">
           {[0, 1, 2].map((index) => (
