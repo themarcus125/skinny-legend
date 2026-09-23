@@ -97,6 +97,18 @@ describe('notifyEntryOwner', () => {
     expect(await db.select().from(schema.notificationLog)).toHaveLength(0);
   });
 
+  it('swallows a database failure instead of failing its caller', async () => {
+    const owner = (await asUser('owner', { activate: true })).user;
+    const actor = (await asUser('actor', { activate: true })).user;
+    const sender = fakeSender();
+    // An id Postgres cannot even parse: the dedupe SELECT throws before anything is sent, which
+    // is the shape of every bookkeeping failure the route must survive.
+    const entry = { id: 'not-a-uuid', userId: owner.id };
+
+    expect(await notifyEntryOwner({ entry, actor, kind: 'heart' }, { sender, now: () => NOW })).toEqual({ sent: 0, skipped: null });
+    expect(sender.sent).toHaveLength(0);
+  });
+
   it('does not log when every device failed, so the next attempt is not deduped away', async () => {
     const owner = (await asUser('owner', { activate: true })).user;
     const actor = (await asUser('actor', { activate: true })).user;

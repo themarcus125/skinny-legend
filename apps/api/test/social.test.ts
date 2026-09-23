@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { eq } from 'drizzle-orm';
 import { schema } from '@skinny/shared';
 import { db } from '../src/db.js';
@@ -23,6 +23,7 @@ async function entryFor(userId: string, status: 'confirmed' | 'pending' = 'confi
 const json = (headers: Record<string, string>) => ({ ...headers, 'content-type': 'application/json' });
 
 beforeEach(async () => { await resetDb(); sender.reset(); clock = NOW; });
+afterEach(() => { vi.restoreAllMocks(); });
 
 describe('hearts', () => {
   it('PUT then DELETE move the count 0 → 1 → 1 → 0 and heartedByMe follows', async () => {
@@ -78,6 +79,25 @@ describe('hearts', () => {
     expect((await app.request(`/entries/${pending.id}/heart`, { method: 'PUT', headers: me.headers })).status).toBe(404);
     expect((await app.request('/entries/00000000-0000-4000-8000-000000000000/heart', { method: 'PUT', headers: me.headers })).status).toBe(404);
     expect((await app.request('/entries/garbage/heart', { method: 'PUT', headers: me.headers })).status).toBe(400);
+  });
+
+  it('keeps the heart and answers 200 when the push bookkeeping throws', async () => {
+    const owner = await asUser('owner', { activate: true });
+    const me = await asUser('me', { activate: true });
+    const entry = await entryFor(owner.user.id);
+    // Only the dedupe SELECT is broken — the heart is already committed by the time it runs, so
+    // the route must not fail with it (spec §C).
+    const select = db.select.bind(db);
+    vi.spyOn(db, 'select').mockImplementation(((fields?: Record<string, unknown>) => {
+      if (fields && fields.id === schema.notificationLog.id) throw new Error('bookkeeping down');
+      return select(fields as never);
+    }) as typeof db.select);
+
+    const res = await app.request(`/entries/${entry.id}/heart`, { method: 'PUT', headers: me.headers });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ heartCount: 1, heartedByMe: true });
+    vi.restoreAllMocks();
+    expect(await db.select().from(schema.entryHearts).where(eq(schema.entryHearts.entryId, entry.id))).toHaveLength(1);
   });
 
   it('requires an active member', async () => {
