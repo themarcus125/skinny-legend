@@ -103,7 +103,9 @@ export function FeedSection({ meId = null }: { meId?: string | null } = {}) {
       }
     },
     onError: (error, _entry, context) => {
-      if (context?.snapshot) queryClient.setQueryData(queryKeys.feed, context.snapshot);
+      if (context?.snapshot) {
+        queryClient.setQueryData<FeedPages>(queryKeys.feed, context.snapshot);
+      }
       setHeartErrorKey(describeError(error));
     },
   });
@@ -250,6 +252,19 @@ function FeedRow({
 }) {
   const t = useTranslations();
   const mine = meId !== null && entry.userId === meId;
+  /**
+   * The visible count sits *inside* the button, where an `aria-label` would silence it — so the
+   * count is folded into the name instead: "Thả tim · 3 tim", never a bare "Thả tim" over a 3.
+   */
+  const heartLabel = entry.heartedByMe ? t('feed.unheart') : t('feed.heart');
+  const heartName =
+    entry.heartCount > 0
+      ? `${heartLabel} · ${t('feed.heartCount', { 0: entry.heartCount })}`
+      : heartLabel;
+  const commentName =
+    entry.commentCount > 0
+      ? `${t('feed.comments')} · ${t('feed.commentCount', { 0: entry.commentCount })}`
+      : t('feed.comments');
   return (
     <SurfaceCard as="article" padding="none" className="overflow-hidden">
       <div data-testid="feed-row" data-entry-id={entry.id}>
@@ -291,7 +306,7 @@ function FeedRow({
               type="button"
               data-testid="feed-heart"
               aria-pressed={entry.heartedByMe}
-              aria-label={entry.heartedByMe ? t('feed.unheart') : t('feed.heart')}
+              aria-label={heartName}
               onClick={onHeart}
               className={cn(
                 'outline-ring flex min-h-11 items-center gap-1.5 rounded-full px-2',
@@ -308,7 +323,7 @@ function FeedRow({
             <button
               type="button"
               data-testid="feed-comment"
-              aria-label={t('feed.comments')}
+              aria-label={commentName}
               onClick={onComment}
               className="text-foreground-secondary outline-ring flex min-h-11 items-center gap-1.5 rounded-full px-2"
             >

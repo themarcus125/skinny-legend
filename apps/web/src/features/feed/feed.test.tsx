@@ -148,8 +148,7 @@ describe('the group feed on Trang chủ', () => {
 
     expect(await screen.findByTestId('feed-row')).toBeInTheDocument();
     expect(screen.queryByTestId('feed-place')).not.toBeInTheDocument();
-    // The photo is a button (it opens the viewer); nothing else in the row may be.
-    // The heart and the comment count are buttons by design; so is the photo.
+    // The photo, the heart and the comment count are buttons; nothing else in the row may be.
     const chrome = new Set(['photo-button', 'feed-heart', 'feed-comment']);
     const buttons = screen
       .queryAllByRole('button')
@@ -221,7 +220,12 @@ describe('the group feed on Trang chủ', () => {
     const rows = await screen.findAllByTestId('feed-row');
     const hearted = rows.find((row) => within(row).getByTestId('feed-heart').getAttribute('aria-pressed') === 'true');
     expect(hearted).toBeDefined();
-    expect(Number(within(hearted!).getByTestId('feed-heart-count').textContent)).toBeGreaterThan(0);
+    const count = Number(within(hearted!).getByTestId('feed-heart-count').textContent);
+    expect(count).toBeGreaterThan(0);
+    // The count is inside the button, where the label would silence it — so the name carries it.
+    expect(within(hearted!).getByTestId('feed-heart')).toHaveAccessibleName(
+      expect.stringContaining(String(count)),
+    );
     const commented = rows.find((row) => within(row).queryByTestId('feed-comment-count'));
     expect(commented).toBeDefined();
   });
