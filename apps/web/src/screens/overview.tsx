@@ -44,7 +44,7 @@ const TINTED_CARD = 'relative overflow-hidden rounded-xl border p-[18px] shadow-
  * card with the challenge total, and — since SKI-134 — the group feed itself underneath, on
  * its own query so neither half blanks the other.
  */
-export function Overview() {
+export function Overview({ meId = null }: { meId?: string | null } = {}) {
   const t = useTranslations();
   const api = useApi();
   const { data, error, isPending, refetch } = useQuery({
@@ -89,7 +89,7 @@ export function Overview() {
          * The group log, under the dashboard cards and on its own query: neither half blanks
          * the other when its request fails (SKI-134).
          */}
-        <FeedSection />
+        <FeedSection meId={meId} />
       </div>
     </>
   );
@@ -111,7 +111,7 @@ export function OverviewScreen() {
     if (userId !== null) void registrar.requestIfUndecided(userId);
   }, [registrar, userId]);
   useEffect(ask, [ask]);
-  return <Overview />;
+  return <Overview meId={userId} />;
 }
 
 /** React Router 7's lazy-route convention. */

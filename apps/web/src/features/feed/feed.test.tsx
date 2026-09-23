@@ -21,7 +21,7 @@ function Here() {
   return <p data-testid="here">{`${location.pathname}${location.search}`}</p>;
 }
 
-function renderFeed(api: ApiClient) {
+function renderFeed(api: ApiClient, meId: string | null = null) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
@@ -35,7 +35,7 @@ function renderFeed(api: ApiClient) {
       </ApiProvider>
     </QueryClientProvider>
   );
-  return render(<FeedSection />, { wrapper: Wrapper });
+  return render(<FeedSection meId={meId} />, { wrapper: Wrapper });
 }
 
 /**
@@ -149,7 +149,11 @@ describe('the group feed on Trang chủ', () => {
     expect(await screen.findByTestId('feed-row')).toBeInTheDocument();
     expect(screen.queryByTestId('feed-place')).not.toBeInTheDocument();
     // The photo is a button (it opens the viewer); nothing else in the row may be.
-    const buttons = screen.queryAllByRole('button').filter((b) => b.getAttribute('data-testid') !== 'photo-button');
+    // The heart and the comment count are buttons by design; so is the photo.
+    const chrome = new Set(['photo-button', 'feed-heart', 'feed-comment']);
+    const buttons = screen
+      .queryAllByRole('button')
+      .filter((b) => !chrome.has(b.getAttribute('data-testid') ?? ''));
     expect(buttons).toHaveLength(0);
   });
 
@@ -210,5 +214,67 @@ describe('the group feed on Trang chủ', () => {
     await waitFor(() => {
       expect(calls).toBeGreaterThan(1);
     });
+  });
+
+  it('shows the seeded heart and comment counts and my pressed state', async () => {
+    renderFeed(seeded());
+    const rows = await screen.findAllByTestId('feed-row');
+    const hearted = rows.find((row) => within(row).getByTestId('feed-heart').getAttribute('aria-pressed') === 'true');
+    expect(hearted).toBeDefined();
+    expect(Number(within(hearted!).getByTestId('feed-heart-count').textContent)).toBeGreaterThan(0);
+    const commented = rows.find((row) => within(row).queryByTestId('feed-comment-count'));
+    expect(commented).toBeDefined();
+  });
+
+  it('a tap flips the heart at once and the mock keeps it', async () => {
+    const api = seeded();
+    renderFeed(api);
+    const rows = await screen.findAllByTestId('feed-row');
+    const row = rows.find((r) => within(r).getByTestId('feed-heart').getAttribute('aria-pressed') === 'false')!;
+    const button = within(row).getByTestId('feed-heart');
+    const before = Number(within(row).queryByTestId('feed-heart-count')?.textContent ?? '0');
+
+    await userEvent.click(button);
+    expect(button).toHaveAttribute('aria-pressed', 'true');
+    expect(within(row).getByTestId('feed-heart-count')).toHaveTextContent(String(before + 1));
+
+    await waitFor(() => expect(api.seed.hearts.some((h) => h.entryId === row.getAttribute('data-entry-id') && h.userId === api.seed.me.id)).toBe(true));
+    expect(button).toHaveAttribute('aria-pressed', 'true');
+
+    await userEvent.click(button);
+    expect(button).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  it('rolls the heart back and shows a banner when the request fails', async () => {
+    const api = seeded();
+    vi.spyOn(api, 'heartEntry').mockRejectedValue(new TypeError('offline'));
+    renderFeed(api);
+    const rows = await screen.findAllByTestId('feed-row');
+    const row = rows.find((r) => within(r).getByTestId('feed-heart').getAttribute('aria-pressed') === 'false')!;
+    const button = within(row).getByTestId('feed-heart');
+    await userEvent.click(button);
+    await screen.findByTestId('feed-heart-error');
+    expect(button).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  it('offers "Sửa" only on my own rows and opens the edit sheet with the title prefilled', async () => {
+    const api = seeded();
+    const mine = api.seed.entries.find((e) => e.status === 'confirmed' && e.userId === api.seed.me.id)!;
+    mine.title = 'Chạy bộ tối';
+    renderFeed(api, api.seed.me.id);
+    const rows = await screen.findAllByTestId('feed-row');
+    const myRow = rows.find((r) => r.getAttribute('data-entry-id') === mine.id)!;
+    const theirRow = rows.find((r) => r.getAttribute('data-entry-id') !== mine.id && !within(r).queryByTestId('feed-edit'))!;
+    expect(theirRow).toBeDefined();
+
+    await userEvent.click(within(myRow).getByTestId('feed-edit'));
+    const sheet = await screen.findByTestId('verdict-sheet');
+    expect(within(sheet).getByTestId('verdict-title')).toHaveValue('Chạy bộ tối');
+  });
+
+  it('renders no "Sửa" at all without a signed-in id', async () => {
+    renderFeed(seeded());
+    await screen.findAllByTestId('feed-row');
+    expect(screen.queryByTestId('feed-edit')).not.toBeInTheDocument();
   });
 });

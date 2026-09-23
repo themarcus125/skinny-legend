@@ -29,7 +29,7 @@ const NO_CAPS: Record<Category, boolean> = Object.fromEntries(
  */
 export function useEntryEditor(): {
   openEdit: (entry: EntryDto & { points?: number }) => void;
-  /** The verdict sheet and the delete dialog, or null while closed. Render it once. */
+  /** The verdict sheet and the delete dialog, empty while closed. Render it once. */
   element: ReactNode;
   /** `errors.*` key of the last failed delete; the screen decides where to show it. */
   deleteErrorKey: string | null;

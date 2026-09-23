@@ -1,17 +1,19 @@
-import { useCallback } from 'react';
-import { useInfiniteQuery } from '@tanstack/react-query';
+import { useCallback, useState } from 'react';
+import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router';
 import { useLocale, useTranslations } from 'use-intl';
 import type { FeedEntryDto } from '@skinny/shared/wire';
-import { AlertBanner, Avatar, CategoryChip, EmptyState, SurfaceCard } from '@skinny/ui';
-import { MapPinGlyph, PhotoStackGlyph } from '@/app/icons';
+import { AlertBanner, Avatar, CategoryChip, EmptyState, SurfaceCard, cn } from '@skinny/ui';
+import { CommentGlyph, HeartGlyph, MapPinGlyph, PhotoStackGlyph } from '@/app/icons';
 import { PlaceButton } from '@/features/map/place-button';
+import { useEntryEditor } from '@/features/track/use-entry-editor';
 import { describeError, useApi } from '@/lib/api';
 import { formatLocalDay } from '@/lib/local-day';
 import { PhotoButton } from '@/app/photo-viewer';
 import { queryKeys } from '@/lib/query';
 import { useEndSentinel } from '@/lib/use-end-sentinel';
 import { Button } from '@/ui/button';
+import { settleHeartInFeed, toggleHeartInFeed, type FeedPages } from './feed-model';
 
 /** Avatar diameter on a feed row — `FeedRow`'s 34. */
 const ROW_AVATAR = 34;
@@ -56,16 +58,54 @@ export function groupByDay(entries: FeedEntryDto[]): FeedDay[] {
  * Paging is the footer sentinel plus "Tải thêm" (`useEndSentinel`), the web's stand-in for
  * `FeedModel.loadNextPageIfNeeded(after:)`.
  */
-export function FeedSection() {
+export function FeedSection({ meId = null }: { meId?: string | null } = {}) {
   const t = useTranslations();
   const locale = useLocale();
   const api = useApi();
+  const queryClient = useQueryClient();
+  const editor = useEntryEditor();
+  // The entry whose comment thread is open. Nothing reads it yet: the sheet itself is Task 12,
+  // which replaces this with `const [commenting, setCommenting]` and renders `<CommentSheet />`.
+  const [, setCommenting] = useState<string | null>(null);
+  const [heartErrorKey, setHeartErrorKey] = useState<string | null>(null);
 
   const feed = useInfiniteQuery({
     queryKey: queryKeys.feed,
     queryFn: ({ pageParam }) => api.feed(pageParam),
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (last) => last.nextCursor ?? undefined,
+  });
+
+  /**
+   * Optimistic: the cache flips before the request, the answer settles it, an error rolls it
+   * back to the snapshot. One mutation for both directions — the entry's current flag decides
+   * which request goes out.
+   */
+  const heart = useMutation({
+    mutationFn: (entry: FeedEntryDto) =>
+      entry.heartedByMe ? api.unheartEntry(entry.id) : api.heartEntry(entry.id),
+    onMutate: async (entry) => {
+      await queryClient.cancelQueries({ queryKey: queryKeys.feed });
+      const snapshot = queryClient.getQueryData<FeedPages>(queryKeys.feed);
+      if (snapshot) {
+        queryClient.setQueryData<FeedPages>(queryKeys.feed, toggleHeartInFeed(snapshot, entry.id));
+      }
+      setHeartErrorKey(null);
+      return { snapshot };
+    },
+    onSuccess: (truth, entry) => {
+      const current = queryClient.getQueryData<FeedPages>(queryKeys.feed);
+      if (current) {
+        queryClient.setQueryData<FeedPages>(
+          queryKeys.feed,
+          settleHeartInFeed(current, entry.id, truth),
+        );
+      }
+    },
+    onError: (error, _entry, context) => {
+      if (context?.snapshot) queryClient.setQueryData(queryKeys.feed, context.snapshot);
+      setHeartErrorKey(describeError(error));
+    },
   });
 
   const entries = feed.data?.pages.flatMap((page) => page.entries) ?? [];
@@ -108,6 +148,17 @@ export function FeedSection() {
         />
       ) : null}
 
+      {/* `AlertBanner` owns its own test id, so the heart's failure gets its own wrapper. */}
+      {heartErrorKey ? (
+        <div data-testid="feed-heart-error">
+          <AlertBanner
+            tone="destructive"
+            title={t('feed.heartFailed')}
+            description={t(heartErrorKey)}
+          />
+        </div>
+      ) : null}
+
       {entries.length === 0 && isPending ? (
         <div data-testid="feed-skeleton" aria-busy="true" className="flex flex-col gap-3.5">
           {[0, 1, 2].map((index) => (
@@ -135,7 +186,14 @@ export function FeedSection() {
             {formatLocalDay(day.date, locale)}
           </h3>
           {day.entries.map((entry) => (
-            <FeedRow key={entry.id} entry={entry} />
+            <FeedRow
+              key={entry.id}
+              entry={entry}
+              meId={meId}
+              onHeart={() => heart.mutate(entry)}
+              onComment={() => setCommenting(entry.id)}
+              onEdit={() => editor.openEdit(entry)}
+            />
           ))}
         </div>
       ))}
@@ -164,6 +222,8 @@ export function FeedSection() {
           ) : null}
         </div>
       ) : null}
+
+      {editor.element}
     </section>
   );
 }
@@ -172,10 +232,24 @@ export function FeedSection() {
  * One entry, `FeedRow`'s anatomy: the photo full-bleed across the card, then the author's avatar
  * and name, the member's own title and note when they wrote one, the category chips, and the
  * place name when there is one — the place being the tap
- * target that opens this entry on the map.
+ * target that opens this entry on the map — and the action row: the heart, the comment count,
+ * and "Sửa" on the reader's own entries.
  */
-function FeedRow({ entry }: { entry: FeedEntryDto }) {
+function FeedRow({
+  entry,
+  meId,
+  onHeart,
+  onComment,
+  onEdit,
+}: {
+  entry: FeedEntryDto;
+  meId: string | null;
+  onHeart: () => void;
+  onComment: () => void;
+  onEdit: () => void;
+}) {
   const t = useTranslations();
+  const mine = meId !== null && entry.userId === meId;
   return (
     <SurfaceCard as="article" padding="none" className="overflow-hidden">
       <div data-testid="feed-row" data-entry-id={entry.id}>
@@ -212,6 +286,51 @@ function FeedRow({ entry }: { entry: FeedEntryDto }) {
           {entry.placeName ? (
             <PlaceButton entryId={entry.id} placeName={entry.placeName} testId="feed-place" />
           ) : null}
+          <div className="flex items-center gap-1 pt-1">
+            <button
+              type="button"
+              data-testid="feed-heart"
+              aria-pressed={entry.heartedByMe}
+              aria-label={entry.heartedByMe ? t('feed.unheart') : t('feed.heart')}
+              onClick={onHeart}
+              className={cn(
+                'outline-ring flex min-h-11 items-center gap-1.5 rounded-full px-2',
+                entry.heartedByMe ? 'text-primary' : 'text-foreground-secondary',
+              )}
+            >
+              <HeartGlyph filled={entry.heartedByMe} className="size-5" />
+              {entry.heartCount > 0 ? (
+                <span data-testid="feed-heart-count" className="type-label tabular-nums">
+                  {entry.heartCount}
+                </span>
+              ) : null}
+            </button>
+            <button
+              type="button"
+              data-testid="feed-comment"
+              aria-label={t('feed.comments')}
+              onClick={onComment}
+              className="text-foreground-secondary outline-ring flex min-h-11 items-center gap-1.5 rounded-full px-2"
+            >
+              <CommentGlyph className="size-5" />
+              {entry.commentCount > 0 ? (
+                <span data-testid="feed-comment-count" className="type-label tabular-nums">
+                  {entry.commentCount}
+                </span>
+              ) : null}
+            </button>
+            {mine ? (
+              <Button
+                size="sm"
+                variant="ghost"
+                data-testid="feed-edit"
+                className="ml-auto"
+                onClick={onEdit}
+              >
+                {t('feed.edit')}
+              </Button>
+            ) : null}
+          </div>
         </div>
       </div>
     </SurfaceCard>
