@@ -12,6 +12,15 @@ import { queryKeys } from '@/lib/query';
 import { relativeTimeKey } from '@/lib/relative-time';
 import { Button } from '@/ui/button';
 
+/**
+ * Which action failed and why — one state rather than a flag per mutation, so a delete failing
+ * after an earlier post failure still names the delete rather than the post.
+ */
+interface SheetFailure {
+  titleKey: 'comments.postFailed' | 'comments.deleteFailed';
+  messageKey: string;
+}
+
 export interface CommentSheetProps {
   entryId: string;
   onDismiss: () => void;
@@ -31,7 +40,7 @@ export function CommentSheet({ entryId, onDismiss, onCountChange }: CommentSheet
   const titleId = useId();
   const panel = useRef<HTMLDivElement>(null);
   const [draft, setDraft] = useState('');
-  const [errorKey, setErrorKey] = useState<string | null>(null);
+  const [failure, setFailure] = useState<SheetFailure | null>(null);
   useModalSheet({ panelRef: panel, onDismiss });
 
   const thread = useQuery({
@@ -42,26 +51,34 @@ export function CommentSheet({ entryId, onDismiss, onCountChange }: CommentSheet
 
   const post = useMutation({
     mutationFn: (body: string) => api.postComment(entryId, body),
+    onMutate: () => setFailure(null),
     onSuccess: async (response) => {
       setDraft('');
-      setErrorKey(null);
+      setFailure(null);
       onCountChange(response.commentCount);
       await queryClient.invalidateQueries({ queryKey: queryKeys.comments(entryId) });
     },
-    onError: (error) => setErrorKey(describeError(error)),
+    onError: (error) =>
+      setFailure({ titleKey: 'comments.postFailed', messageKey: describeError(error) }),
   });
 
   const remove = useMutation({
     mutationFn: (id: string) => api.deleteComment(id),
+    onMutate: () => setFailure(null),
     onSuccess: async () => {
-      setErrorKey(null);
+      setFailure(null);
+      // `staleTime: 0` on purpose: the app's client caches a thread for 30s (`makeQueryClient`),
+      // so a plain `fetchQuery` would hand back the list the deleted row is still in — and the
+      // count reported here would be the old one.
       const fresh = await queryClient.fetchQuery({
         queryKey: queryKeys.comments(entryId),
         queryFn: () => api.comments(entryId),
+        staleTime: 0,
       });
       onCountChange(fresh.comments.length);
     },
-    onError: (error) => setErrorKey(describeError(error)),
+    onError: (error) =>
+      setFailure({ titleKey: 'comments.deleteFailed', messageKey: describeError(error) }),
   });
 
   const canSend = draft.trim().length > 0 && !post.isPending;
@@ -135,12 +152,12 @@ export function CommentSheet({ entryId, onDismiss, onCountChange }: CommentSheet
             />
           ))}
           {/* `AlertBanner` owns its own test id, so the sheet's failure gets its own wrapper. */}
-          {errorKey ? (
+          {failure ? (
             <div data-testid="comment-error">
               <AlertBanner
                 tone="destructive"
-                title={t(post.isError ? 'comments.postFailed' : 'comments.deleteFailed')}
-                description={t(errorKey)}
+                title={t(failure.titleKey)}
+                description={t(failure.messageKey)}
               />
             </div>
           ) : null}

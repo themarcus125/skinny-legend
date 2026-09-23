@@ -1,11 +1,12 @@
 import type { ReactNode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider } from '@tanstack/react-query';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, useLocation } from 'react-router';
 import type { ApiClient } from '@skinny/api-client';
 import { createMockApiClient, makeSeed } from '@skinny/api-client/mock';
 import { ApiProvider } from '@/lib/api';
+import { makeQueryClient } from '@/lib/query';
 import { stubApi } from '@/test/session';
 import { render, screen, waitFor, within } from '@/test/intl';
 import { FeedSection } from './feed';
@@ -22,8 +23,13 @@ function Here() {
 }
 
 function renderFeed(api: ApiClient, meId: string | null = null) {
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  // The app's own client, so its `staleTime` is in play here too — see `comment-sheet.test.tsx`.
+  const queryClient = makeQueryClient();
+  const defaults = queryClient.getDefaultOptions();
+  queryClient.setDefaultOptions({
+    ...defaults,
+    queries: { ...defaults.queries, retry: false },
+    mutations: { ...defaults.mutations, retry: false },
   });
   const Wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={queryClient}>
