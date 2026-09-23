@@ -217,7 +217,9 @@
       "inactive_1d": "Inactive 1 day",
       "inactive_3d": "Inactive 3 days",
       "inactive_7d": "Inactive 7 days",
-      "rank_nudge": "Rank nudge"
+      "rank_nudge": "Rank nudge",
+      "heart": "Heart",
+      "comment": "Comment"
     },
     "platform": {
       "ios": "iOS",
