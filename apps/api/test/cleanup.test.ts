@@ -22,4 +22,14 @@ describe('cleanupOrphans', () => {
     expect(mem.objects.has(`photos/${user.id}/kept.jpg`)).toBe(true);
     expect(mem.objects.has(`avatars/${user.id}/kept.jpg`)).toBe(true);
   });
+
+  it('steps over an entry an admin added without a photo', async () => {
+    const { user } = await asUser('u', { activate: true });
+    // The in-memory bucket outlives `resetDb`, so start it empty.
+    (storage as unknown as { objects: Map<string, Buffer> }).objects.clear();
+    await storage.putObject(`photos/${user.id}/orphan.jpg`, Buffer.from('x'), 'image/jpeg');
+    await db.insert(schema.entries).values({ userId: user.id, challengeId: await challengeId(), photoKey: null, takenAt: new Date(), localDate: '2026-09-10', status: 'confirmed' });
+    const { deleted } = await cleanupOrphans(new Date());
+    expect(deleted).toEqual([`photos/${user.id}/orphan.jpg`]);
+  });
 });

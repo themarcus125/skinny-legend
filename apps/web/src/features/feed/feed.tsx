@@ -305,11 +305,14 @@ function FeedRow({
   return (
     <SurfaceCard as="article" padding="none" className="overflow-hidden">
       <div data-testid="feed-row" data-entry-id={entry.id}>
-        <PhotoButton
-          src={entry.thumbUrl ?? entry.photoUrl}
-          full={entry.photoUrl}
-          className="bg-surface-2 h-[200px] w-full"
-        />
+        {/* An entry logged without a photo is a text card: no empty frame where one would be. */}
+        {entry.photoUrl ? (
+          <PhotoButton
+            src={entry.thumbUrl ?? entry.photoUrl}
+            full={entry.photoUrl}
+            className="bg-surface-2 h-[200px] w-full"
+          />
+        ) : null}
         <div className="flex flex-col gap-2.5 p-4">
           <div className="flex items-center gap-2.5">
             <Avatar name={entry.user.displayName} src={entry.user.avatarUrl} size={ROW_AVATAR} />

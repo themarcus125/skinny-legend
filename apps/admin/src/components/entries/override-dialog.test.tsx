@@ -113,4 +113,61 @@ describe('OverrideDialog', () => {
     render(<OverrideDialog entry={entry()} onClose={vi.fn()} onSave={vi.fn()} isSaving />);
     expect(screen.getByRole('button', { name: 'Lưu' })).toBeDisabled();
   });
+
+  it('opens on the entry’s own time, text and place', () => {
+    const row = entry({ takenAt: '2026-08-02T09:56:56.000Z', title: 'Pilates', note: 'Buổi chiều', placeName: 'Studio' });
+    render(<OverrideDialog entry={row} onClose={vi.fn()} onSave={vi.fn()} isSaving={false} />);
+
+    expect(screen.getByLabelText('Thời gian')).toHaveValue('2026-08-02T16:56');
+    expect(screen.getByLabelText('Tiêu đề')).toHaveValue('Pilates');
+    expect(screen.getByLabelText('Ghi chú')).toHaveValue('Buổi chiều');
+    expect(screen.getByLabelText('Địa điểm')).toHaveValue('Studio');
+  });
+
+  it('sends the new time on the challenge clock when the admin moves the entry', () => {
+    const onSave = vi.fn();
+    const row = entry({ takenAt: '2026-08-02T09:56:56.000Z' });
+    render(<OverrideDialog entry={row} onClose={vi.fn()} onSave={onSave} isSaving={false} />);
+
+    fireEvent.change(screen.getByLabelText('Thời gian'), { target: { value: '2026-09-26T17:00' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Lưu' }));
+
+    expect(onSave).toHaveBeenCalledWith('e-1', {
+      categories: ['exercise'],
+      status: 'pending',
+      takenAt: '2026-09-26T17:00:00+07:00',
+    });
+  });
+
+  it('sends only the text the admin changed, and null for what they cleared', () => {
+    const onSave = vi.fn();
+    const row = entry({ title: 'Pilates', note: 'Buổi chiều', placeName: 'Studio' });
+    render(<OverrideDialog entry={row} onClose={vi.fn()} onSave={onSave} isSaving={false} />);
+
+    fireEvent.change(screen.getByLabelText('Tiêu đề'), { target: { value: 'Pilates buổi sáng' } });
+    fireEvent.change(screen.getByLabelText('Địa điểm'), { target: { value: '' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Lưu' }));
+
+    // The note was not touched, so it is not in the patch at all.
+    expect(onSave).toHaveBeenCalledWith('e-1', {
+      categories: ['exercise'],
+      status: 'pending',
+      title: 'Pilates buổi sáng',
+      placeName: null,
+    });
+  });
+
+  it('will not save while the time field is empty', () => {
+    render(<OverrideDialog entry={entry()} onClose={vi.fn()} onSave={vi.fn()} isSaving={false} />);
+
+    fireEvent.change(screen.getByLabelText('Thời gian'), { target: { value: '' } });
+    expect(screen.getByRole('button', { name: 'Lưu' })).toBeDisabled();
+  });
+
+  it('shows no photo for an entry that was logged without one', () => {
+    render(<OverrideDialog entry={entry({ photoUrl: null, thumbUrl: null, verdict: null })} onClose={vi.fn()} onSave={vi.fn()} isSaving={false} />);
+
+    expect(screen.queryByRole('img')).not.toBeInTheDocument();
+    expect(screen.getByText('Mục ghi này không có ảnh.')).toBeInTheDocument();
+  });
 });

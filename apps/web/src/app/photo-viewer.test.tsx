@@ -83,4 +83,18 @@ describe('the photo viewer', () => {
     expect(rowTaps).toBe(0);
     expect(screen.getByTestId('photo-viewer')).toBeInTheDocument();
   });
+
+  it('stands a plain tile in for an entry that has no photo, with nothing to tap', () => {
+    render(
+      <PhotoViewerProvider>
+        <PhotoButton src={null} full={null} className="size-[60px]" />
+      </PhotoViewerProvider>,
+    );
+
+    const tile = screen.getByTestId('photo-placeholder');
+    // Same box as a real thumbnail, so a row with no photo still lines up with its neighbours.
+    expect(tile).toHaveClass('size-[60px]');
+    expect(tile.querySelector('img')).toBeNull();
+    expect(screen.queryByRole('button')).toBeNull();
+  });
 });

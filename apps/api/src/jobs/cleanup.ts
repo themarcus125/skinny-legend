@@ -10,7 +10,7 @@ const MAX_AGE_MS = 24 * 60 * 60 * 1000;
 
 export async function cleanupOrphans(now = new Date()): Promise<{ deleted: string[] }> {
   const referenced = new Set<string>();
-  for (const e of await db.select({ p: schema.entries.photoKey, t: schema.entries.thumbKey }).from(schema.entries)) { referenced.add(e.p); if (e.t) referenced.add(e.t); }
+  for (const e of await db.select({ p: schema.entries.photoKey, t: schema.entries.thumbKey }).from(schema.entries)) { if (e.p) referenced.add(e.p); if (e.t) referenced.add(e.t); }
   for (const u of await db.select({ a: schema.users.avatarKey }).from(schema.users).where(isNotNull(schema.users.avatarKey))) referenced.add(u.a!);
   for (const f of await db.select({ s: schema.feedback.screenshotKey }).from(schema.feedback).where(isNotNull(schema.feedback.screenshotKey))) referenced.add(f.s!);
 

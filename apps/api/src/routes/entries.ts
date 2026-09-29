@@ -21,7 +21,7 @@ export type EntryDeps = { classify: typeof classifyPhoto };
 export const HISTORY_PAGE_SIZE = 50;
 
 /** An entry may be logged slightly ahead of the server clock (device drift, timezone rounding). */
-const TAKEN_AT_FUTURE_TOLERANCE_MS = 10 * 60 * 1000;
+export const TAKEN_AT_FUTURE_TOLERANCE_MS = 10 * 60 * 1000;
 
 type EntryRow = typeof schema.entries.$inferSelect;
 
@@ -29,7 +29,7 @@ export async function toEntryDto(row: EntryRow, categories: Category[]): Promise
   return {
     id: row.id,
     userId: row.userId,
-    photoUrl: await storage.publicUrl(row.photoKey),
+    photoUrl: row.photoKey ? await storage.publicUrl(row.photoKey) : null,
     thumbUrl: row.thumbKey ? await storage.publicUrl(row.thumbKey) : null,
     takenAt: row.takenAt.toISOString(),
     localDate: row.localDate,

@@ -71,7 +71,11 @@
     "internal": "Máy chủ gặp sự cố. Vui lòng thử lại sau.",
     "offline": "Không kết nối được máy chủ. Kiểm tra mạng hoặc cấu hình CORS_ORIGINS của API.",
     "no_device_tokens": "Thành viên này chưa bật thông báo trên iPhone.",
-    "push_failed": "Gửi thông báo thất bại. Vui lòng thử lại sau."
+    "push_failed": "Gửi thông báo thất bại. Vui lòng thử lại sau.",
+    "taken_at_future": "Thời gian không được ở tương lai.",
+    "photo_missing": "Ảnh chưa được tải lên. Hãy chọn lại ảnh.",
+    "photo_invalid": "Không đọc được ảnh này. Hãy dùng ảnh JPEG, PNG hoặc WebP.",
+    "upload_failed": "Không tải ảnh lên được. Vui lòng thử lại."
   },
   "auth": {
     "emulatorHint": "Chế độ kiểm thử: đăng nhập bằng email và mật khẩu của Auth Emulator.",
@@ -146,7 +150,26 @@
     "photoOf": "Ảnh của {name}",
     "overrideNote": "Hạng mục sẽ được ghi với nguồn <code>admin</code> và điểm được tính lại ngay.",
     "updated": "Đã cập nhật mục ghi",
-    "rejected": "Đã từ chối mục ghi"
+    "rejected": "Đã từ chối mục ghi",
+    "editEntry": "Sửa mục ghi",
+    "time": "Thời gian",
+    "timeHint": "Theo giờ Việt Nam. Ngày của mục ghi và điểm được tính theo thời gian này.",
+    "timeRequired": "Hãy chọn ngày và giờ.",
+    "timeFuture": "Thời gian không được ở tương lai.",
+    "outsideChallenge": "Ngày này nằm ngoài thử thách ({start} – {end}) nên mục ghi sẽ không được tính điểm.",
+    "entryTitle": "Tiêu đề",
+    "note": "Ghi chú",
+    "place": "Địa điểm",
+    "noPhoto": "Mục ghi này không có ảnh.",
+    "add": "Thêm mục ghi",
+    "addTitle": "Thêm mục ghi cho thành viên",
+    "addDescription": "Mục ghi được xác nhận ngay và tính điểm cho thành viên. Ảnh là không bắt buộc.",
+    "addSubmit": "Thêm mục ghi",
+    "pickMember": "Chọn thành viên",
+    "photoOptional": "Ảnh (không bắt buộc)",
+    "added": "Đã thêm mục ghi",
+    "earned": "+{points} điểm",
+    "earnedCapped": "+{points} điểm · đã đủ giới hạn"
   },
   "rules": {
     "title": "Luật chơi",

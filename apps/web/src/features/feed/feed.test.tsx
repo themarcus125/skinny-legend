@@ -198,6 +198,26 @@ describe('the group feed on Trang chủ', () => {
     expect(within(rows[1]!).getByTestId('feed-posted')).toHaveTextContent('Đăng lúc 22:28 · 28/09');
   });
 
+  it('drops the photo from a card whose entry has none, keeping everything else', async () => {
+    const page = await seeded().feed();
+    renderFeed(
+      stubApi({
+        feed: () =>
+          Promise.resolve({
+            entries: [{ ...page.entries[0]!, id: 'no-photo', photoUrl: null, thumbUrl: null }],
+            nextCursor: null,
+          }),
+      }),
+    );
+
+    const row = await screen.findByTestId('feed-row');
+    expect(within(row).queryByTestId('photo-button')).not.toBeInTheDocument();
+    // No empty 200 px block where the photo would have been.
+    expect(within(row).queryByTestId('photo-placeholder')).not.toBeInTheDocument();
+    expect(within(row).getByTestId('feed-author')).not.toBeEmptyDOMElement();
+    expect(within(row).getByTestId('feed-points')).toBeInTheDocument();
+  });
+
   it('leaves a row with no location untappable', async () => {
     // The seed's own first entry with its place stripped — a real `FeedEntryDto`, minus a place.
     const page = await seeded().feed();

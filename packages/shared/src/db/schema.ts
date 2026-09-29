@@ -48,7 +48,8 @@ export const entries = pgTable('entries', {
   id: uuid('id').primaryKey().defaultRandom(),
   userId: uuid('user_id').notNull().references(() => users.id),
   challengeId: uuid('challenge_id').notNull().references(() => challenges.id),
-  photoKey: text('photo_key').notNull(),
+  /** Null only for an entry an admin added on a member's behalf without a photo. */
+  photoKey: text('photo_key'),
   thumbKey: text('thumb_key'),
   takenAt: timestamp('taken_at', { withTimezone: true }).notNull(),
   localDate: date('local_date').notNull(),

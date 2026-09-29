@@ -3,7 +3,6 @@ import type {
   CreateEntryInput,
   DashboardDto,
   DeviceDto,
-  EntryDto,
   EntryMutationResponse,
   FeedResponse,
   HeartResponse,
@@ -21,6 +20,8 @@ import type {
 import { ApiError } from './errors';
 import type {
   AdminEntry,
+  AdminEntryInput,
+  AdminEntryResult,
   AdminUser,
   EntryFilters,
   EntryPatch,
@@ -105,7 +106,8 @@ export interface ApiClient {
   patchUser(id: string, patch: UserPatch): Promise<AdminUser>;
   listEntries(filters: EntryFilters): Promise<AdminEntry[]>;
   /** `PATCH /admin/entries/:id` — the admin override (ruling R3). */
-  patchEntry(id: string, patch: EntryPatch): Promise<EntryDto>;
+  addEntry(input: AdminEntryInput): Promise<AdminEntryResult>;
+  patchEntry(id: string, patch: EntryPatch): Promise<AdminEntryResult>;
   rejectEntry(id: string): Promise<void>;
   getRules(): Promise<RulesResponse>;
   putRules(payload: RulesPayload): Promise<void>;
@@ -337,12 +339,18 @@ export class LiveApiClient implements ApiClient {
     return entries;
   }
 
-  async patchEntry(id: string, patch: EntryPatch): Promise<EntryDto> {
-    const { entry } = await this.request<{ entry: EntryDto }>(`/admin/entries/${id}`, {
+  addEntry(input: AdminEntryInput): Promise<AdminEntryResult> {
+    return this.request<AdminEntryResult>('/admin/entries', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    });
+  }
+
+  patchEntry(id: string, patch: EntryPatch): Promise<AdminEntryResult> {
+    return this.request<AdminEntryResult>(`/admin/entries/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(patch),
     });
-    return entry;
   }
 
   async rejectEntry(id: string): Promise<void> {

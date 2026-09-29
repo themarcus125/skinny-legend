@@ -118,6 +118,121 @@ describe('admin entries', () => {
   });
 });
 
+describe('admin adds an entry for a member', () => {
+  const add = (headers: Record<string, string>, body: Record<string, unknown>) =>
+    app.request('/admin/entries', { method: 'POST', headers: json(headers), body: JSON.stringify(body) });
+
+  it('creates a confirmed entry with no photo that scores for the member', async () => {
+    const admin = await asUser('adm', { admin: true });
+    const u = await asUser('u', { activate: true, name: 'U' });
+    const res = await add(admin.headers, { userId: u.user.id, takenAt: '2026-09-09T20:00:00+07:00', categories: ['exercise'], title: 'Pilates', note: 'Quên chụp ảnh' });
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    expect(body.entry).toMatchObject({ userId: u.user.id, status: 'confirmed', localDate: '2026-09-09', categories: ['exercise'], photoUrl: null, thumbUrl: null, title: 'Pilates', note: 'Quên chụp ảnh' });
+    expect(body).toMatchObject({ points: 3, capped: false });
+
+    expect(await db.select().from(schema.entryCategories)).toEqual([expect.objectContaining({ category: 'exercise', source: 'admin' })]);
+    expect(await db.select().from(schema.aiVerdicts)).toEqual([]);
+    expect(await db.select().from(schema.auditLog)).toEqual([expect.objectContaining({ actorId: admin.user.id, action: 'entry.create', targetId: body.entry.id })]);
+
+    const feed = await (await app.request('/feed', { headers: u.headers })).json();
+    expect(feed.entries).toEqual([expect.objectContaining({ id: body.entry.id, photoUrl: null, points: 3 })]);
+    const mine = await (await app.request('/entries/mine', { headers: u.headers })).json();
+    expect(mine.entries.map((e: { id: string }) => e.id)).toEqual([body.entry.id]);
+  });
+
+  it('keeps the photo and makes a thumbnail when the admin uploads one', async () => {
+    const admin = await asUser('adm', { admin: true });
+    const u = await asUser('u', { activate: true });
+    const presign = await (await app.request('/uploads/presign', { method: 'POST', headers: json(admin.headers), body: JSON.stringify({ kind: 'photo', contentType: 'image/png' }) })).json();
+    await storage.putObject(presign.key, png, 'image/png');
+    const res = await add(admin.headers, { userId: u.user.id, takenAt: '2026-09-09T20:00:00+07:00', categories: ['meal'], photoKey: presign.key });
+    expect(res.status).toBe(201);
+    const [row] = await db.select().from(schema.entries);
+    expect(row).toMatchObject({ userId: u.user.id, photoKey: presign.key });
+    expect(row?.thumbKey).toMatch(new RegExp(`^thumbs/${u.user.id}/`));
+    expect((await res.json()).entry.photoUrl).toEqual(expect.any(String));
+  });
+
+  it('says so when the day’s cap was already used', async () => {
+    const admin = await asUser('adm', { admin: true });
+    const u = await asUser('u', { activate: true });
+    await add(admin.headers, { userId: u.user.id, takenAt: '2026-09-09T08:00:00+07:00', categories: ['exercise'] });
+    const second = await (await add(admin.headers, { userId: u.user.id, takenAt: '2026-09-09T20:00:00+07:00', categories: ['exercise'] })).json();
+    expect(second).toMatchObject({ points: 0, capped: true });
+  });
+
+  it('refuses a member it cannot find, a future time, no category and a photo that is not the admin’s', async () => {
+    const admin = await asUser('adm', { admin: true });
+    const u = await asUser('u', { activate: true });
+    const valid = { userId: u.user.id, takenAt: '2026-09-09T20:00:00+07:00', categories: ['exercise'] };
+
+    const unknown = await add(admin.headers, { ...valid, userId: '00000000-0000-0000-0000-000000000000' });
+    expect([unknown.status, (await unknown.json()).error.code]).toEqual([404, 'not_found']);
+
+    const future = await add(admin.headers, { ...valid, takenAt: new Date(Date.now() + 60 * 60 * 1000).toISOString() });
+    expect([future.status, (await future.json()).error.code]).toEqual([400, 'taken_at_future']);
+
+    const bare = await add(admin.headers, { ...valid, categories: [] });
+    expect([bare.status, (await bare.json()).error.code]).toEqual([400, 'invalid_body']);
+
+    const foreign = await add(admin.headers, { ...valid, photoKey: `photos/${u.user.id}/x.jpg` });
+    expect([foreign.status, (await foreign.json()).error.code]).toEqual([403, 'forbidden']);
+
+    expect(await db.select().from(schema.entries)).toEqual([]);
+  });
+
+  it('is closed to members', async () => {
+    const u = await asUser('u', { activate: true });
+    const res = await add(u.headers, { userId: u.user.id, takenAt: '2026-09-09T20:00:00+07:00', categories: ['exercise'] });
+    expect(res.status).toBe(403);
+    expect(await db.select().from(schema.entries)).toEqual([]);
+  });
+});
+
+describe('admin edits an entry', () => {
+  const patch = (headers: Record<string, string>, id: string, body: Record<string, unknown>) =>
+    app.request(`/admin/entries/${id}`, { method: 'PATCH', headers: json(headers), body: JSON.stringify(body) });
+
+  it('moves an entry to the day it really happened, and its points with it', async () => {
+    const admin = await asUser('adm', { admin: true });
+    const u = await asUser('u', { activate: true });
+    // A photo whose capture date is before the challenge: confirmed, and worth nothing.
+    const presign = await (await app.request('/uploads/presign', { method: 'POST', headers: json(u.headers), body: JSON.stringify({ kind: 'photo', contentType: 'image/png' }) })).json();
+    await storage.putObject(presign.key, png, 'image/png');
+    const created = await (await app.request('/entries', { method: 'POST', headers: json(u.headers), body: JSON.stringify({ photoKey: presign.key, takenAt: '2026-08-02T09:56:56Z' }) })).json();
+    await app.request(`/entries/${created.entry.id}`, { method: 'PATCH', headers: json(u.headers), body: JSON.stringify({ categories: ['exercise'] }) });
+    expect((await (await app.request('/leaderboard', { headers: u.headers })).json()).leaderboard[0].total).toBe(0);
+
+    const res = await patch(admin.headers, created.entry.id, { takenAt: '2026-09-09T17:00:00+07:00' });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.entry).toMatchObject({ localDate: '2026-09-09', takenAt: '2026-09-09T10:00:00.000Z', categories: ['exercise'] });
+    expect(body).toMatchObject({ points: 3, capped: false });
+    expect((await (await app.request('/leaderboard', { headers: u.headers })).json()).leaderboard[0].total).toBe(3);
+  });
+
+  it('edits the title, note and place, and clears them with null', async () => {
+    const admin = await asUser('adm', { admin: true });
+    const u = await asUser('u', { activate: true });
+    const id = await createEntry(u.headers);
+    const set = await (await patch(admin.headers, id, { title: '  Chạy bộ ', note: 'Công viên', placeName: 'Tao Đàn' })).json();
+    expect(set.entry).toMatchObject({ title: 'Chạy bộ', note: 'Công viên', placeName: 'Tao Đàn', placeSource: 'manual' });
+    const cleared = await (await patch(admin.headers, id, { title: null, note: '', placeName: null })).json();
+    expect(cleared.entry).toMatchObject({ title: null, note: null, placeName: null, placeSource: 'none' });
+    // Text edits leave the categories the member confirmed exactly as they were.
+    expect(cleared.entry.categories).toEqual(set.entry.categories);
+  });
+
+  it('refuses to move an entry into the future', async () => {
+    const admin = await asUser('adm', { admin: true });
+    const u = await asUser('u', { activate: true });
+    const id = await createEntry(u.headers);
+    const res = await patch(admin.headers, id, { takenAt: new Date(Date.now() + 60 * 60 * 1000).toISOString() });
+    expect([res.status, (await res.json()).error.code]).toEqual([400, 'taken_at_future']);
+  });
+});
+
 describe('admin rules', () => {
   // The PUT below overwrites the shared seeded challenge/rules; other test files run in the
   // same DB (fileParallelism: false) and assume the seeded defaults, so restore them afterward.
