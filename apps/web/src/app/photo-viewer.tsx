@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import type { ReactNode } from 'react';
 import { useTranslations } from 'use-intl';
 import { cn } from '@skinny/ui';
-import { CloseGlyph } from './icons';
+import { CloseGlyph, PhotoStackGlyph } from './icons';
 import { useModalSheet } from './use-modal-sheet';
 
 export interface ViewerPhoto {
@@ -114,8 +114,8 @@ function PhotoViewer({ photo, onDismiss }: { photo: ViewerPhoto; onDismiss: () =
 }
 
 export interface PhotoButtonProps {
-  /** What the row shows — usually the thumbnail. */
-  src: string;
+  /** What the row shows — usually the thumbnail. Null when the entry has no photo at all. */
+  src: string | null;
   /** What the viewer shows; falls back to `src`. */
   full?: string | null;
   alt?: string;
@@ -127,10 +127,27 @@ export interface PhotoButtonProps {
  * A photo that opens in the viewer. It wraps the `<img>` in a real button so the tap target is
  * announced and focusable; the image itself stays decorative (`alt=""`) because the row's text
  * already says what it is, and the button carries the "Xem ảnh" name instead.
+ *
+ * An entry an admin logged without a photo has nothing to open, so it gets a plain tile of the
+ * same size instead: the row keeps its shape and there is no button that leads nowhere.
  */
 export function PhotoButton({ src, full, alt, className, imgClassName }: PhotoButtonProps) {
   const t = useTranslations();
   const { open } = usePhotoViewer();
+  if (src === null) {
+    return (
+      <div
+        data-testid="photo-placeholder"
+        aria-hidden="true"
+        className={cn(
+          'text-foreground-subtle flex shrink-0 items-center justify-center overflow-hidden',
+          className,
+        )}
+      >
+        <PhotoStackGlyph className="size-6" />
+      </div>
+    );
+  }
   return (
     <button
       type="button"

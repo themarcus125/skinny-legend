@@ -3,7 +3,6 @@ import type {
   CreateEntryInput,
   DashboardDto,
   DeviceDto,
-  EntryDto,
   EntryMutationResponse,
   FeedResponse,
   HeartResponse,

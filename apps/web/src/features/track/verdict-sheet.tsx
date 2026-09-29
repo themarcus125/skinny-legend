@@ -172,12 +172,14 @@ export function VerdictSheet({
           {/* Already tracked: the points are the headline, so they sit above the fold like the
               iOS sheet's. Every other state leads with the photo and the AI's reasoning. */}
           {tracked ? pointsCard : null}
-          <PhotoButton
-            src={state.entry.thumbUrl ?? state.entry.photoUrl}
-            full={state.entry.photoUrl}
-            alt={t('track.photoAlt')}
-            className="bg-surface-2 h-[200px] w-full rounded-xl"
-          />
+          {state.entry.photoUrl ? (
+            <PhotoButton
+              src={state.entry.thumbUrl ?? state.entry.photoUrl}
+              full={state.entry.photoUrl}
+              alt={t('track.photoAlt')}
+              className="bg-surface-2 h-[200px] w-full rounded-xl"
+            />
+          ) : null}
 
           {verdict ? (
             <SurfaceCard as="section" className="flex items-start gap-3">
