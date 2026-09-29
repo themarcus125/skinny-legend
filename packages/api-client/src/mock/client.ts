@@ -32,6 +32,8 @@ import type { ApiClient } from '../client';
 import { ApiError } from '../errors';
 import type {
   AdminEntry,
+  AdminEntryInput,
+  AdminEntryResult,
   AdminUser,
   Challenge,
   EntryFilters,
@@ -681,13 +683,56 @@ export class MockApiClient implements ApiClient {
       .map((entry) => ({ ...entry, categories: [...entry.categories] }));
   }
 
-  async patchEntry(id: string, patch: EntryPatch): Promise<EntryDto> {
+  async addEntry(input: AdminEntryInput): Promise<AdminEntryResult> {
+    await this.delay();
+    const member = this.state.users.find((user) => user.id === input.userId);
+    if (!member) throw new ApiError(404, 'not_found', 'User not found');
+    const takenAt = parseTakenAt(input.takenAt);
+    this.counter += 1;
+    const placeName = textOrNull(input.placeName);
+    // A photo key stands for an upload the mock never received, so it shows a generated tile.
+    const photo = input.photoKey ? svgImage(`#${this.counter}`, (this.counter * 37) % 360) : null;
+    const entry: AdminEntry = {
+      id: `cccccccc-0000-4000-8000-${String(this.counter).padStart(12, '0')}`,
+      userId: member.id,
+      photoUrl: photo,
+      thumbUrl: photo,
+      takenAt: takenAt.toISOString(),
+      localDate: toLocalDate(takenAt, CHALLENGE_TIMEZONE),
+      status: 'confirmed',
+      categories: [...new Set(input.categories)],
+      placeName,
+      placeSource: placeName ? 'manual' : 'none',
+      title: textOrNull(input.title),
+      note: textOrNull(input.note),
+      createdAt: new Date().toISOString(),
+      user: { id: member.id, displayName: member.displayName },
+      lat: null,
+      lng: null,
+      verdict: null,
+    };
+    this.state.entries.unshift(entry);
+    return { entry: toEntryDto(entry), ...entryPoints(this.score(member.id), entry.id) };
+  }
+
+  async patchEntry(id: string, patch: EntryPatch): Promise<AdminEntryResult> {
     await this.delay();
     const entry = this.state.entries.find((row) => row.id === id);
     if (!entry) throw new ApiError(404, 'not_found', 'Entry not found');
+    const takenAt = patch.takenAt === undefined ? undefined : parseTakenAt(patch.takenAt);
     if (patch.categories) entry.categories = [...new Set(patch.categories)];
     if (patch.status) entry.status = patch.status;
-    return toEntryDto(entry);
+    if (takenAt) {
+      entry.takenAt = takenAt.toISOString();
+      entry.localDate = toLocalDate(takenAt, CHALLENGE_TIMEZONE);
+    }
+    if (patch.title !== undefined) entry.title = textOrNull(patch.title);
+    if (patch.note !== undefined) entry.note = textOrNull(patch.note);
+    if (patch.placeName !== undefined) {
+      entry.placeName = textOrNull(patch.placeName);
+      entry.placeSource = entry.placeName ? 'manual' : 'none';
+    }
+    return { entry: toEntryDto(entry), ...entryPoints(this.score(entry.userId), entry.id) };
   }
 
   async rejectEntry(id: string): Promise<void> {
@@ -744,6 +789,23 @@ function weekPoints(score: ScoreResult, week: string): number {
   return Object.entries(score.byDay)
     .filter(([date]) => isoWeekKey(date) === week)
     .reduce((sum, [, day]) => sum + day.points, 0);
+}
+
+/** The server's ten minutes of grace for a clock that runs ahead. */
+const TAKEN_AT_FUTURE_TOLERANCE_MS = 10 * 60 * 1000;
+
+function parseTakenAt(value: string): Date {
+  const takenAt = new Date(value);
+  if (Number.isNaN(takenAt.getTime())) throw new ApiError(400, 'invalid_body', 'takenAt is not a date');
+  if (takenAt.getTime() - Date.now() > TAKEN_AT_FUTURE_TOLERANCE_MS) {
+    throw new ApiError(400, 'taken_at_future', 'takenAt is in the future');
+  }
+  return takenAt;
+}
+
+/** Whitespace-only text is the same as none. */
+function textOrNull(value: string | null | undefined): string | null {
+  return value?.trim() || null;
 }
 
 /** What one entry earned inside its author's score — the mock's copy of the server's helper. */

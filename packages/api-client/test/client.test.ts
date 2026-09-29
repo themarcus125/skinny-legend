@@ -161,3 +161,39 @@ describe('createApiClient', () => {
     ]);
   });
 });
+
+describe('admin entry writes', () => {
+  it('POSTs a new entry to /admin/entries and hands back what it earned', async () => {
+    let seen: { url: string; init: RequestInit } | null = null;
+    const api = createApiClient(
+      opts(
+        stub(201, { entry: { id: 'e-9', photoUrl: null }, points: 3, capped: false }, (url, init) => {
+          seen = { url, init };
+        }),
+      ),
+    );
+    const input = { userId: 'u-1', takenAt: '2026-09-09T20:00:00+07:00', categories: ['exercise' as const], title: 'Pilates' };
+    await expect(api.addEntry(input)).resolves.toMatchObject({ entry: { id: 'e-9', photoUrl: null }, points: 3, capped: false });
+    const call = seen as unknown as { url: string; init: RequestInit };
+    expect(call.url).toBe('https://api.test/admin/entries');
+    expect(call.init.method).toBe('POST');
+    expect(JSON.parse(String(call.init.body))).toEqual(input);
+  });
+
+  it('PATCHes the time and text of an entry and hands back what it now earns', async () => {
+    let seen: { url: string; init: RequestInit } | null = null;
+    const api = createApiClient(
+      opts(
+        stub(200, { entry: { id: 'e-1', localDate: '2026-09-09' }, points: 0, capped: true }, (url, init) => {
+          seen = { url, init };
+        }),
+      ),
+    );
+    const patch = { takenAt: '2026-09-09T17:00:00+07:00', title: null, placeName: 'Tao Đàn' };
+    await expect(api.patchEntry('e-1', patch)).resolves.toMatchObject({ entry: { localDate: '2026-09-09' }, points: 0, capped: true });
+    const call = seen as unknown as { url: string; init: RequestInit };
+    expect(call.url).toBe('https://api.test/admin/entries/e-1');
+    expect(call.init.method).toBe('PATCH');
+    expect(JSON.parse(String(call.init.body))).toEqual(patch);
+  });
+});

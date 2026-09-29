@@ -190,6 +190,36 @@ describe('mock client', () => {
   });
 });
 
+describe('admin entry writes', () => {
+  it('adds a confirmed, photo-less entry for a member that reaches their history and the feed', async () => {
+    const api = fixed();
+    const member = (await api.listUsers()).find((user) => user.id !== api.seed.me.id && user.status === 'active')!;
+    // A Tuesday evening the seed has not already booked a group activity on.
+    const added = await api.addEntry({ userId: member.id, takenAt: `${TODAY}T20:30:00+07:00`, categories: ['group'], title: 'Đá bóng' });
+    expect(added.entry).toMatchObject({ userId: member.id, status: 'confirmed', localDate: TODAY, photoUrl: null, thumbUrl: null, title: 'Đá bóng', categories: ['group'] });
+    expect(typeof added.points).toBe('number');
+
+    const listed = (await api.listEntries({ user: member.id })).find((row) => row.id === added.entry.id);
+    expect(listed).toMatchObject({ user: { id: member.id, displayName: member.displayName }, verdict: null, photoUrl: null });
+    expect((await api.userEntries(member.id)).entries.map((e) => e.id)).toContain(added.entry.id);
+  });
+
+  it('refuses a member it does not know and a time in the future', async () => {
+    const api = fixed();
+    await expect(api.addEntry({ userId: 'nope', takenAt: `${TODAY}T08:00:00+07:00`, categories: ['meal'] })).rejects.toMatchObject({ status: 404, code: 'not_found' });
+    await expect(api.addEntry({ userId: api.seed.me.id, takenAt: '2999-01-01T08:00:00+07:00', categories: ['meal'] })).rejects.toMatchObject({ status: 400, code: 'taken_at_future' });
+  });
+
+  it('moves an entry to another day and edits its text', async () => {
+    const api = fixed();
+    const entry = (await api.listEntries({ status: 'confirmed' }))[0]!;
+    const patched = await api.patchEntry(entry.id, { takenAt: '2026-09-10T07:15:00+07:00', title: ' Bơi ', note: '', placeName: null });
+    expect(patched.entry).toMatchObject({ localDate: '2026-09-10', takenAt: '2026-09-10T00:15:00.000Z', title: 'Bơi', note: null, placeName: null, placeSource: 'none' });
+    expect(patched.entry.categories).toEqual(entry.categories);
+    expect(typeof patched.capped).toBe('boolean');
+  });
+});
+
 describe('feed', () => {
   it('gives every entry the points its author earned for it, agreeing with their history', async () => {
     const api = fixed();

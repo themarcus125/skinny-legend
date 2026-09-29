@@ -200,10 +200,39 @@ export interface MePatch {
   locale: UserLocale;
 }
 
-/** Body of `PATCH /admin/entries/:id`. */
+/**
+ * Body of `PATCH /admin/entries/:id`. Every key is optional; an omitted one leaves the stored
+ * value alone, while `null` (or an empty string) clears a title, note or place.
+ */
 export interface EntryPatch {
   categories?: Category[];
   status?: EntryStatus;
+  /** ISO instant with an offset. The entry's challenge day follows it. */
+  takenAt?: string;
+  title?: string | null;
+  note?: string | null;
+  placeName?: string | null;
+}
+
+/**
+ * Body of `POST /admin/entries`: an entry logged on a member's behalf. It is confirmed at once;
+ * the photo is optional and, when present, is the admin's own upload.
+ */
+export interface AdminEntryInput {
+  userId: string;
+  takenAt: string;
+  categories: Category[];
+  photoKey?: string;
+  title?: string | null;
+  note?: string | null;
+  placeName?: string | null;
+}
+
+/** What an admin write answers with: the saved entry and what it now earns its member. */
+export interface AdminEntryResult {
+  entry: EntryDto;
+  points: number;
+  capped: boolean;
 }
 
 /** Mirrors `notification_kind` in packages/shared/src/db/schema.ts. */
