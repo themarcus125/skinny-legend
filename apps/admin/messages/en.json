@@ -71,7 +71,11 @@
     "internal": "The server hit a problem. Please try again later.",
     "offline": "Can't reach the server. Check your connection or the API's CORS_ORIGINS setting.",
     "no_device_tokens": "This member hasn't turned on notifications on their iPhone.",
-    "push_failed": "Couldn't send the notification. Please try again later."
+    "push_failed": "Couldn't send the notification. Please try again later.",
+    "taken_at_future": "The time can't be in the future.",
+    "photo_missing": "The photo wasn't uploaded. Pick it again.",
+    "photo_invalid": "Couldn't read this photo. Use a JPEG, PNG or WebP.",
+    "upload_failed": "Couldn't upload the photo. Try again."
   },
   "auth": {
     "emulatorHint": "Test mode: sign in with an Auth Emulator email and password.",
@@ -146,7 +150,26 @@
     "photoOf": "{name}'s photo",
     "overrideNote": "Categories are saved with source <code>admin</code> and points are recalculated immediately.",
     "updated": "Entry updated",
-    "rejected": "Entry rejected"
+    "rejected": "Entry rejected",
+    "editEntry": "Edit entry",
+    "time": "Time",
+    "timeHint": "Vietnam time. The entry's day and its points follow this time.",
+    "timeRequired": "Pick a date and time.",
+    "timeFuture": "The time can't be in the future.",
+    "outsideChallenge": "This day is outside the challenge ({start} – {end}), so the entry won't score.",
+    "entryTitle": "Title",
+    "note": "Note",
+    "place": "Place",
+    "noPhoto": "This entry has no photo.",
+    "add": "Add entry",
+    "addTitle": "Add an entry for a member",
+    "addDescription": "The entry is confirmed at once and scores for the member. The photo is optional.",
+    "addSubmit": "Add entry",
+    "pickMember": "Pick a member",
+    "photoOptional": "Photo (optional)",
+    "added": "Entry added",
+    "earned": "+{points} pts",
+    "earnedCapped": "+{points} pts · limit reached"
   },
   "rules": {
     "title": "Rules",

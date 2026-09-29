@@ -22,6 +22,22 @@ describe('describeError', () => {
     );
   });
 
+  it('maps the codes adding an entry with a photo can return', () => {
+    expect(describeError(new ApiError(400, 'taken_at_future', 'takenAt is in the future'))).toBe('errors.taken_at_future');
+    expect(describeError(new ApiError(400, 'photo_missing', 'Photo not uploaded'))).toBe('errors.photo_missing');
+    expect(describeError(new ApiError(400, 'photo_invalid', 'Photo could not be decoded'))).toBe('errors.photo_invalid');
+    expect(describeError(new ApiError(0, 'upload_failed', 'PUT failed'))).toBe('errors.upload_failed');
+  });
+
+  it('has Vietnamese and English copy for every key it can answer with', async () => {
+    const vi = (await import('../../../messages/vi.json')).default as { errors: Record<string, string> };
+    const en = (await import('../../../messages/en.json')).default as { errors: Record<string, string> };
+    for (const code of ['taken_at_future', 'photo_missing', 'photo_invalid', 'upload_failed']) {
+      expect(vi.errors[code], `vi errors.${code}`).toEqual(expect.any(String));
+      expect(en.errors[code], `en errors.${code}`).toEqual(expect.any(String));
+    }
+  });
+
   it('describes a network / CORS failure', () => {
     expect(describeError(new TypeError('Failed to fetch'))).toBe('errors.offline');
   });
