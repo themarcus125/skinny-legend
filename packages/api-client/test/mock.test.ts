@@ -190,6 +190,36 @@ describe('mock client', () => {
   });
 });
 
+describe('feed', () => {
+  it('gives every entry the points its author earned for it, agreeing with their history', async () => {
+    const api = fixed();
+    const { entries } = await api.feed();
+    const mine = new Map((await api.myEntries()).entries.map((e) => [e.id, [e.points, e.capped]]));
+    const shared = entries.filter((e) => mine.has(e.id));
+    expect(shared.length).toBeGreaterThan(0);
+    for (const entry of shared) expect([entry.points, entry.capped]).toEqual(mine.get(entry.id));
+    expect(entries.some((e) => e.points > 0)).toBe(true);
+  });
+
+  it('files a backdated entry under when it happened, not at the top of the feed', async () => {
+    const api = fixed();
+    const created = await api.createEntry({ photoKey: 'photos/me/old.jpg', takenAt: '2026-09-09T09:00:00+07:00' });
+    await api.confirmEntry(created.entry.id, { categories: ['group'] });
+    const seen: string[] = [];
+    const ids: string[] = [];
+    let cursor: string | undefined;
+    do {
+      const page = await api.feed(cursor);
+      seen.push(...page.entries.map((e) => e.takenAt));
+      ids.push(...page.entries.map((e) => e.id));
+      cursor = page.nextCursor ?? undefined;
+    } while (cursor);
+    expect(ids).toContain(created.entry.id);
+    expect(ids[0]).not.toBe(created.entry.id);
+    expect(seen.map((t) => Date.parse(t))).toEqual([...seen].map((t) => Date.parse(t)).sort((a, b) => b - a));
+  });
+});
+
 describe('hearts and comments', () => {
   it('seeds hearted entries and comments so every feed state appears', async () => {
     const api = fixed();
