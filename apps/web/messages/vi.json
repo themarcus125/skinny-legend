@@ -251,7 +251,9 @@
     "loadFailed": "Không tải được xu hướng.",
     "mineSeries": "Bạn",
     "cellLabel": "{0}: {1} điểm",
-    "cellLabelEmpty": "{0}: không hoạt động"
+    "cellLabelEmpty": "{0}: không hoạt động",
+    "olderWeeks": "Các tuần trước",
+    "newerWeeks": "Các tuần sau"
   },
   "account": {
     "title": "Tài khoản",

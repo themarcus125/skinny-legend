@@ -251,7 +251,9 @@
     "loadFailed": "Couldn't load trends.",
     "mineSeries": "You",
     "cellLabel": "{0}: {1} points",
-    "cellLabelEmpty": "{0}: no activity"
+    "cellLabelEmpty": "{0}: no activity",
+    "olderWeeks": "Earlier weeks",
+    "newerWeeks": "Later weeks"
   },
   "account": {
     "title": "Account",

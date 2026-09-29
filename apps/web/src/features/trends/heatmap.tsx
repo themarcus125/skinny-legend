@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import { useLocale, useTranslations } from 'use-intl';
 import { cn } from '@skinny/ui';
+import { ChevronRightGlyph } from '@/app/icons';
 import type { TrendsResponse } from '@skinny/shared/wire';
 import type { Locale } from '@/i18n/locale';
 import {
@@ -7,6 +9,7 @@ import {
   buildHeatGrid,
   heatLevel,
   heatmapCellLabel,
+  pageHeatWeeks,
   weekAxisLabel,
   weekdayAxisLabel,
 } from './axis-labels';
@@ -29,6 +32,24 @@ export const HEAT_STYLE: Record<0 | 1 | 2 | 3 | 4, string> = {
 };
 
 /**
+ * The ink for the points written on each step of the ramp. The top two steps are the `--primary`
+ * end, so they take its foreground; the rest are light enough for the body ink.
+ */
+export const HEAT_INK: Record<0 | 1 | 2 | 3 | 4, string> = {
+  0: 'text-foreground-subtle',
+  1: 'text-foreground',
+  2: 'text-foreground',
+  3: 'text-primary-foreground',
+  4: 'text-primary-foreground',
+};
+
+const PAGER_BUTTON = cn(
+  'text-foreground-secondary flex size-11 items-center justify-center rounded-full',
+  'focus-visible:ring-ring focus-visible:ring-2 focus-visible:outline-none',
+  'disabled:text-foreground-subtle disabled:opacity-40',
+);
+
+/**
  * Ngày hoạt động — the active-days calendar. Port of `TrendsView.heatmap`
  * (ios/SkinnyLegend/Features/Trends/TrendsView.swift), where the Y axis is the ISO week and the
  * X axis the Monday-first weekday.
@@ -39,6 +60,10 @@ export const HEAT_STYLE: Record<0 | 1 | 2 | 3 | 4, string> = {
  * is reachable by keyboard, it names itself (`heatmapCellLabel`, the wording of
  * `TrendsModel.accessibilityLabel`), and it opens the day sheet — which on iOS needs a separate
  * `accessibilityChildren` overlay precisely because a `Chart` is opaque to VoiceOver.
+ *
+ * Each square carries the day's points as a number, so the ramp is a reinforcement and not the
+ * only reading. The card shows four weeks at a time — the newest four first — and pages back
+ * through the rest, so a long challenge does not push the rest of Xu hướng off the screen.
  */
 export function Heatmap({
   heatmap,
@@ -49,7 +74,13 @@ export function Heatmap({
 }) {
   const t = useTranslations();
   const locale = useLocale() as Locale;
-  const weeks = buildHeatGrid(heatmap);
+  const [requested, setRequested] = useState(0);
+  const { weeks, page, pageCount, hasOlder, hasNewer } = pageHeatWeeks(
+    buildHeatGrid(heatmap),
+    requested,
+  );
+  const first = weeks[0];
+  const last = weeks[weeks.length - 1];
 
   return (
     <div data-testid="heatmap" className="flex flex-col gap-1.5">
@@ -101,16 +132,56 @@ export function Heatmap({
                     backgroundColor: HEAT_STYLE[level],
                   }}
                   className={cn(
-                    'aspect-square w-full rounded-md transition-transform',
+                    'flex aspect-square w-full items-center justify-center rounded-md transition-transform',
                     'focus-visible:ring-ring focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none',
                     'hover:scale-105 active:scale-95',
+                    HEAT_INK[level],
                   )}
-                />
+                >
+                  {/* Hidden from the name: `aria-label` already reads the points out in words. */}
+                  <span
+                    data-testid="heat-points"
+                    aria-hidden="true"
+                    className="type-caption font-semibold tabular-nums"
+                  >
+                    {cell.points}
+                  </span>
+                </button>
               );
             })}
           </li>
         ))}
       </ul>
+      {pageCount > 1 && first && last ? (
+        <div data-testid="heat-pager" data-page={page} className="flex items-center justify-between gap-2">
+          <button
+            type="button"
+            aria-label={t('trends.olderWeeks')}
+            disabled={!hasOlder}
+            onClick={() => setRequested(page + 1)}
+            className={PAGER_BUTTON}
+          >
+            <ChevronRightGlyph className="size-5 rotate-180" />
+          </button>
+          <span
+            data-testid="heat-range"
+            aria-live="polite"
+            className="type-caption text-foreground-secondary font-semibold tabular-nums"
+          >
+            {/* Two catalog labels and a dash: nothing here for a translator to word. */}
+            {`${weekAxisLabel(first.week, locale)} – ${weekAxisLabel(last.week, locale)}`}
+          </span>
+          <button
+            type="button"
+            aria-label={t('trends.newerWeeks')}
+            disabled={!hasNewer}
+            onClick={() => setRequested(page - 1)}
+            className={PAGER_BUTTON}
+          >
+            <ChevronRightGlyph className="size-5" />
+          </button>
+        </div>
+      ) : null}
       <p className="type-caption text-foreground-subtle pt-0.5">{t('trends.tapCell')}</p>
     </div>
   );
