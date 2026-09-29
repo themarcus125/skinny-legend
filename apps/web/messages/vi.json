@@ -210,7 +210,9 @@
     "comments": "Bình luận",
     "commentCount": "{0} bình luận",
     "edit": "Sửa",
-    "heartFailed": "Không thả tim được, hãy thử lại."
+    "heartFailed": "Không thả tim được, hãy thử lại.",
+    "points": "+{0} điểm",
+    "postedAt": "Đăng lúc {0}"
   },
   "comments": {
     "title": "Bình luận",
@@ -249,7 +251,9 @@
     "loadFailed": "Không tải được xu hướng.",
     "mineSeries": "Bạn",
     "cellLabel": "{0}: {1} điểm",
-    "cellLabelEmpty": "{0}: không hoạt động"
+    "cellLabelEmpty": "{0}: không hoạt động",
+    "olderWeeks": "Các tuần trước",
+    "newerWeeks": "Các tuần sau"
   },
   "account": {
     "title": "Tài khoản",

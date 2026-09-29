@@ -210,7 +210,9 @@
     "comments": "Comments",
     "commentCount": "{0} comments",
     "edit": "Edit",
-    "heartFailed": "Couldn't send the heart, please try again."
+    "heartFailed": "Couldn't send the heart, please try again.",
+    "points": "+{0} pts",
+    "postedAt": "Posted {0}"
   },
   "comments": {
     "title": "Comments",
@@ -249,7 +251,9 @@
     "loadFailed": "Couldn't load trends.",
     "mineSeries": "You",
     "cellLabel": "{0}: {1} points",
-    "cellLabelEmpty": "{0}: no activity"
+    "cellLabelEmpty": "{0}: no activity",
+    "olderWeeks": "Earlier weeks",
+    "newerWeeks": "Later weeks"
   },
   "account": {
     "title": "Account",

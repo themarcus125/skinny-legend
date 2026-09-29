@@ -139,6 +139,65 @@ describe('the group feed on Trang chủ', () => {
     expect(within(rows[1]!).queryByTestId('feed-note')).not.toBeInTheDocument();
   });
 
+  it('says what each post earned, and why a post earned nothing', async () => {
+    const page = await seeded().feed();
+    renderFeed(
+      stubApi({
+        feed: () =>
+          Promise.resolve({
+            entries: [
+              { ...page.entries[0]!, id: 'scored', points: 3, capped: false },
+              { ...page.entries[1]!, id: 'capped', points: 0, capped: true },
+              { ...page.entries[2]!, id: 'outside', points: 0, capped: false },
+            ],
+            nextCursor: null,
+          }),
+      }),
+    );
+
+    const rows = await screen.findAllByTestId('feed-row');
+    expect(within(rows[0]!).getByTestId('feed-points')).toHaveTextContent('+3 điểm');
+    expect(within(rows[0]!).queryByTestId('feed-capped')).not.toBeInTheDocument();
+    expect(within(rows[1]!).getByTestId('feed-points')).toHaveTextContent('+0 điểm');
+    expect(within(rows[1]!).getByTestId('feed-capped')).toHaveTextContent('Đã đủ giới hạn');
+    expect(within(rows[2]!).getByTestId('feed-points')).toHaveTextContent('+0 điểm');
+    expect(within(rows[2]!).queryByTestId('feed-capped')).not.toBeInTheDocument();
+  });
+
+  it('stamps each post with when it happened, and when it was posted if that was another day', async () => {
+    const page = await seeded().feed();
+    renderFeed(
+      stubApi({
+        feed: () =>
+          Promise.resolve({
+            entries: [
+              {
+                ...page.entries[0]!,
+                id: 'same-day',
+                localDate: '2026-09-28',
+                takenAt: '2026-09-28T14:24:00.000Z',
+                createdAt: '2026-09-28T14:25:10.000Z',
+              },
+              {
+                ...page.entries[1]!,
+                id: 'backdated',
+                localDate: '2026-08-02',
+                takenAt: '2026-08-02T09:56:56.000Z',
+                createdAt: '2026-09-28T15:28:12.252Z',
+              },
+            ],
+            nextCursor: null,
+          }),
+      }),
+    );
+
+    const rows = await screen.findAllByTestId('feed-row');
+    expect(within(rows[0]!).getByTestId('feed-time')).toHaveTextContent('21:24 · 28/09');
+    expect(within(rows[0]!).queryByTestId('feed-posted')).not.toBeInTheDocument();
+    expect(within(rows[1]!).getByTestId('feed-time')).toHaveTextContent('16:56 · 02/08');
+    expect(within(rows[1]!).getByTestId('feed-posted')).toHaveTextContent('Đăng lúc 22:28 · 28/09');
+  });
+
   it('leaves a row with no location untappable', async () => {
     // The seed's own first entry with its place stripped — a real `FeedEntryDto`, minus a place.
     const page = await seeded().feed();

@@ -44,6 +44,10 @@ export interface TrendsResponse {
 
 export interface FeedEntryDto extends EntryDto {
   user: UserSummaryDto;
+  /** What this entry earned for its author; the streak bonus belongs to a run of days, not to it. */
+  points: number;
+  /** A cap zeroed at least one of the entry's categories. */
+  capped: boolean;
   heartCount: number;
   commentCount: number;
   /** Whether the requesting member has hearted this entry. */

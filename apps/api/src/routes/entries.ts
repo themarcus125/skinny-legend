@@ -13,7 +13,7 @@ import { authenticate, requireActive, type AuthEnv } from '../middleware/auth.js
 import { storage, newKey, ownedKeyPrefix } from '../services/storage.js';
 import { classifyPhoto, type Verdict } from '../services/vision.js';
 import { makeThumbnail, normalizeImage } from '../services/thumbnail.js';
-import { loadChallenge, loadConfirmedEntries, todayLocal, type Challenge } from '../services/score.js';
+import { entryPoints, loadChallenge, loadConfirmedEntries, todayLocal, type Challenge } from '../services/score.js';
 
 export type EntryDeps = { classify: typeof classifyPhoto };
 
@@ -198,9 +198,7 @@ export function entryRoutes(deps: EntryDeps) {
     const entries: HistoryEntryDto[] = [];
     for (const row of rows) {
       const cats = await categoriesOf(row.id);
-      const points = score.scored.filter((s) => s.entryId === row.id).reduce((sum, s) => sum + s.points, 0);
-      const capped = score.scored.some((s) => s.entryId === row.id && s.capped);
-      entries.push({ ...(await toEntryDto(row, cats)), points, capped });
+      entries.push({ ...(await toEntryDto(row, cats)), ...entryPoints(score, row.id) });
     }
     const nextCursor = rows.length === limit ? rows[rows.length - 1]!.takenAt.toISOString() : null;
     return c.json({ entries, nextCursor } satisfies HistoryResponse);

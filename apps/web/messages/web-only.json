@@ -251,6 +251,22 @@
     "vi": "Không thả tim được, hãy thử lại.",
     "en": "Couldn't send the heart, please try again."
   },
+  "trends.olderWeeks": {
+    "vi": "Các tuần trước",
+    "en": "Earlier weeks"
+  },
+  "trends.newerWeeks": {
+    "vi": "Các tuần sau",
+    "en": "Later weeks"
+  },
+  "feed.points": {
+    "vi": "+{0} điểm",
+    "en": "+{0} pts"
+  },
+  "feed.postedAt": {
+    "vi": "Đăng lúc {0}",
+    "en": "Posted {0}"
+  },
   "comments.title": {
     "vi": "Bình luận",
     "en": "Comments"

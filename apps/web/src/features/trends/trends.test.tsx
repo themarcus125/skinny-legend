@@ -205,6 +205,54 @@ describe('the trends screen', () => {
     expect(cells[0]).toHaveAccessibleName('Thứ Sáu, 11/09: không hoạt động');
   });
 
+  it('writes each day’s points inside its square', async () => {
+    renderTrends();
+
+    const cells = await screen.findAllByTestId('heat-cell');
+    expect(cells.map((cell) => within(cell).getByTestId('heat-points').textContent)).toEqual([
+      '0',
+      '4',
+      '12',
+      '2',
+    ]);
+    // The number is what a sighted reader gets; the accessible name already says it in words.
+    expect(cells[2]).toHaveAccessibleName('Thứ Hai, 14/09: 12 điểm');
+  });
+
+  it('shows four weeks at most and pages back to the older ones', async () => {
+    // Six Mondays, W37 → W42, one scored day in each.
+    const mondays = ['2026-09-07', '2026-09-14', '2026-09-21', '2026-09-28', '2026-10-05', '2026-10-12'];
+    renderTrends(
+      stubApi({
+        trends: () =>
+          Promise.resolve({ ...TRENDS, heatmap: mondays.map((date, index) => ({ date, points: index + 1 })) }),
+      }),
+    );
+    const weeks = () => screen.getAllByTestId('heat-week').map((row) => row.getAttribute('data-week'));
+
+    await screen.findAllByTestId('heat-cell');
+    expect(weeks()).toEqual(['2026-W39', '2026-W40', '2026-W41', '2026-W42']);
+    expect(screen.getByTestId('heat-range')).toHaveTextContent('T39 – T42');
+    const older = screen.getByRole('button', { name: 'Các tuần trước' });
+    const newer = screen.getByRole('button', { name: 'Các tuần sau' });
+    expect(newer).toBeDisabled();
+
+    await userEvent.click(older);
+    expect(weeks()).toEqual(['2026-W37', '2026-W38']);
+    expect(screen.getByTestId('heat-range')).toHaveTextContent('T37 – T38');
+    expect(older).toBeDisabled();
+
+    await userEvent.click(newer);
+    expect(weeks()).toEqual(['2026-W39', '2026-W40', '2026-W41', '2026-W42']);
+  });
+
+  it('shows no pager while everything fits on one page', async () => {
+    renderTrends();
+
+    await screen.findAllByTestId('heat-cell');
+    expect(screen.queryByTestId('heat-pager')).not.toBeInTheDocument();
+  });
+
   it('labels the axes in the active language', async () => {
     renderTrends(stubApi({}), 'en');
 

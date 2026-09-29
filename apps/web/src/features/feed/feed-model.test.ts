@@ -21,6 +21,8 @@ const entry = (id: string, over: Partial<FeedEntryDto> = {}): FeedEntryDto => ({
   heartCount: 0,
   commentCount: 0,
   heartedByMe: false,
+  points: 3,
+  capped: false,
   ...over,
 });
 

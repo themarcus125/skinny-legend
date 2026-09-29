@@ -330,15 +330,20 @@ export class MockApiClient implements ApiClient {
     await this.delay();
     const visible = this.state.entries
       .filter((entry) => entry.status === 'confirmed')
-      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-    const page = paginate(visible, cursor, this.feedPageSize, 'createdAt');
+      // Newest activity first, like the server: a backdated entry files under its own day.
+      .sort((a, b) => Date.parse(b.takenAt) - Date.parse(a.takenAt));
+    const page = paginate(visible, cursor, this.feedPageSize, 'takenAt');
+    const scores = new Map<string, ScoreResult>();
     const entries = page.items.flatMap<FeedEntryDto>((entry) => {
       const author = this.state.users.find((user) => user.id === entry.userId);
       if (!author) return [];
       const hearts = this.state.hearts.filter((h) => h.entryId === entry.id);
+      const score = scores.get(author.id) ?? this.score(author.id);
+      scores.set(author.id, score);
       return [
         {
           ...toEntryDto(entry),
+          ...entryPoints(score, entry.id),
           user: summary(author),
           heartCount: hearts.length,
           commentCount: this.state.comments.filter((c) => c.entryId === entry.id).length,
@@ -370,14 +375,10 @@ export class MockApiClient implements ApiClient {
       .filter((entry) => entry.userId === userId && keep(entry))
       .sort((a, b) => b.takenAt.localeCompare(a.takenAt));
     const page = paginate(visible, cursor, limit, 'takenAt');
-    const entries = page.items.map<HistoryEntryDto>((entry) => {
-      const scored = score.scored.filter((row) => row.entryId === entry.id);
-      return {
-        ...toEntryDto(entry),
-        points: scored.reduce((sum, row) => sum + row.points, 0),
-        capped: scored.some((row) => row.capped),
-      };
-    });
+    const entries = page.items.map<HistoryEntryDto>((entry) => ({
+      ...toEntryDto(entry),
+      ...entryPoints(score, entry.id),
+    }));
     return { entries, nextCursor: page.nextCursor };
   }
 
@@ -743,6 +744,15 @@ function weekPoints(score: ScoreResult, week: string): number {
   return Object.entries(score.byDay)
     .filter(([date]) => isoWeekKey(date) === week)
     .reduce((sum, [, day]) => sum + day.points, 0);
+}
+
+/** What one entry earned inside its author's score — the mock's copy of the server's helper. */
+function entryPoints(score: ScoreResult, entryId: string): { points: number; capped: boolean } {
+  const scored = score.scored.filter((row) => row.entryId === entryId);
+  return {
+    points: scored.reduce((sum, row) => sum + row.points, 0),
+    capped: scored.some((row) => row.capped),
+  };
 }
 
 function paginate<T, K extends keyof T & string>(

@@ -132,3 +132,38 @@ export function buildHeatGrid(heatmap: { date: string; points: number }[]): Heat
   }
   return [...weeks].map(([week, cells]) => ({ week, cells }));
 }
+
+/** How many calendar rows the active-days card shows before it pages. */
+export const HEAT_WEEKS_PER_PAGE = 4;
+
+export interface HeatPage {
+  /** The rows on this page, oldest week first like the grid itself. */
+  weeks: HeatWeek[];
+  /** `0` is the newest page; each step up is four weeks further back. */
+  page: number;
+  pageCount: number;
+  hasOlder: boolean;
+  hasNewer: boolean;
+}
+
+/**
+ * One page of the calendar. Pages are counted back from the newest week, so page `0` is always
+ * "the last four weeks" and only the oldest page can come up short. A page that does not exist
+ * (the data shrank under the reader) clamps to the nearest one that does.
+ */
+export function pageHeatWeeks(
+  weeks: HeatWeek[],
+  page: number,
+  size: number = HEAT_WEEKS_PER_PAGE,
+): HeatPage {
+  const pageCount = Math.max(1, Math.ceil(weeks.length / size));
+  const current = Math.min(Math.max(0, page), pageCount - 1);
+  const end = weeks.length - current * size;
+  return {
+    weeks: weeks.slice(Math.max(0, end - size), end),
+    page: current,
+    pageCount,
+    hasOlder: current < pageCount - 1,
+    hasNewer: current > 0,
+  };
+}

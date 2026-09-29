@@ -44,6 +44,16 @@ export async function loadUserScore(userId: string, challenge: Challenge, asOf: 
   return computeScore({ entries, rules: challenge.rules, challenge: challenge.config, asOf });
 }
 
+/**
+ * What one entry earned inside a member's score: the sum of its scored categories, and whether
+ * a cap zeroed any of them. An entry the score never saw (outside the challenge window, or not
+ * confirmed) earned nothing and was not capped.
+ */
+export function entryPoints(score: ScoreResult, entryId: string): { points: number; capped: boolean } {
+  const rows = score.scored.filter((s) => s.entryId === entryId);
+  return { points: rows.reduce((sum, s) => sum + s.points, 0), capped: rows.some((s) => s.capped) };
+}
+
 export interface ScoreboardRow {
   user: typeof schema.users.$inferSelect;
   score: ScoreResult;

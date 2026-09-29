@@ -3,7 +3,9 @@ import { isoWeekKey as sharedIsoWeekKey } from '@skinny/shared/dates';
 import { translator } from '@/test/intl';
 import type { Translate } from './axis-labels';
 import {
+  HEAT_WEEKS_PER_PAGE,
   buildHeatGrid,
+  pageHeatWeeks,
   heatLevel,
   heatmapCellLabel,
   isoWeekKey,
@@ -68,5 +70,38 @@ describe('the trends axis labels', () => {
     expect(grid[1]?.cells.map((cell) => cell.date)).toEqual(['2026-09-14', '2026-09-20']);
     // Every reported day gets exactly one cell — no filler.
     expect(grid.flatMap((row) => row.cells)).toHaveLength(3);
+  });
+
+  describe('paging the calendar', () => {
+    const week = (n: number) => ({ week: `2026-W${n}`, cells: [] });
+    const six = [37, 38, 39, 40, 41, 42].map(week);
+
+    it('shows four weeks at a time', () => {
+      expect(HEAT_WEEKS_PER_PAGE).toBe(4);
+    });
+
+    it('opens on the newest four weeks, still oldest first', () => {
+      const first = pageHeatWeeks(six, 0);
+      expect(first.weeks.map((row) => row.week)).toEqual(['2026-W39', '2026-W40', '2026-W41', '2026-W42']);
+      expect(first).toMatchObject({ page: 0, pageCount: 2, hasOlder: true, hasNewer: false });
+    });
+
+    it('steps back to whatever older weeks are left', () => {
+      const older = pageHeatWeeks(six, 1);
+      expect(older.weeks.map((row) => row.week)).toEqual(['2026-W37', '2026-W38']);
+      expect(older).toMatchObject({ page: 1, pageCount: 2, hasOlder: false, hasNewer: true });
+    });
+
+    it('is a single page when there are four weeks or fewer', () => {
+      const all = pageHeatWeeks(six.slice(0, 4), 0);
+      expect(all.weeks).toHaveLength(4);
+      expect(all).toMatchObject({ pageCount: 1, hasOlder: false, hasNewer: false });
+    });
+
+    it('clamps a page that no longer exists to the nearest one', () => {
+      expect(pageHeatWeeks(six, 9).page).toBe(1);
+      expect(pageHeatWeeks(six, -1).page).toBe(0);
+      expect(pageHeatWeeks([], 3)).toMatchObject({ weeks: [], page: 0, pageCount: 1 });
+    });
   });
 });
