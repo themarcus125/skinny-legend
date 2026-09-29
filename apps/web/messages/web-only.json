@@ -251,6 +251,14 @@
     "vi": "Không thả tim được, hãy thử lại.",
     "en": "Couldn't send the heart, please try again."
   },
+  "feed.points": {
+    "vi": "+{0} điểm",
+    "en": "+{0} pts"
+  },
+  "feed.postedAt": {
+    "vi": "Đăng lúc {0}",
+    "en": "Posted {0}"
+  },
   "comments.title": {
     "vi": "Bình luận",
     "en": "Comments"

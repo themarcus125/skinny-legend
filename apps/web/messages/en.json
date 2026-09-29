@@ -210,7 +210,9 @@
     "comments": "Comments",
     "commentCount": "{0} comments",
     "edit": "Edit",
-    "heartFailed": "Couldn't send the heart, please try again."
+    "heartFailed": "Couldn't send the heart, please try again.",
+    "points": "+{0} pts",
+    "postedAt": "Posted {0}"
   },
   "comments": {
     "title": "Comments",

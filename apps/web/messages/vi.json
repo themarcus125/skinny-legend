@@ -210,7 +210,9 @@
     "comments": "Bình luận",
     "commentCount": "{0} bình luận",
     "edit": "Sửa",
-    "heartFailed": "Không thả tim được, hãy thử lại."
+    "heartFailed": "Không thả tim được, hãy thử lại.",
+    "points": "+{0} điểm",
+    "postedAt": "Đăng lúc {0}"
   },
   "comments": {
     "title": "Bình luận",

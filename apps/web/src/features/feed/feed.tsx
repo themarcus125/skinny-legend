@@ -8,7 +8,7 @@ import { CommentGlyph, HeartGlyph, MapPinGlyph, PhotoStackGlyph } from '@/app/ic
 import { PlaceButton } from '@/features/map/place-button';
 import { useEntryEditor } from '@/features/track/use-entry-editor';
 import { describeError, useApi } from '@/lib/api';
-import { formatLocalDay } from '@/lib/local-day';
+import { formatEntryTime, formatLocalDay, localDayOf } from '@/lib/local-day';
 import { PhotoButton } from '@/app/photo-viewer';
 import { queryKeys } from '@/lib/query';
 import { useEndSentinel } from '@/lib/use-end-sentinel';
@@ -33,11 +33,10 @@ interface FeedDay {
 /**
  * Groups a cursor-paged feed into day sections **without re-sorting it**.
  *
- * `GET /feed` is ordered by `created_at` descending, which is the order the reader sees and the
- * order the cursor continues from; an entry backdated by its photo's EXIF can therefore arrive
- * after a later day's entries. Walking the list and opening a new section whenever the date
- * changes keeps the server's order intact — re-sorting by date would reshuffle rows under the
- * reader every time a page lands, and would disagree with the cursor.
+ * `GET /feed` is ordered by `taken_at` descending — newest activity first — which is the order
+ * the reader sees and the order the cursor continues from, so the days arrive already in order.
+ * Walking the list and opening a new section whenever the date changes keeps the server's order
+ * intact; re-sorting here would reshuffle rows under the reader every time a page lands.
  */
 export function groupByDay(entries: FeedEntryDto[]): FeedDay[] {
   const days: FeedDay[] = [];
@@ -301,6 +300,8 @@ function FeedRow({
     entry.commentCount > 0
       ? `${t('feed.comments')} · ${t('feed.commentCount', { 0: entry.commentCount })}`
       : t('feed.comments');
+  // A post logged on a later day than it happened says so, or its old date reads as a glitch.
+  const postedLater = localDayOf(entry.createdAt) !== entry.localDate;
   return (
     <SurfaceCard as="article" padding="none" className="overflow-hidden">
       <div data-testid="feed-row" data-entry-id={entry.id}>
@@ -312,9 +313,40 @@ function FeedRow({
         <div className="flex flex-col gap-2.5 p-4">
           <div className="flex items-center gap-2.5">
             <Avatar name={entry.user.displayName} src={entry.user.avatarUrl} size={ROW_AVATAR} />
-            <p data-testid="feed-author" className="type-h3 min-w-0 truncate font-heading">
-              {entry.user.displayName}
-            </p>
+            <div className="flex min-w-0 flex-1 flex-col">
+              <p data-testid="feed-author" className="type-h3 truncate font-heading">
+                {entry.user.displayName}
+              </p>
+              <p className="type-caption text-foreground-subtle truncate tabular-nums">
+                <time data-testid="feed-time" dateTime={entry.takenAt}>
+                  {formatEntryTime(entry.takenAt)}
+                </time>
+                {postedLater ? (
+                  <span data-testid="feed-posted">
+                    {' · '}
+                    {t('feed.postedAt', { 0: formatEntryTime(entry.createdAt) })}
+                  </span>
+                ) : null}
+              </p>
+            </div>
+            <div className="flex shrink-0 flex-col items-end gap-0.5">
+              <span
+                data-testid="feed-points"
+                className={cn(
+                  'type-label rounded-full px-2.5 py-1 tabular-nums',
+                  entry.points > 0
+                    ? 'bg-primary-soft text-foreground'
+                    : 'bg-surface-2 text-foreground-subtle',
+                )}
+              >
+                {t('feed.points', { 0: entry.points })}
+              </span>
+              {entry.capped ? (
+                <span data-testid="feed-capped" className="type-label text-foreground-subtle">
+                  {t('account.capped')}
+                </span>
+              ) : null}
+            </div>
           </div>
           {entry.title ? (
             <p data-testid="feed-title" className="type-body-medium font-medium">

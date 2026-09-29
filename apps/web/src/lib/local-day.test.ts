@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatLocalDay } from './local-day';
+import { formatEntryTime, formatLocalDay, localDayOf } from './local-day';
 
 describe('formatLocalDay', () => {
   it('reads as the weekday then dd/MM in the display language', () => {
@@ -32,5 +32,28 @@ describe('formatLocalDay', () => {
     expect(formatLocalDay('2026-09', 'vi')).toBe('2026-09');
     expect(formatLocalDay('hôm nay', 'vi')).toBe('hôm nay');
     expect(formatLocalDay('2026-xx-14', 'vi')).toBe('2026-xx-14');
+  });
+});
+
+describe('formatEntryTime', () => {
+  it('reads an instant as the challenge clock: HH:mm, then dd/MM', () => {
+    // 14:24 UTC is 21:24 the same evening in Ho Chi Minh City.
+    expect(formatEntryTime('2026-09-28T14:24:00.000Z')).toBe('21:24 · 28/09');
+  });
+
+  it('rolls the date over with the challenge clock, not the reader’s or UTC’s', () => {
+    // 17:30 UTC on the 28th is already half past midnight on the 29th in Vietnam.
+    expect(formatEntryTime('2026-09-28T17:30:00.000Z')).toBe('00:30 · 29/09');
+  });
+
+  it('hands back an unparseable value untouched', () => {
+    expect(formatEntryTime('garbage')).toBe('garbage');
+  });
+});
+
+describe('localDayOf', () => {
+  it('names the challenge day an instant falls on', () => {
+    expect(localDayOf('2026-09-28T15:28:12.252Z')).toBe('2026-09-28');
+    expect(localDayOf('2026-09-28T17:30:00.000Z')).toBe('2026-09-29');
   });
 });
