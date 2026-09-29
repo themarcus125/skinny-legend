@@ -169,6 +169,47 @@ describe('GET /feed and GET /users/:id/entries', () => {
     expect(board.leaderboard[0].total).toBe(3);
   });
 
+  it('feed entries carry the points each one earned, and whether a cap zeroed it', async () => {
+    const a = await asUser('a', { activate: true, name: 'A' });
+    const b = await asUser('b', { activate: true, name: 'B' });
+    const first = await confirmed(a.headers, '2026-09-09T01:00:00Z', ['exercise']);
+    const second = await confirmed(a.headers, '2026-09-09T05:00:00Z', ['exercise', 'meal']);
+    const theirs = await confirmed(b.headers, '2026-09-09T03:00:00Z', ['meal']);
+    const feed = await (await app.request('/feed', { headers: b.headers })).json();
+    const byId = new Map(feed.entries.map((e: { id: string; points: number; capped: boolean }) => [e.id, [e.points, e.capped]]));
+    expect(byId.get(first)).toEqual([3, false]);
+    // The day's exercise cap was already used by `first`; only the meal scores.
+    expect(byId.get(second)).toEqual([2, true]);
+    expect(byId.get(theirs)).toEqual([2, false]);
+  });
+
+  it('feed scores an entry dated before the challenge as zero without calling it capped', async () => {
+    const a = await asUser('a', { activate: true });
+    await confirmed(a.headers, '2026-08-02T09:56:56Z', ['exercise']);
+    const feed = await (await app.request('/feed', { headers: a.headers })).json();
+    expect(feed.entries.map((e: { points: number; capped: boolean }) => [e.points, e.capped])).toEqual([[0, false]]);
+  });
+
+  it('feed is ordered by when the activity happened, so a backdated entry does not jump to the top', async () => {
+    const a = await asUser('a', { activate: true });
+    const recent = await confirmed(a.headers, '2026-09-09T01:00:00Z', ['exercise']);
+    const middle = await confirmed(a.headers, '2026-09-08T12:00:00Z', ['meal']);
+    // Posted last, but its photo is the oldest of the three.
+    const backdated = await confirmed(a.headers, '2026-09-08T02:00:00Z', ['exercise']);
+    const feed = await (await app.request('/feed', { headers: a.headers })).json();
+    expect(feed.entries.map((e: { id: string }) => e.id)).toEqual([recent, middle, backdated]);
+  });
+
+  it('pages the feed from a takenAt cursor', async () => {
+    const a = await asUser('a', { activate: true });
+    const recent = await confirmed(a.headers, '2026-09-09T01:00:00Z', ['exercise']);
+    const backdated = await confirmed(a.headers, '2026-09-08T02:00:00Z', ['exercise']);
+    const all = await (await app.request('/feed', { headers: a.headers })).json();
+    expect(all.entries.map((e: { id: string }) => e.id)).toEqual([recent, backdated]);
+    const page = await (await app.request(`/feed?cursor=${encodeURIComponent(all.entries[0].takenAt)}`, { headers: a.headers })).json();
+    expect(page.entries.map((e: { id: string }) => e.id)).toEqual([backdated]);
+  });
+
   it('feed omits an entry whose verdict failed until the member categorises it', async () => {
     classify.mockResolvedValue({ ...verdict, failed: true });
     const a = await asUser('a', { activate: true });

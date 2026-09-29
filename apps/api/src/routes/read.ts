@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { and, count, desc, eq, gte, inArray, isNotNull, lt } from 'drizzle-orm';
 import {
-  isoWeekKey, addDays, schema, feedQuery, mapQuery, historyQuery, CATEGORIES,
+  computeScore, isoWeekKey, addDays, schema, feedQuery, mapQuery, historyQuery, CATEGORIES,
   type Category, type DashboardDto, type FeedEntryDto, type FeedResponse, type HistoryResponse,
   type LeaderboardResponse, type LeaderboardRowDto, type MapPinDto, type MapResponse,
   type ScoreResult, type TrendsResponse, type UserSummaryDto,
@@ -9,7 +9,7 @@ import {
 import { db } from '../db.js';
 import { validate, uuidParam } from '../validate.js';
 import { authenticate, requireActive, type AuthEnv } from '../middleware/auth.js';
-import { loadChallenge, loadScoreboard, todayLocal } from '../services/score.js';
+import { entryPoints, loadChallenge, loadConfirmedEntries, loadScoreboard, todayLocal } from '../services/score.js';
 import { storage } from '../services/storage.js';
 import { toEntryDto, HISTORY_PAGE_SIZE } from './entries.js';
 
@@ -93,15 +93,29 @@ readRoutes.get('/me/trends', async (c) => {
   return c.json({ weeks, heatmap, byCategory: mine.byCategory, streakBonus: mine.streakBonus } satisfies TrendsResponse);
 });
 
+/**
+ * The group's log, newest *activity* first. It is ordered by `takenAt`, not `createdAt`: an entry
+ * backdated by its photo's capture time (or added by an admin for an earlier day) belongs under
+ * its own day, not above today's entries.
+ */
 readRoutes.get('/feed', validate('query', feedQuery), async (c) => {
   const { cursor } = c.req.valid('query');
   const where = cursor
-    ? and(eq(schema.entries.status, 'confirmed'), lt(schema.entries.createdAt, new Date(cursor)))
+    ? and(eq(schema.entries.status, 'confirmed'), lt(schema.entries.takenAt, new Date(cursor)))
     : eq(schema.entries.status, 'confirmed');
   const rows = await db.select({ entry: schema.entries, user: schema.users })
     .from(schema.entries).innerJoin(schema.users, eq(schema.users.id, schema.entries.userId))
-    .where(where).orderBy(desc(schema.entries.createdAt)).limit(30);
+    .where(where).orderBy(desc(schema.entries.takenAt), desc(schema.entries.createdAt)).limit(30);
   const ids = rows.map(({ entry }) => entry.id);
+  // One score per author on the page, so each entry can say what it earned.
+  const challenge = await loadChallenge();
+  const asOf = todayLocal(challenge.config);
+  const authors = [...new Set(rows.map(({ entry }) => entry.userId))];
+  const confirmedByUser = await loadConfirmedEntries(authors);
+  const scoreByUser = new Map(authors.map((id) => [
+    id,
+    computeScore({ entries: confirmedByUser.get(id) ?? [], rules: challenge.rules, challenge: challenge.config, asOf }),
+  ]));
   const me = c.get('user');
   const [heartRows, commentRows, mine] = ids.length === 0 ? [[], [], []] : await Promise.all([
     db.select({ entryId: schema.entryHearts.entryId, n: count() }).from(schema.entryHearts).where(inArray(schema.entryHearts.entryId, ids)).groupBy(schema.entryHearts.entryId),
@@ -117,13 +131,14 @@ readRoutes.get('/feed', validate('query', feedQuery), async (c) => {
     const cats = (await db.select().from(schema.entryCategories).where(eq(schema.entryCategories.entryId, entry.id))).map((r) => r.category as Category);
     entries.push({
       ...(await toEntryDto(entry, cats)),
+      ...entryPoints(scoreByUser.get(entry.userId)!, entry.id),
       user: await userDto(user),
       heartCount: hearts.get(entry.id) ?? 0,
       commentCount: comments.get(entry.id) ?? 0,
       heartedByMe: hearted.has(entry.id),
     });
   }
-  const nextCursor = rows.length === 30 ? rows[rows.length - 1]!.entry.createdAt.toISOString() : null;
+  const nextCursor = rows.length === 30 ? rows[rows.length - 1]!.entry.takenAt.toISOString() : null;
   return c.json({ entries, nextCursor } satisfies FeedResponse);
 });
 
