@@ -1,15 +1,17 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { and, desc, eq, gte, inArray, lte, type SQL } from 'drizzle-orm';
-import { schema, TEST_NOTIFICATION, type Category } from '@skinny/shared';
+import { schema, toLocalDate, CATEGORIES, ENTRY_TITLE_MAX, ENTRY_NOTE_MAX, TEST_NOTIFICATION, type Category } from '@skinny/shared';
 import { db } from '../db.js';
 import { ApiError } from '../errors.js';
 import { validate, uuidParam } from '../validate.js';
 import { authenticate, requireAdmin, type AuthEnv } from '../middleware/auth.js';
 import { writeAudit } from '../services/audit.js';
-import { storage } from '../services/storage.js';
+import { storage, newKey, ownedKeyPrefix } from '../services/storage.js';
 import { localeFor, pushSender, type PushResult } from '../services/push.js';
-import { toEntryDto } from './entries.js';
+import { entryPoints, loadChallenge, loadUserScore } from '../services/score.js';
+import { makeThumbnail, normalizeImage } from '../services/thumbnail.js';
+import { toEntryDto, TAKEN_AT_FUTURE_TOLERANCE_MS } from './entries.js';
 
 export const adminRoutes = new Hono<AuthEnv>();
 adminRoutes.use(authenticate, requireAdmin);
@@ -65,10 +67,97 @@ adminRoutes.get('/entries', validate('query', entryFilters), async (c) => {
   return c.json({ entries });
 });
 
-const patchEntry = z.object({ categories: z.array(z.enum(['exercise', 'meal', 'group'])).max(3).optional(), status: z.enum(['pending', 'confirmed', 'rejected']).optional() });
+const categoryList = z.array(z.enum(CATEGORIES)).max(3);
+const takenAtField = z.string().datetime({ offset: true });
+const titleField = z.string().max(ENTRY_TITLE_MAX).nullable();
+const noteField = z.string().max(ENTRY_NOTE_MAX).nullable();
+const placeField = z.string().max(120).nullable();
+
+function parseTakenAt(value: string): Date {
+  const takenAt = new Date(value);
+  if (takenAt.getTime() - Date.now() > TAKEN_AT_FUTURE_TOLERANCE_MS) throw new ApiError(400, 'taken_at_future', 'takenAt is in the future');
+  return takenAt;
+}
+
+/** Whitespace-only text is the same as none, exactly as on the member's own sheet. */
+const textOrNull = (value: string | null) => value?.trim() || null;
+
+/** The saved entry with what it now earns, so the console can say so without a second call. */
+async function entryResult(row: typeof schema.entries.$inferSelect) {
+  const cats = (await db.select().from(schema.entryCategories).where(eq(schema.entryCategories.entryId, row.id))).map((r) => r.category as Category);
+  const score = await loadUserScore(row.userId, await loadChallenge());
+  return { entry: await toEntryDto(row, cats), ...entryPoints(score, row.id) };
+}
+
+/**
+ * An entry logged on a member's behalf — they forgot, or their photo carried the wrong date.
+ * It is confirmed at once with the categories the admin picked, skips the AI verdict, and the
+ * photo is optional. A photo, when there is one, is the admin's own upload.
+ */
+const createEntry = z.object({
+  userId: z.string().uuid(),
+  takenAt: takenAtField,
+  categories: categoryList.min(1),
+  photoKey: z.string().min(1).optional(),
+  title: titleField.optional(),
+  note: noteField.optional(),
+  placeName: placeField.optional(),
+});
+adminRoutes.post('/entries', validate('json', createEntry), async (c) => {
+  const admin = c.get('user');
+  const body = c.req.valid('json');
+  const takenAt = parseTakenAt(body.takenAt);
+  const [member] = await db.select().from(schema.users).where(eq(schema.users.id, body.userId));
+  if (!member) throw new ApiError(404, 'not_found', 'User not found');
+
+  let thumbKey: string | null = null;
+  if (body.photoKey) {
+    if (!body.photoKey.startsWith(ownedKeyPrefix('photos', admin.id))) throw new ApiError(403, 'forbidden', 'Photo does not belong to you');
+    const image = await storage.getObject(body.photoKey).catch(() => { throw new ApiError(400, 'photo_missing', 'Photo not uploaded'); });
+    const normalized = await normalizeImage(image).catch(() => { throw new ApiError(400, 'photo_invalid', 'Photo could not be decoded'); });
+    thumbKey = newKey('thumb', member.id);
+    await storage.putObject(thumbKey, await makeThumbnail(normalized), 'image/jpeg');
+  }
+
+  const challenge = await loadChallenge();
+  const placeName = textOrNull(body.placeName ?? null);
+  const categories = [...new Set(body.categories)];
+  const created = await db.transaction(async (tx) => {
+    const [row] = await tx.insert(schema.entries).values({
+      userId: member.id,
+      challengeId: challenge.id,
+      photoKey: body.photoKey ?? null,
+      thumbKey,
+      takenAt,
+      localDate: toLocalDate(takenAt, challenge.config.timezone),
+      status: 'confirmed',
+      placeName,
+      placeSource: placeName ? 'manual' : 'none',
+      title: textOrNull(body.title ?? null),
+      note: textOrNull(body.note ?? null),
+    }).returning();
+    await tx.insert(schema.entryCategories).values(categories.map((category) => ({ entryId: row!.id, category, source: 'admin' as const })));
+    await writeAudit(admin.id, 'entry.create', 'entry', row!.id, body, tx);
+    return row!;
+  });
+  return c.json(await entryResult(created), 201);
+});
+
+const patchEntry = z.object({
+  categories: categoryList.optional(),
+  status: z.enum(['pending', 'confirmed', 'rejected']).optional(),
+  takenAt: takenAtField.optional(),
+  /** Omitted leaves the stored value alone; null or '' clears it. */
+  title: titleField.optional(),
+  note: noteField.optional(),
+  placeName: placeField.optional(),
+});
 adminRoutes.patch('/entries/:id', validate('param', uuidParam), validate('json', patchEntry), async (c) => {
   const id = c.req.valid('param').id;
   const body = c.req.valid('json');
+  const takenAt = body.takenAt ? parseTakenAt(body.takenAt) : undefined;
+  const challenge = await loadChallenge();
+  const placeName = body.placeName === undefined ? undefined : textOrNull(body.placeName);
   const updated = await db.transaction(async (tx) => {
     const [existing] = await tx.select().from(schema.entries).where(eq(schema.entries.id, id));
     if (!existing) throw new ApiError(404, 'not_found', 'Entry not found');
@@ -77,12 +166,19 @@ adminRoutes.patch('/entries/:id', validate('param', uuidParam), validate('json',
       const cats = [...new Set(body.categories)];
       if (cats.length) await tx.insert(schema.entryCategories).values(cats.map((category) => ({ entryId: id, category, source: 'admin' as const })));
     }
-    const [row] = await tx.update(schema.entries).set({ updatedAt: new Date(), ...(body.status ? { status: body.status } : {}) }).where(eq(schema.entries.id, id)).returning();
+    const [row] = await tx.update(schema.entries).set({
+      updatedAt: new Date(),
+      ...(body.status ? { status: body.status } : {}),
+      // The challenge day follows the time, so the entry's points move to the day it names.
+      ...(takenAt ? { takenAt, localDate: toLocalDate(takenAt, challenge.config.timezone) } : {}),
+      ...(body.title !== undefined ? { title: textOrNull(body.title) } : {}),
+      ...(body.note !== undefined ? { note: textOrNull(body.note) } : {}),
+      ...(placeName !== undefined ? { placeName, placeSource: placeName ? 'manual' as const : 'none' as const } : {}),
+    }).where(eq(schema.entries.id, id)).returning();
     await writeAudit(c.get('user').id, 'entry.update', 'entry', id, body, tx);
     return row!;
   });
-  const cats = (await db.select().from(schema.entryCategories).where(eq(schema.entryCategories.entryId, id))).map((r) => r.category as Category);
-  return c.json({ entry: await toEntryDto(updated, cats) });
+  return c.json(await entryResult(updated));
 });
 
 adminRoutes.delete('/entries/:id', validate('param', uuidParam), async (c) => {

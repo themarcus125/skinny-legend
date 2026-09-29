@@ -41,7 +41,8 @@ export type HistoryQuery = z.infer<typeof historyQuery>;
 export interface EntryDto {
   id: string;
   userId: string;
-  photoUrl: string;
+  /** Null when an admin logged the entry for the member without a photo. */
+  photoUrl: string | null;
   thumbUrl: string | null;
   takenAt: string;
   localDate: string;
