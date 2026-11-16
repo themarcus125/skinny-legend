@@ -62,11 +62,11 @@ export function makePgRateLimiter(database: Db, minIntervalMs: number, lockTimeo
     database.transaction(async (tx) => {
       await tx.execute(sql`select set_config('lock_timeout', ${lockTimeout}, true)`);
       await tx.execute(sql`select pg_advisory_xact_lock(${NOMINATIM_LOCK_KEY})`);
-      const startedAt = Date.now();
+      const startedAt = performance.now();
       try {
         return await task();
       } finally {
-        const wait = startedAt + minIntervalMs - Date.now();
+        const wait = startedAt + minIntervalMs - performance.now();
         if (wait > 0) await sleep(wait);
       }
     });
