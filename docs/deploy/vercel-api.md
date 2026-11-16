@@ -148,10 +148,14 @@ Notes:
    -e DST` passes the values into the container without putting them on the command line:
 
    ```bash
-   docker run --rm -e SRC -e DST postgres:18 sh -c 'pg_dump --no-owner --no-acl "$SRC" | psql -v ON_ERROR_STOP=1 --single-transaction "$DST"'
+   docker run --rm -e SRC -e DST postgres:18 sh -c 'pg_dump --no-owner --no-acl --file=/tmp/db.sql "$SRC" && psql -v ON_ERROR_STOP=1 --single-transaction --file=/tmp/db.sql "$DST"'
    ```
 
-   - `DST` must be an empty database: no §4 migrate or seed, and no earlier copy.
+   - `DST` must be an empty database: no §4 migrate or seed, and no earlier copy. To empty it
+     again (after a trial copy, or a §4 run by mistake), reset the Neon branch or run
+     `DROP SCHEMA IF EXISTS public, drizzle CASCADE; CREATE SCHEMA public;` against it.
+   - The dump goes to a file first, so `psql` only runs on a dump that `pg_dump` finished. Piped,
+     a dump that dies part way ends `psql`'s input early and the partial copy commits.
    - `--no-owner --no-acl`: Railway's roles do not exist on Neon; everything ends up owned
      by `neondb_owner`.
    - `ON_ERROR_STOP=1 --single-transaction`: the first failure rolls the whole restore back
