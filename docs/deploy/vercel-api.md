@@ -40,7 +40,7 @@ Neon prints the URLs with `?sslmode=require&channel_binding=require`. Keep `?ssl
 but **delete `&channel_binding=require`** from every URL you hand to this repo's code
 (`DATABASE_URL` on Vercel, and for `db:migrate` / `db:seed`): postgres.js forwards unknown URL
 parameters to the server as startup parameters (`parseOptions` in `postgres/src/index.js`), and
-the server rejects that one. The libpq tools in §5 (`pg_dump`, `pg_restore`, `psql`) understand
+the server rejects that one. The libpq tools in §5 (`pg_dump`, `psql`) understand
 it, so it can stay there.
 
 `apps/api/src/db.ts` opens the pool with `prepare: false`, so no query depends on a prepared
@@ -110,7 +110,7 @@ not silent. `CRON_SECRET` is not one of the gates, so the API boots without it.
 ## 4. Migrate and seed (fresh install only, no Railway data)
 
 **Skip this section when §5's copy will run.** The dump brings the schema and drizzle's
-migration table with it; migrating first only gives the restore objects to drop.
+migration table with it, and the restore needs an empty database.
 
 The deployed function ships only the production build, so `drizzle-kit` is not in it. Run both
 from a local checkout with Neon's **direct** URL (no `-pooler`, no `channel_binding`) exported:
@@ -148,20 +148,15 @@ Notes:
    -e DST` passes the values into the container without putting them on the command line:
 
    ```bash
-   docker run --rm -e SRC -e DST postgres:18 sh -c '
-     pg_dump --format=custom --no-owner --no-privileges --file=/tmp/db.dump "$SRC" &&
-     pg_restore --no-owner --no-privileges --clean --if-exists --exit-on-error --dbname="$DST" /tmp/db.dump'
+   docker run --rm -e SRC -e DST postgres:18 sh -c 'pg_dump --no-owner --no-acl "$SRC" | psql -v ON_ERROR_STOP=1 --single-transaction "$DST"'
    ```
 
-   - `--no-owner --no-privileges`: Railway's roles do not exist on Neon; everything ends up owned
+   - `DST` must be an empty database: no §4 migrate or seed, and no earlier copy.
+   - `--no-owner --no-acl`: Railway's roles do not exist on Neon; everything ends up owned
      by `neondb_owner`.
-   - `--clean --if-exists`: drops each object before recreating it, so the command is safe to run
-     again over an earlier restore (for example a trial run before cutover day).
-   - `--exit-on-error`: the first failure stops the restore instead of leaving a half-copied
-     database behind a wall of warnings.
+   - `ON_ERROR_STOP=1 --single-transaction`: the first failure rolls the whole restore back
+     instead of leaving a half-copied database behind a wall of warnings.
    - The dump includes the `drizzle` schema, so `drizzle.__drizzle_migrations` comes across.
-     This form has been trial-run against the real databases: all 14 tables, including
-     `drizzle.__drizzle_migrations`, matched on row count.
 
 4. **Check the copy.**
 
