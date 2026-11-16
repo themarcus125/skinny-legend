@@ -174,25 +174,26 @@ Recall and the two `ambiguous-*` rows are tie-breakers, not gates.
 
 ---
 
-## 4. Switch the model on Railway
+## 4. Switch the model on Vercel
 
 `VISION_MODEL` is read at boot in `apps/api/src/env.ts` (default `qwen/qwen3.7-flash`).
 Nothing else in the app hard-codes a model id, so changing it is a variable change plus a
 restart — no code change and no rebuild.
 
-Railway dashboard: open the API service → **Variables** → set
+Vercel dashboard: open the API project `skinny-legend-api` → **Settings → Environment Variables**
+→ set, for Production
 
 ```
 VISION_MODEL = <the winning model id, exactly as on openrouter.ai/models>
 ```
 
-then redeploy the service so the new process picks it up.
+then redeploy production so the new function picks it up.
 
 Or with the CLI:
 
 ```bash
-railway variables --set VISION_MODEL=z-ai/glm-4.6v
-railway redeploy
+vercel env add VISION_MODEL production       # prompts for the value; `vercel env rm VISION_MODEL production` first if it exists
+vercel redeploy <production deployment url>
 ```
 
 Afterwards:

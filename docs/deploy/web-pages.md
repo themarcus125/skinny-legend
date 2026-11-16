@@ -2,7 +2,7 @@
 
 Vite 8 + React 19, React Router, TanStack Query, Tailwind v4, `vite-plugin-pwa` (Workbox
 `generateSW`), Firebase web SDK for Google sign-in and FCM web push. Like the admin dashboard it
-is a pure client of the Railway API: no server, no secrets, no database. Unlike the admin it is
+is a pure client of the Vercel API: no server, no secrets, no database. Unlike the admin it is
 an installable PWA, so two things beyond "serve the files" matter — the SPA fallback and the
 service worker.
 
@@ -40,7 +40,7 @@ authoritative list is `apps/web/src/vite-env.d.ts`.
 
 | Variable | Required? | Value |
 | --- | --- | --- |
-| `VITE_API_BASE_URL` | yes | The Railway API domain, **no trailing slash** (e.g. `https://skinny-legend-api.up.railway.app`). Also read at build time by `vite.config.ts`, which gives that origin an explicit `NetworkOnly` service-worker rule. |
+| `VITE_API_BASE_URL` | yes | The Vercel API domain, **no trailing slash** (e.g. `https://skinny-legend-api.vercel.app`). Also read at build time by `vite.config.ts`, which gives that origin an explicit `NetworkOnly` service-worker rule. |
 | `VITE_FIREBASE_API_KEY` | yes | Firebase → Project settings → Your apps → Web app (`apiKey`) |
 | `VITE_FIREBASE_AUTH_DOMAIN` | yes | Same config (`authDomain`, e.g. `skinny-legend.firebaseapp.com`) |
 | `VITE_FIREBASE_PROJECT_ID` | yes | Same config (`projectId`) — must equal the API's `FIREBASE_PROJECT_ID` |
@@ -100,9 +100,10 @@ with a day of persisted data invisible behind it (checklist step 7.5). The `manu
 After a deploy, check the precache size in the build log (`PWA v1.3.0 … precache N entries`); a
 jump of hundreds of KiB usually means a new pattern swept one of these back in.
 
-## 5. On the API side (Railway) — CORS
+## 5. On the API side (Vercel API project) — CORS
 
-The PWA is a different origin from the API. On the Railway `api` service:
+The PWA is a different origin from the API. On the Vercel API project `skinny-legend-api`
+(Production env, `docs/deploy/vercel-api.md` §3):
 
 | Variable | Value |
 | --- | --- |
@@ -130,8 +131,8 @@ installed to the Home Screen — the app says so itself (`src/app/install-hint.t
 3. Track a photo end to end: presign → PUT to R2 → verdict sheet → the entry on Xếp hạng. The
    thumbnail rendering proves the R2 read path; `/places/nearby` resolving to a named place
    below the photo proves the OSM chip and its cache.
-4. Turn on **Nhắc nhở** in Tài khoản, then send yourself one real push (Railway `notify` job, or
-   the admin console) and confirm it arrives and that tapping it lands on `/track`. This only
+4. Turn on **Nhắc nhở** in Tài khoản, then send yourself one real push (the `notify` job, `docs/deploy/vercel-api.md` §8,
+   or the admin console) and confirm it arrives and that tapping it lands on `/track`. This only
    works from the installed app on iOS, and only with the VAPID key set.
 5. Turn airplane mode on and relaunch: the offline strip appears and the last-known dashboard,
    leaderboard and history still render from the persisted cache (24 h, `src/lib/persist.ts`).

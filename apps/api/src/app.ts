@@ -11,6 +11,7 @@ import { feedbackRoutes } from './routes/feedback.js';
 import { adminRoutes } from './routes/admin.js';
 import { placeRoutes, type PlaceDeps } from './routes/places.js';
 import { socialRoutes } from './routes/social.js';
+import { cronRoutes } from './routes/cron.js';
 import { classifyPhoto } from './services/vision.js';
 import { type SocialPushDeps } from './services/social-push.js';
 import { type AuthEnv } from './middleware/auth.js';
@@ -44,7 +45,11 @@ export function createApp(deps: Partial<EntryDeps & PlaceDeps & SocialPushDeps> 
   app.route('/feedback', feedbackRoutes);
   app.route('/admin', adminRoutes);
   app.route('/places', placeRoutes({ nearby: deps.nearby }));
+  app.route('/cron', cronRoutes);
   app.route('/', socialRoutes({ sender: deps.sender, now: deps.now }));
   app.route('/', readRoutes);
   return app;
 }
+
+// Vercel serves this default export; index.ts stays the @hono/node-server entry for Docker and e2e.
+export default createApp();

@@ -28,6 +28,8 @@ const schema = z
     AUTH_MODE: z.enum(['firebase', 'test']).default('firebase'),
     // Comma-separated list of browser origins allowed to call this API (the admin dashboard).
     CORS_ORIGINS: z.string().default('http://localhost:3001'),
+    // Vercel Cron sends it as `Authorization: Bearer …`; empty means /cron/* refuses every request.
+    CRON_SECRET: z.string().default(''),
   })
   // Every var above has a default so the test suite can boot with an almost-empty
   // environment; the real requirements depend on AUTH_MODE and are enforced here.

@@ -12,7 +12,7 @@ reject it outright.
 
 ## Layout
 - `packages/shared` — Drizzle schema, scoring engine, date helpers
-- `apps/api` — Hono REST API (Railway)
+- `apps/api` — Hono REST API (Vercel)
 - `apps/admin` — Next.js 16 admin dashboard (Vercel), standalone: no `@skinny/shared` dependency
 - `apps/web` — Vite + React member PWA (Cloudflare Pages), the web twin of the iOS app
 - `packages/ui` — the design system shared by `apps/web` and `apps/admin`
@@ -45,31 +45,39 @@ API tests need the local Postgres running and use `AUTH_MODE=test` (header `x-te
 
 - `pnpm e2e` — the local end-to-end suite (real services, Firebase Auth Emulator). See [docs/testing/e2e.md](docs/testing/e2e.md).
 
-## Deploy (Railway)
+## Deploy (Vercel + Neon)
 
-Step-by-step runbooks for the first deploy — Railway, R2, Firebase, Vercel, and the list of
-values to collect — live in [`docs/deploy/`](docs/deploy/README.md). The sections below are the
-reference for what the code expects.
+The API runs as a Vercel function (project `skinny-legend-api`, region `sin1`) on a Neon Postgres
+database. Step-by-step runbooks for the first deploy — Neon and the Vercel API project, R2,
+Firebase, the admin on Vercel, the PWA on Cloudflare Pages, and the list of values to collect —
+live in [`docs/deploy/`](docs/deploy/README.md); the API's is
+[`docs/deploy/vercel-api.md`](docs/deploy/vercel-api.md). The sections below are the reference
+for what the code expects.
 
-The runtime image (`apps/api/Dockerfile`) contains only the production dependency tree, so
-`drizzle-kit` is **not** available there. Run migrations and the seed from a dev checkout with
-the production connection string exported:
+Until cutover the Railway deployment, built from `apps/api/Dockerfile`, keeps serving the live
+clients. The data copy from Railway to Neon and the cutover order are in the runbook (§5, §7).
+
+`apps/api/vercel.json` sets the framework (`hono`), install and build commands, output directory
+(`dist`, whose `app.js` default export Vercel serves), region and cron. `drizzle-kit` is a
+devDependency and does not ship with the deployment, so run migrations and the seed from a dev
+checkout with Neon's **direct** URL exported (fresh install only — a data copy brings the
+schema with it):
 
 ```bash
-DATABASE_URL=<production url> pnpm --filter @skinny/api db:migrate \
-  && DATABASE_URL=<production url> pnpm --filter @skinny/api db:seed
+DATABASE_URL=<neon direct url> pnpm --filter @skinny/api db:migrate \
+  && DATABASE_URL=<neon direct url> pnpm --filter @skinny/api db:seed
 ```
 
 The seed is idempotent: it skips when a challenge row already exists.
 
 ### Environment variables
 
-Set these on the Railway service (see `.env.example` for the shape):
+Set these on the Vercel API project, Production (see `.env.example` for the shape):
 
 | Variable | Notes |
 | --- | --- |
-| `DATABASE_URL` | Postgres connection string |
-| `PORT` | Provided by Railway; defaults to 3000 |
+| `DATABASE_URL` | Neon **pooled** URL, without `&channel_binding=require` |
+| `PORT` | Local and Docker only; defaults to 3000 |
 | `FIREBASE_PROJECT_ID` | Required |
 | `FIREBASE_CLIENT_EMAIL` | Required |
 | `FIREBASE_PRIVATE_KEY` | Required; `\n` escapes are expanded at runtime |
@@ -79,33 +87,35 @@ Set these on the Railway service (see `.env.example` for the shape):
 | `R2_BUCKET` | Defaults to `skinny-legend` |
 | `OPENROUTER_API_KEY` | Required |
 | `VISION_MODEL` | Defaults to `qwen/qwen3.7-flash` |
-| `CORS_ORIGINS` | Comma-separated admin origins; defaults to `http://localhost:3001` |
+| `CORS_ORIGINS` | Comma-separated admin and PWA origins; defaults to `http://localhost:3001` |
+| `CRON_SECRET` | Guards `/cron/*`; empty (the default) refuses every request. Set only at cutover |
 
 `AUTH_MODE` must be **unset** in production. It defaults to `firebase`, and the API refuses to
-boot when it is `test` while `NODE_ENV=production`. Any missing or empty variable from the list
-above also fails the boot with a message naming it.
+boot when it is `test` while `NODE_ENV=production`. Any missing or empty required variable from
+the list above also fails the boot with a message naming it.
 
 ### Weekly cleanup cron
 
-Add a second Railway service from the same image with no HTTP port. Railway no longer reads
-`railway.cleanup.json` (Config-as-code is deprecated); set the service's *Build* and *Deploy*
-fields by hand as described in `docs/deploy/railway.md`, and never start it with `pnpm` — the
-runtime image has no pnpm.
+A Vercel cron declared in `apps/api/vercel.json` calls `GET /cron/cleanup` on the API:
 
-- Command: `node dist/jobs/cleanup.js`
-- Schedule: `0 3 * * 1` (Mondays, 03:00 UTC)
-- Same environment variables as the API service
+- Schedule: `0 3 * * 1` (Mondays, 03:00 UTC; Hobby fires it within that hour)
+- Auth: Vercel sends `Authorization: Bearer $CRON_SECRET`; the route answers 401 without it, and
+  to everyone while `CRON_SECRET` is empty
+- Response: `{"deleted":n}`
 
-It deletes R2 objects older than 24h that no row references.
+It deletes R2 objects older than 24h that no row references. Only the cleanup whose database is
+live may sweep the shared bucket, so `CRON_SECRET` is set at cutover — see
+[`docs/deploy/vercel-api.md`](docs/deploy/vercel-api.md) §7. `node dist/jobs/cleanup.js` still
+runs the same sweep once from a shell.
 
 ### Daily push cron
 
-Add a third Railway service from the same image with no HTTP port, configured the same way as
-the cleanup service (`railway.notify.json` is the reference shape only; Railway does not read it).
+**Not wired on Vercel yet.** The job is `apps/api/src/jobs/notify.ts`
+(`node dist/jobs/notify.js`); [`docs/deploy/vercel-api.md`](docs/deploy/vercel-api.md) §8 says
+how to add it as a `/cron/notify` route and cron entry.
 
-- Command: `node dist/jobs/notify.js`
 - Schedule: `0 13 * * *` — 13:00 UTC, which is **20:00 Asia/Ho_Chi_Minh** all year (ICT has no DST)
-- Same environment variables as the API service
+- Same environment variables as the API
 
 Each run builds the reminder plan (`packages/shared/src/notifications/plan.ts`) from the current
 standings and the last 24 h of `notification_log`, then sends through FCM.
@@ -114,9 +124,9 @@ Delivery only goes out for real once `AUTH_MODE=firebase` and `FIREBASE_PROJECT_
 `FIREBASE_CLIENT_EMAIL` and `FIREBASE_PRIVATE_KEY` are all set (SKI-40/42) — the same service
 account that verifies ID tokens, plus an **APNs authentication key uploaded to Firebase → Project
 settings → Cloud Messaging**. The job shares the API's env gate: with `AUTH_MODE` unset (the
-production default) it refuses to boot until the three `FIREBASE_*` vars are present, so create the
-Railway cron service once Firebase and the APNs key are configured. Under `AUTH_MODE=test` (local
-only) sends go to an in-memory fake that reports success, so `notification_log` rows are still written.
+production default) it refuses to boot until the three `FIREBASE_*` vars are present. Under
+`AUTH_MODE=test` (local only) sends go to an in-memory fake that reports success, so
+`notification_log` rows are still written.
 
 ### Bootstrapping the first admin
 
@@ -191,17 +201,17 @@ enforced by the API's token verification and the `role=admin` check).
 
 | Variable | Value |
 | --- | --- |
-| `NEXT_PUBLIC_API_BASE_URL` | The Railway API URL, no trailing slash (e.g. `https://skinny-legend-api.up.railway.app`) |
+| `NEXT_PUBLIC_API_BASE_URL` | The Vercel API URL, no trailing slash (e.g. `https://skinny-legend-api.vercel.app`) |
 | `NEXT_PUBLIC_MOCK` | `0` — **never** `1` in a deployed environment |
 | `NEXT_PUBLIC_FIREBASE_API_KEY` | Firebase console → Project settings → Your apps → Web app |
 | `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN` | e.g. `skinny-legend.firebaseapp.com` |
 | `NEXT_PUBLIC_FIREBASE_PROJECT_ID` | Same project the API verifies tokens against (`FIREBASE_PROJECT_ID`) |
 | `NEXT_PUBLIC_FIREBASE_APP_ID` | The Web app's app id |
 
-#### On the API side (Railway)
+#### On the API side (Vercel API project)
 
 The dashboard is a different origin from the API, so the API must be told to allow it. Set on
-the Railway service, alongside the existing variables:
+the Vercel API project `skinny-legend-api`, alongside the existing variables:
 
 | Variable | Value |
 | --- | --- |
@@ -289,8 +299,8 @@ XcodeGen (`ios/*.xcodeproj` is gitignored), so project settings are edited there
 4. **Firebase project + APNs key** (SKI-40 / SKI-42) — a real Firebase project with the APNs
    auth key uploaded, and the matching service credentials set on the API, so FCM can deliver.
 5. **Production API base URL** — the `API_BASE_URL` Info.plist key, fed per configuration from
-   `settings.configs` in `ios/project.yml` (Debug `http://localhost:3000`, Release a documented
-   placeholder). Replace the Release value with the deployed Railway URL and regenerate; an
+   `settings.configs` in `ios/project.yml` (Debug `http://localhost:3000`, Release the Vercel API
+   `https://skinny-legend-api.vercel.app`, live only after cutover). Regenerate after changing it; an
    `API_BASE_URL` process-environment variable still overrides it for a scheme or a device
    pointing at a laptop (`AppMode.resolveBaseURL`: env → Info.plist → localhost).
 6. **Code signing** — `ios/project.yml` switches signing off (`CODE_SIGN_STYLE: Manual`,
