@@ -15,7 +15,7 @@ by a Neon Postgres database. The weekly R2 cleanup is a Vercel cron that calls
 Framework, install, build, output directory, region and cron all live in
 `apps/api/vercel.json`, so they are reviewed in pull requests rather than set by hand.
 
-**Transition.** Until cutover the Railway project (the `api`, `cleanup` and `notify` services,
+**Transition.** Until cutover the Railway project (the `api` and `cleanup` services,
 built from `apps/api/Dockerfile`, and its Postgres) keeps serving the live clients. The Dockerfile
 and `src/index.ts` (the `@hono/node-server` entry) stay as they are, so Railway keeps building.
 The order that matters is in §5 and §7: copy the data, then turn on the Vercel cron and remove
@@ -226,7 +226,7 @@ Until this runs, the dashboard shows `/not-authorized`.
 
 ## 8. Notify (not wired)
 
-The daily reminder job (`apps/api/src/jobs/notify.ts`, Railway's `notify` service) has no Vercel
+The daily reminder job (`apps/api/src/jobs/notify.ts`; it was never deployed on Railway either) has no Vercel
 route yet. To add it:
 
 1. a `GET /cron/notify` route in `apps/api/src/routes/cron.ts` that calls `runNotifyJob` behind
