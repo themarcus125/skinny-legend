@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import { schema } from '@skinny/shared';
-import { db, sql } from '../src/db.js';
+import { db } from '../src/db.js';
 import { env } from '../src/env.js';
 import { createApp } from '../src/app.js';
 import { app, resetDb, asUser } from './helpers.js';
@@ -56,36 +57,24 @@ describe('haversineMeters', () => {
 });
 
 describe('makePgRateLimiter', () => {
-  it('runs one task at a time and holds the lock for the rest of the interval', async () => {
-    let clock = 0;
-    const slept: number[] = [];
-    const limit = makePgRateLimiter(sql, 1000, {
-      now: () => clock,
-      sleep: async (ms) => { slept.push(ms); clock += ms; },
-    });
-    let running = 0;
-    let maxRunning = 0;
-    await Promise.all([1, 2, 3].map(() => limit(async () => {
-      maxRunning = Math.max(maxRunning, ++running);
-      await new Promise((resolve) => setTimeout(resolve, 5));
-      clock += 10;
-      running--;
-    })));
-    expect(maxRunning).toBe(1);
-    expect(slept).toHaveLength(3);
-    expect(slept.every((ms) => ms >= 990)).toBe(true);
-  });
-
-  it('spaces task starts across two instances on separate connections', async () => {
+  it('runs one task at a time and spaces task starts across two instances on separate connections', async () => {
     const a = postgres(env.DATABASE_URL, { max: 2, prepare: false });
     const b = postgres(env.DATABASE_URL, { max: 2, prepare: false });
     try {
       const interval = 200;
       const starts: number[] = [];
-      const task = async () => { starts.push(performance.now()); };
-      const limitA = makePgRateLimiter(a, interval);
-      const limitB = makePgRateLimiter(b, interval);
+      let running = 0;
+      let maxRunning = 0;
+      const task = async () => {
+        starts.push(performance.now());
+        maxRunning = Math.max(maxRunning, ++running);
+        await new Promise((resolve) => setTimeout(resolve, 5));
+        running--;
+      };
+      const limitA = makePgRateLimiter(drizzle(a, { schema }), interval);
+      const limitB = makePgRateLimiter(drizzle(b, { schema }), interval);
       await Promise.all([limitA(task), limitB(task), limitA(task), limitB(task)]);
+      expect(maxRunning).toBe(1);
       starts.sort((x, y) => x - y);
       expect(starts).toHaveLength(4);
       for (let i = 1; i < starts.length; i++) expect(starts[i]! - starts[i - 1]!).toBeGreaterThanOrEqual(interval - 5);
@@ -95,7 +84,7 @@ describe('makePgRateLimiter', () => {
   });
 
   it('releases the lock when a task rejects, so the next caller proceeds', async () => {
-    const limit = makePgRateLimiter(sql, 0);
+    const limit = makePgRateLimiter(db, 0);
     await expect(limit(async () => { throw new Error('boom'); })).rejects.toThrow('boom');
     await expect(limit(async () => 'ok')).resolves.toBe('ok');
   });
@@ -113,8 +102,10 @@ describe('makePgRateLimiter', () => {
     });
     try {
       await isLocked;
-      const limiter = makePgRateLimiter(sql, 0, { lockTimeoutMs: 50 });
-      await expect(limiter(async () => 'never')).rejects.toThrow(/lock timeout/);
+      const limiter = makePgRateLimiter(db, 0, 50);
+      // drizzle wraps the driver error; Postgres's own message is on `cause`.
+      await expect(limiter(async () => 'never'))
+        .rejects.toMatchObject({ cause: { message: expect.stringMatching(/lock timeout/) } });
       const fetchImpl = nominatim(reverseBody());
       const result = await nearbyPlaces(HCMC.lat, HCMC.lng, { fetch: fetchImpl, limiter });
       expect(result).toMatchObject({ places: [], degraded: true });

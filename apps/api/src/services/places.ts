@@ -1,7 +1,7 @@
-import { eq } from 'drizzle-orm';
+import { setTimeout as sleep } from 'node:timers/promises';
+import { eq, sql } from 'drizzle-orm';
 import { schema, type NearbyPlace, type NearbyPlacesResponse } from '@skinny/shared';
-import type { Sql } from 'postgres';
-import { db, sql } from '../db.js';
+import { db, type Db } from '../db.js';
 
 /**
  * Nearby-place lookup for the web PWA's manual place picker (spec §3.1).
@@ -52,35 +52,28 @@ export type Limiter = <T>(task: () => Promise<T>) => Promise<T>;
  * transaction-scoped Postgres advisory lock held until max(task end, start + minIntervalMs). The
  * lock frees at commit or rollback, so a rejected task releases it and the caller sees its error.
  * set_config(..., true) is transaction-local, which keeps it safe behind a transaction-mode pooler.
- * Trade-off: one pooled connection is held per lookup (<= NOMINATIM_TIMEOUT_MS + the spacing) and a
- * cache miss can wait up to ~1 s minus fetch time; fine at ~100 req/day behind place_cache.
- * `now`/`sleep` are injectable so the spacing can be asserted without real time passing.
+ * Trade-off: one pooled connection is held per lookup, including while a caller waits for the lock
+ * (<= LOCK_TIMEOUT_MS + NOMINATIM_TIMEOUT_MS + the spacing), and a cache miss can wait up to ~1 s
+ * minus fetch time; fine at ~100 req/day behind place_cache.
  */
-export function makePgRateLimiter(
-  client: Sql,
-  minIntervalMs: number,
-  opts: { now?: () => number; sleep?: (ms: number) => Promise<void>; lockTimeoutMs?: number } = {},
-): Limiter {
-  const now = opts.now ?? Date.now;
-  const sleep = opts.sleep ?? ((ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)));
-  const lockTimeout = `${opts.lockTimeoutMs ?? LOCK_TIMEOUT_MS}ms`;
-  // Cast: begin's type unwraps a returned array of promises; an async callback returns a Promise, never an array.
-  return <T>(task: () => Promise<T>): Promise<T> =>
-    client.begin(async (tx) => {
-      await tx`select set_config('lock_timeout', ${lockTimeout}, true)`;
-      await tx`select pg_advisory_xact_lock(${NOMINATIM_LOCK_KEY})`;
-      const startedAt = now();
+export function makePgRateLimiter(database: Db, minIntervalMs: number, lockTimeoutMs = LOCK_TIMEOUT_MS): Limiter {
+  const lockTimeout = `${lockTimeoutMs}ms`;
+  return (task) =>
+    database.transaction(async (tx) => {
+      await tx.execute(sql`select set_config('lock_timeout', ${lockTimeout}, true)`);
+      await tx.execute(sql`select pg_advisory_xact_lock(${NOMINATIM_LOCK_KEY})`);
+      const startedAt = Date.now();
       try {
         return await task();
       } finally {
-        const wait = startedAt + minIntervalMs - now();
+        const wait = startedAt + minIntervalMs - Date.now();
         if (wait > 0) await sleep(wait);
       }
-    }) as Promise<T>;
+    });
 }
 
 /** Shared by every request on every instance (the lock lives in Postgres), so the 1 rps budget is global. */
-const sharedLimiter = makePgRateLimiter(sql, MIN_REQUEST_INTERVAL_MS);
+const sharedLimiter = makePgRateLimiter(db, MIN_REQUEST_INTERVAL_MS);
 
 export interface NearbyDeps {
   fetch?: typeof fetch;
