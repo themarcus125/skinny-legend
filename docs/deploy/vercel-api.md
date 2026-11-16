@@ -175,8 +175,11 @@ Notes:
    The two `psql` lines must be identical. If `DST` still carries `&channel_binding=require`,
    drop it for the `db:migrate` call (§1).
 
-5. Do §7's cutover step (`CRON_SECRET` on Vercel, Railway's `cleanup` removed). Pointing the
-   clients at the Vercel API (§9) is a separate change; cancel Railway after that.
+5. Do §7's cutover step (`CRON_SECRET` on Vercel, Railway's `cleanup` removed). Keep the
+   Railway `api` paused from step 1 until the admin (`NEXT_PUBLIC_API_BASE_URL`) and the PWA
+   (`VITE_API_BASE_URL`) point at Vercel (§9), and switch them in the same sitting, right after
+   §7, not as a later change: a write to Railway now never reaches Neon, and the Vercel cron
+   deletes its photos. Cancel Railway after that.
 
 ## 6. Promote the first admin
 
