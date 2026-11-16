@@ -1,6 +1,6 @@
 import { serve } from '@hono/node-server';
-import { createApp } from './app.js';
+import app from './app.js';
 
 const port = Number(process.env.PORT ?? 3000);
-serve({ fetch: createApp().fetch, port });
+serve({ fetch: app.fetch, port });
 console.log(`api listening on :${port}`);
