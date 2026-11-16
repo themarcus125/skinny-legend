@@ -4,7 +4,7 @@ import { db } from '../src/db.js';
 import { createApp } from '../src/app.js';
 import { app, resetDb, asUser } from './helpers.js';
 import {
-  ATTRIBUTION, cellFor, haversineMeters, makeRateLimiter, nearbyPlaces,
+  ATTRIBUTION, cellFor, haversineMeters, nearbyPlaces, type Limiter,
 } from '../src/services/places.js';
 
 beforeEach(resetDb);
@@ -13,10 +13,10 @@ const HCMC = { lat: 10.7769, lng: 106.7009 };
 
 /**
  * The module-level limiter is the real 1 rps one, and these cases do not exercise it (the
- * `makeRateLimiter` block above does), so they inject a zero-interval one instead of spending
- * a second of wall clock per assertion.
+ * limiter tests do), so they inject a pass-through instead of spending a second of
+ * wall clock per assertion.
  */
-const fast = makeRateLimiter(0);
+const fast: Limiter = (task) => task();
 
 /** A Nominatim jsonv2 `/reverse` body, in the shape the service parses. */
 function nominatim(body: Record<string, unknown>) {
@@ -50,26 +50,6 @@ describe('haversineMeters', () => {
   it('is zero for the same point and ~111 m for 0.001 degrees of latitude', () => {
     expect(haversineMeters(HCMC, HCMC)).toBe(0);
     expect(haversineMeters(HCMC, { ...HCMC, lat: HCMC.lat + 0.001 })).toBeCloseTo(111, 0);
-  });
-});
-
-describe('makeRateLimiter', () => {
-  it('spaces tasks at least the interval apart and runs them in order', async () => {
-    let clock = 0;
-    const slept: number[] = [];
-    const limit = makeRateLimiter(1000, () => clock, async (ms) => { slept.push(ms); clock += ms; });
-    const order: number[] = [];
-    await Promise.all([1, 2, 3].map((n) => limit(async () => { order.push(n); clock += 10; })));
-    expect(order).toEqual([1, 2, 3]);
-    expect(slept.every((ms) => ms >= 990)).toBe(true);
-    expect(slept).toHaveLength(2);
-  });
-
-  it('keeps serving later tasks after one rejects', async () => {
-    let clock = 0;
-    const limit = makeRateLimiter(1000, () => clock, async (ms) => { clock += ms; });
-    await expect(limit(async () => { throw new Error('boom'); })).rejects.toThrow('boom');
-    await expect(limit(async () => 'ok')).resolves.toBe('ok');
   });
 });
 
