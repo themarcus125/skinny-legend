@@ -110,7 +110,7 @@ not silent. `CRON_SECRET` is not one of the gates, so the API boots without it.
 ## 4. Migrate and seed (fresh install only, no Railway data)
 
 **Skip this section when §5's copy will run.** The dump brings the schema and drizzle's
-migration table with it, and the restore needs an empty database.
+migration table with it, and its restore drops and recreates them.
 
 The deployed function ships only the production build, so `drizzle-kit` is not in it. Run both
 from a local checkout with Neon's **direct** URL (no `-pooler`, no `channel_binding`) exported:
