@@ -12,8 +12,8 @@ SDK).
 1. console.firebase.google.com → **Add project** → name it (e.g. `skinny-legend`).
 2. Google Analytics: not needed; turn it off.
 3. Note the **Project ID** Firebase assigns (e.g. `skinny-legend-4f2a1`). It is not a secret and
-   it must be the *same* value everywhere: `FIREBASE_PROJECT_ID` on Railway and
-   `NEXT_PUBLIC_FIREBASE_PROJECT_ID` on Vercel. A mismatch makes every API call 401, because the
+   it must be the *same* value everywhere: `FIREBASE_PROJECT_ID` on the Vercel API project and
+   `NEXT_PUBLIC_FIREBASE_PROJECT_ID` on the Vercel admin project. A mismatch makes every API call 401, because the
    API verifies the token's audience against its own project.
 
 ## 2. Register the apps
@@ -84,9 +84,9 @@ Notifications** capabilities.
 **Project settings → Service accounts → Firebase Admin SDK → Generate new private key.** A JSON
 file downloads; treat it as a credential (do not commit it, do not paste it into chat).
 
-Map three of its fields onto Railway variables (`apps/api/src/services/firebase.ts`):
+Map three of its fields onto the Vercel API project's env vars (`apps/api/src/services/firebase.ts`):
 
-| JSON field | Railway variable |
+| JSON field | Vercel API env var |
 | --- | --- |
 | `project_id` | `FIREBASE_PROJECT_ID` |
 | `client_email` (`firebase-adminsdk-…@<project>.iam.gserviceaccount.com`) | `FIREBASE_CLIENT_EMAIL` |
@@ -100,18 +100,17 @@ In the JSON the key is a single line whose newlines are already the two characte
 "-----BEGIN PRIVATE KEY-----\nMIIEv...\n-----END PRIVATE KEY-----\n"
 ```
 
-Paste it into Railway **exactly like that** — one line, literal `\n`, no surrounding quotes, no
+Paste it into Vercel **exactly like that** — one line, literal `\n`, no surrounding quotes, no
 real line breaks. The API unescapes it at boot:
 
 ```ts
 privateKey: env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
 ```
 
-If you paste a multi-line PEM instead, Railway's bulk-paste editor splits it across variables
-and the boot fails; if you paste with the JSON quotes still attached, `cert()` rejects the key.
+If you paste it with the JSON quotes still attached, `cert()` rejects the key.
 
-Set the same three variables on the `notify` cron service — it uses the same credential to send
-through FCM.
+The `notify` job uses the same credential to send through FCM. On Vercel it runs in the same
+API project (`docs/deploy/vercel-api.md` §8), so there is nothing extra to set.
 
 ## 5. Push / Cloud Messaging **[needs SKI-42]**
 
@@ -144,7 +143,7 @@ A domain that is missing here fails the Google popup with `auth/unauthorized-dom
 ## 7. Verify
 
 1. Admin dashboard with `NEXT_PUBLIC_MOCK=0` → Google sign-in completes and you land on
-   `/not-authorized` (expected until the SQL promotion in `docs/deploy/railway.md`).
+   `/not-authorized` (expected until the SQL promotion in `docs/deploy/vercel-api.md` §6).
 2. After promoting: the dashboard loads members and entries.
 3. iOS app with the plist in place and mock mode off → Apple/Google sign-in returns a token the
    API accepts, and a `users` row appears.
@@ -154,5 +153,5 @@ A domain that is missing here fails the Google popup with `auth/unauthorized-dom
 ## Values to hand back
 
 Non-secret: **project id**, the four `NEXT_PUBLIC_FIREBASE_*` values, the bundle id, the
-`REVERSED_CLIENT_ID`. Secret (Railway Variables only, never chat): the service-account JSON, the
+`REVERSED_CLIENT_ID`. Secret (Vercel API env vars only, never chat): the service-account JSON, the
 APNs `.p8`, the Sign in with Apple `.p8`.

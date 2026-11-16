@@ -1,7 +1,7 @@
 # Vercel — admin dashboard (`apps/admin`)
 
 Next.js 16 App Router, Tailwind v4, TanStack Query, Firebase Google sign-in. It is a pure
-client of the Railway API: no server secrets, no database.
+client of the Vercel API: no server secrets, no database.
 
 Since the `@skinny/api-client` migration the dashboard *does* depend on workspace packages.
 `@skinny/api-client` ships TypeScript source, so Next compiles it through
@@ -46,7 +46,7 @@ Sources: `apps/admin/.env.example`, `apps/admin/src/lib/auth/firebase.ts`.
 
 | Variable | Value |
 | --- | --- |
-| `NEXT_PUBLIC_API_BASE_URL` | The Railway API domain, **no trailing slash** (e.g. `https://skinny-legend-api.up.railway.app`) |
+| `NEXT_PUBLIC_API_BASE_URL` | The Vercel API domain, **no trailing slash** (e.g. `https://skinny-legend-api.vercel.app`) |
 | `NEXT_PUBLIC_MOCK` | `0` — **never** `1` in a deployed environment (`1` swaps in the seeded mock client and skips Firebase entirely) |
 | `NEXT_PUBLIC_FIREBASE_API_KEY` | Firebase → Project settings → Your apps → Web app (`apiKey`) |
 | `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN` | Same config (`authDomain`, e.g. `skinny-legend.firebaseapp.com`) |
@@ -56,10 +56,10 @@ Sources: `apps/admin/.env.example`, `apps/admin/src/lib/auth/firebase.ts`.
 All four Firebase values must be present together; `isFirebaseConfigured()` returns false if any
 is missing and sign-in throws "Thiếu biến môi trường NEXT_PUBLIC_FIREBASE_*".
 
-## 3. On the API side (Railway) — CORS
+## 3. On the API side (Vercel API project) — CORS
 
 The dashboard is a different origin from the API, so the API must be told to allow it. On the
-Railway `api` service, set:
+Vercel API project `skinny-legend-api` (Production env, `docs/deploy/vercel-api.md` §3), set:
 
 | Variable | Value |
 | --- | --- |
@@ -83,10 +83,10 @@ preview domain you sign in from (no wildcards). See `docs/deploy/firebase.md` §
 
 1. Firebase → Authentication → Sign-in method: **Google** enabled.
 2. Firebase → Authorized domains includes the Vercel domain.
-3. `CORS_ORIGINS` on Railway includes the Vercel domain; API redeployed. Verify from the
+3. `CORS_ORIGINS` on the Vercel API project includes the admin domain; API redeployed. Verify from the
    dashboard's browser console:
    `fetch('<api-base-url>/health').then(r => r.json())` → `{ ok: true }` with no CORS error.
-4. Sign in once, then promote yourself with the SQL in `docs/deploy/railway.md` §4; until then
+4. Sign in once, then promote yourself with the SQL in `docs/deploy/vercel-api.md` §6; until then
    the dashboard shows `/not-authorized`.
 5. Photos render: they are 1-hour presigned R2 GET URLs loaded as plain `<img>`, so they need
    no R2 CORS rule (`docs/deploy/r2.md` §3).
