@@ -148,19 +148,20 @@ Notes:
    -e DST` passes the values into the container without putting them on the command line:
 
    ```bash
-   docker run --rm -e SRC -e DST postgres:18 sh -c 'pg_dump --no-owner --no-acl --file=/tmp/db.sql "$SRC" && psql -v ON_ERROR_STOP=1 --single-transaction --file=/tmp/db.sql "$DST"'
+   docker run --rm -e SRC -e DST postgres:18 sh -c 'pg_dump --format=custom --no-owner --no-privileges --file=/tmp/db.dump "$SRC" && pg_restore --clean --if-exists --no-owner --no-privileges --single-transaction --exit-on-error --dbname="$DST" /tmp/db.dump'
    ```
 
-   - `DST` must be an empty database: no §4 migrate or seed, and no earlier copy. To empty it
-     again (after a trial copy, or a §4 run by mistake), reset the Neon branch or run
-     `DROP SCHEMA IF EXISTS public, drizzle CASCADE; CREATE SCHEMA public;` against it.
-   - The dump goes to a file first, so `psql` only runs on a dump that `pg_dump` finished. Piped,
-     a dump that dies part way ends `psql`'s input early and the partial copy commits.
-   - `--no-owner --no-acl`: Railway's roles do not exist on Neon; everything ends up owned
+   - The dump goes to a file first, so `pg_restore` only runs on a dump that `pg_dump` finished.
+   - `--clean --if-exists`: drops each object before recreating it, so the command can run again
+     over an earlier copy (the trial copy already in Neon, or a §4 run by mistake). `DST` does not
+     need to be empty.
+   - `--single-transaction --exit-on-error`: the first failure rolls the whole restore back, the
+     drops included, so `DST` is either the old copy or the new one, never half of each.
+   - `--no-owner --no-privileges`: Railway's roles do not exist on Neon; everything ends up owned
      by `neondb_owner`.
-   - `ON_ERROR_STOP=1 --single-transaction`: the first failure rolls the whole restore back
-     instead of leaving a half-copied database behind a wall of warnings.
    - The dump includes the `drizzle` schema, so `drizzle.__drizzle_migrations` comes across.
+     This exact command was trial-run against the real databases on 2026-11-16, over an earlier
+     copy: all 14 tables, `drizzle.__drizzle_migrations` included, matched on row count.
 
 4. **Check the copy.**
 
