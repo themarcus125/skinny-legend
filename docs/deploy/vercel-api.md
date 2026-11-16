@@ -257,9 +257,12 @@ and `vercel logs` for the deployment must show no 500 and no `ECONNRESET`. A fai
 function kept postgres.js sockets the suspended compute had closed. The fix is a follow-up
 change: a postgres.js `idle_timeout` below the 5-minute suspend window, or a retry-once.
 
-Then hand the domain `https://skinny-legend-api.vercel.app` to the clients (a separate change):
+Then hand the domain `https://skinny-legend-api.vercel.app` to the clients (in the same sitting as
+§5 step 5 and §7):
 
-- `NEXT_PUBLIC_API_BASE_URL` on the Vercel admin project `skinny-legend-admin` (no trailing slash);
-- `VITE_API_BASE_URL` on the Cloudflare Pages project (`skinny-legend.pages.dev`);
+- `NEXT_PUBLIC_API_BASE_URL` on the Vercel admin project `skinny-legend-admin` (no trailing slash),
+  then redeploy that project (the value is baked in at build time);
+- `VITE_API_BASE_URL` on the Cloudflare Pages project (`skinny-legend.pages.dev`), then redeploy
+  that project (the value is baked in at build time);
 - `API_BASE_URL` under `settings.configs.Release` in `ios/project.yml` (already set), then
   regenerate the Xcode project.
