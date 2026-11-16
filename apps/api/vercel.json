@@ -1,0 +1,9 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "hono",
+  "installCommand": "pnpm install --frozen-lockfile",
+  "buildCommand": "pnpm --filter @skinny/shared build && pnpm --filter @skinny/api build",
+  "outputDirectory": "dist",
+  "regions": ["sin1"],
+  "crons": [{ "path": "/cron/cleanup", "schedule": "0 3 * * 1" }]
+}
