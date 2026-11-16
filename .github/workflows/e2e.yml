@@ -48,6 +48,8 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      - run: pnpm --filter @skinny/shared build
+
       - name: Build the Auth Emulator image and start it
         run: |
           docker build -t skinny-auth-emulator ./infra/firebase-emulator
