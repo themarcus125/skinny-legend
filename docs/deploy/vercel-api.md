@@ -177,7 +177,7 @@ Notes:
 
 5. Do §7's cutover step (`CRON_SECRET` on Vercel, Railway's `cleanup` removed). Keep the
    Railway `api` paused from step 1 until the admin (`NEXT_PUBLIC_API_BASE_URL`) and the PWA
-   (`VITE_API_BASE_URL`) point at Vercel (§9), and switch them in the same sitting, right after
+   (`VITE_API_BASE_URL`) point at Vercel (§10), and switch them in the same sitting, right after
    §7, not as a later change: a write to Railway now never reaches Neon, and the Vercel cron
    deletes its photos. Cancel Railway after that.
 
@@ -242,7 +242,10 @@ Hobby allows a cron to run at most once a day, which this schedule fits, but fir
 within the hour, so reminders would land between 20:00 and 20:59. It needs Firebase plus an APNs
 key uploaded to Firebase Cloud Messaging before real sends work (`docs/deploy/firebase.md`).
 
-## 9. Verify
+## 9. Verify (before cutover day)
+
+The production deployment already runs against the trial copy in Neon, so do all of this before
+the cutover sitting, not during it.
 
 ```bash
 curl -fsS https://skinny-legend-api.vercel.app/health                                 # {"ok":true}
@@ -252,13 +255,14 @@ curl -s -o /dev/null -w '%{http_code}\n' https://skinny-legend-api.vercel.app/cr
 
 **Idle check** (Neon Free scales to zero after 5 minutes, fixed). After more than 10 minutes with
 no traffic, call an authenticated route that reads the database (for example `GET /me` with a
-real token, or at cutover `/cron/cleanup` with the secret) **twice in a row**. Both must succeed,
-and `vercel logs` for the deployment must show no 500 and no `ECONNRESET`. A failure means the
-function kept postgres.js sockets the suspended compute had closed. The fix is a follow-up
-change: a postgres.js `idle_timeout` below the 5-minute suspend window, or a retry-once.
+real token) **twice in a row**. Both must succeed, and `vercel logs` for the deployment must show
+no 500 and no `ECONNRESET`. A failure means the function kept postgres.js sockets the suspended
+compute had closed. Fix that before cutover: a postgres.js `idle_timeout` below the 5-minute
+suspend window, or a retry-once.
 
-Then hand the domain `https://skinny-legend-api.vercel.app` to the clients (in the same sitting as
-§5 step 5 and §7):
+## 10. Switch the clients (cutover, same sitting as §5 and §7)
+
+Right after §7, hand the domain `https://skinny-legend-api.vercel.app` to the clients:
 
 - `NEXT_PUBLIC_API_BASE_URL` on the Vercel admin project `skinny-legend-admin` (no trailing slash),
   then redeploy that project (the value is baked in at build time);
