@@ -74,8 +74,7 @@ describe('makePgRateLimiter', () => {
     };
     await Promise.all([limit(task), limit(task), limit(task)]);
     expect(maxRunning).toBe(1);
-    expect(sleeps).toHaveLength(3);
-    for (const ms of sleeps) expect(ms).toBeGreaterThanOrEqual(990);
+    expect(sleeps).toEqual([990, 990, 990]);
   });
 
   it('runs one task at a time and spaces task starts across two instances on separate connections', async () => {
