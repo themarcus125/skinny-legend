@@ -55,19 +55,25 @@ export type Limiter = <T>(task: () => Promise<T>) => Promise<T>;
  * Trade-off: one pooled connection is held per lookup, including while a caller waits for the lock
  * (<= LOCK_TIMEOUT_MS + NOMINATIM_TIMEOUT_MS + the spacing), and a cache miss can wait up to ~1 s
  * minus fetch time; fine at ~100 req/day behind place_cache.
+ * `now`/`sleep` are injectable so the spacing can be asserted without real time passing.
  */
-export function makePgRateLimiter(database: Db, minIntervalMs: number, lockTimeoutMs = LOCK_TIMEOUT_MS): Limiter {
+export function makePgRateLimiter(
+  database: Db,
+  minIntervalMs: number,
+  opts: { now?: () => number; sleep?: (ms: number) => Promise<unknown>; lockTimeoutMs?: number } = {},
+): Limiter {
+  const { now = () => performance.now(), sleep: pause = sleep, lockTimeoutMs = LOCK_TIMEOUT_MS } = opts;
   const lockTimeout = `${lockTimeoutMs}ms`;
   return (task) =>
     database.transaction(async (tx) => {
       await tx.execute(sql`select set_config('lock_timeout', ${lockTimeout}, true)`);
       await tx.execute(sql`select pg_advisory_xact_lock(${NOMINATIM_LOCK_KEY})`);
-      const startedAt = performance.now();
+      const startedAt = now();
       try {
         return await task();
       } finally {
-        const wait = startedAt + minIntervalMs - performance.now();
-        if (wait > 0) await sleep(wait);
+        const wait = startedAt + minIntervalMs - now();
+        if (wait > 0) await pause(wait);
       }
     });
 }

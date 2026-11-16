@@ -57,6 +57,27 @@ describe('haversineMeters', () => {
 });
 
 describe('makePgRateLimiter', () => {
+  it('runs one task at a time and sleeps out the spacing on a fake clock', async () => {
+    let clock = 0;
+    const sleeps: number[] = [];
+    const limit = makePgRateLimiter(db, 1_000, {
+      now: () => clock,
+      sleep: async (ms) => { sleeps.push(ms); clock += ms; },
+    });
+    let running = 0;
+    let maxRunning = 0;
+    const task = async () => {
+      maxRunning = Math.max(maxRunning, ++running);
+      clock += 10;
+      await Promise.resolve();
+      running--;
+    };
+    await Promise.all([limit(task), limit(task), limit(task)]);
+    expect(maxRunning).toBe(1);
+    expect(sleeps).toHaveLength(3);
+    for (const ms of sleeps) expect(ms).toBeGreaterThanOrEqual(990);
+  });
+
   it('runs one task at a time and spaces task starts across two instances on separate connections', async () => {
     const a = postgres(env.DATABASE_URL, { max: 2, prepare: false });
     const b = postgres(env.DATABASE_URL, { max: 2, prepare: false });
@@ -102,7 +123,7 @@ describe('makePgRateLimiter', () => {
     });
     try {
       await isLocked;
-      const limiter = makePgRateLimiter(db, 0, 50);
+      const limiter = makePgRateLimiter(db, 0, { lockTimeoutMs: 50 });
       // drizzle wraps the driver error; Postgres's own message is on `cause`.
       await expect(limiter(async () => 'never'))
         .rejects.toMatchObject({ cause: { message: expect.stringMatching(/lock timeout/) } });
