@@ -299,8 +299,8 @@ XcodeGen (`ios/*.xcodeproj` is gitignored), so project settings are edited there
 4. **Firebase project + APNs key** (SKI-40 / SKI-42) — a real Firebase project with the APNs
    auth key uploaded, and the matching service credentials set on the API, so FCM can deliver.
 5. **Production API base URL** — the `API_BASE_URL` Info.plist key, fed per configuration from
-   `settings.configs` in `ios/project.yml` (Debug `http://localhost:3000`, Release a documented
-   placeholder). Replace the Release value with the deployed Vercel URL and regenerate; an
+   `settings.configs` in `ios/project.yml` (Debug `http://localhost:3000`, Release the Vercel API
+   `https://skinny-legend-api.vercel.app`, live only after cutover). Regenerate after changing it; an
    `API_BASE_URL` process-environment variable still overrides it for a scheme or a device
    pointing at a laptop (`AppMode.resolveBaseURL`: env → Info.plist → localhost).
 6. **Code signing** — `ios/project.yml` switches signing off (`CODE_SIGN_STYLE: Manual`,

@@ -29,8 +29,8 @@ settings:
       CODE_SIGN_STYLE: Automatic
       # Set to your Apple Developer team id before archiving for TestFlight.
       DEVELOPMENT_TEAM: ""
-      # Placeholder: replace with the deployed API's URL before shipping a build.
-      API_BASE_URL: https://skinny-legend-api.up.railway.app
+      # The Vercel API (docs/deploy/vercel-api.md); it serves live data only after cutover.
+      API_BASE_URL: https://skinny-legend-api.vercel.app
 
 packages:
   Firebase:
