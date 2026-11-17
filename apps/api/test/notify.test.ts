@@ -6,7 +6,7 @@ import { fakeSender, type PushMessage, type PushSender } from '../src/services/p
 import { runNotifyJob } from '../src/jobs/notify.js';
 import { resetDb, asUser, challengeId } from './helpers.js';
 
-// 2026-09-20 20:00 ICT — the instant the Railway cron fires.
+// 2026-09-20 20:00 ICT — the instant the notify cron would fire (13:00 UTC).
 const NOW = new Date('2026-09-20T13:00:00Z');
 
 beforeEach(resetDb);
