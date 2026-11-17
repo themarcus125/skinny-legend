@@ -18,10 +18,11 @@ Framework, install, build, output directory, region and cron all live in
 **Status.** The live clients moved here at the 2026-11-17 cutover, in one sitting: the Railway
 `api` was paused, §5 copied Railway's Postgres into Neon (all 14 tables matched on row count),
 `CRON_SECRET` was added on Vercel as Railway's `cleanup` was removed (§7), and the admin and PWA
-were switched to Vercel (§10). The Railway project is paused as a rollback for about a week,
-pending deletion. A final Railway dump taken at cutover is kept offline as a restore source
-(§5). Before a restore or a rollback to Railway, remove `CRON_SECRET` first (§7); restoring the
-cutover dump also drops every write since 2026-11-17. `apps/api/Dockerfile` and `src/index.ts`
+were switched to Vercel (§10). Railway's `api` deployment was then removed too, so a rollback to
+Railway means redeploying it; the Railway project is paused for about a week, pending deletion.
+A final Railway dump taken at cutover is kept offline as `railway-final.dump`, a restore source
+(§5). Before a restore or a rollback to Railway, switch the cleanup cron off first (§7);
+restoring the cutover dump also drops every write since 2026-11-17. `apps/api/Dockerfile` and `src/index.ts`
 (the `@hono/node-server` entry that `pnpm dev`/`start` and the e2e suite run) stay in the repo.
 
 ## 1. Neon
@@ -136,13 +137,12 @@ Notes:
 
 ## 5. Data copy or restore into Neon
 
-1. **Switch the cleanup cron off** when `DST` is the live database: remove `CRON_SECRET` and
-   redeploy, as §7 says.
+1. **Make sure the cleanup cron is off**: `CRON_SECRET` removed and redeployed (§7).
 2. **Stop writes** to the source database, or accept that anything written after the dump is
-   lost.
+   lost. A dump file kept offline has no source: skip this step.
 3. **Export the two URLs without printing them.** `SRC` is the source's public URL (a host
    internal to the source's platform does not resolve from your machine). `DST` is Neon's
-   **direct** URL.
+   **direct** URL. For a dump file, export only `DST`.
 
    ```bash
    read -rs SRC && export SRC   # paste, Enter; nothing is echoed
@@ -156,7 +156,8 @@ Notes:
    docker run --rm -e SRC -e DST postgres:18 sh -c 'pg_dump --format=custom --no-owner --no-privileges --file=/tmp/db.dump "$SRC" && pg_restore --clean --if-exists --no-owner --no-privileges --single-transaction --exit-on-error --dbname="$DST" /tmp/db.dump'
    ```
 
-   To restore a dump file kept offline instead, export only `DST` and mount the file:
+   To restore the dump file kept offline instead, run this from the directory that holds
+   `railway-final.dump`:
 
    ```bash
    docker run --rm -e DST -v "$PWD/railway-final.dump:/tmp/db.dump:ro" postgres:18 sh -c 'pg_restore --clean --if-exists --no-owner --no-privileges --single-transaction --exit-on-error --dbname="$DST" /tmp/db.dump'
@@ -181,8 +182,9 @@ Notes:
    DATABASE_URL="$DST" pnpm --filter @skinny/api db:migrate   # must apply nothing
    ```
 
-   The two `psql` lines must be identical. If `DST` still carries `&channel_binding=require`,
-   drop it for the `db:migrate` call (§1).
+   The two `psql` lines must be identical. A dump file has no `SRC` to compare against: run only
+   the `db:migrate` line. If `DST` still carries `&channel_binding=require`, drop it for the
+   `db:migrate` call (§1).
 
 6. **Switch the cleanup cron back on** (§7) only once Neon is the database the clients write to.
 
@@ -222,8 +224,8 @@ Until this runs, the dashboard shows `/not-authorized`.
   `Bearer <CRON_SECRET>`, and to everyone while `CRON_SECRET` is unset. It is set on Production
   (§3).
 - **Only one cleanup may sweep the shared R2 bucket: the one whose database is live.** A sweep
-  against a stale database deletes photos the live one still references. Before a §5 copy or
-  restore over the live database, or a rollback to another API, remove `CRON_SECRET` and
+  against a stale database deletes photos the live one still references. Before any §5 copy or
+  restore, or a rollback to another API, remove `CRON_SECRET` and
   redeploy (the cron then answers 401); add it back and redeploy only once the restored
   database is the one the clients write to.
 - Manual run:
