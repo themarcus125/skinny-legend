@@ -15,10 +15,13 @@ by a Neon Postgres database. The weekly R2 cleanup is a Vercel cron that calls
 Framework, install, build, output directory, region and cron all live in
 `apps/api/vercel.json`, so they are reviewed in pull requests rather than set by hand.
 
-**Status.** The live clients moved here at the 2026-11-17 cutover, after §5 copied the data from
-Railway into Neon. Railway's `api` and `cleanup` deployments were removed then; the Railway
-project is paused as a rollback for about a week, pending deletion. A final Railway dump taken
-at cutover is kept offline as the restore source (§5). `apps/api/Dockerfile` and `src/index.ts`
+**Status.** The live clients moved here at the 2026-11-17 cutover, in one sitting: the Railway
+`api` was paused, §5 copied Railway's Postgres into Neon (all 14 tables matched on row count),
+`CRON_SECRET` was added on Vercel as Railway's `cleanup` was removed (§7), and the admin and PWA
+were switched to Vercel (§10). The Railway project is paused as a rollback for about a week,
+pending deletion. A final Railway dump taken at cutover is kept offline as a restore source
+(§5). Before a restore or a rollback to Railway, remove `CRON_SECRET` first (§7); restoring the
+cutover dump also drops every write since 2026-11-17. `apps/api/Dockerfile` and `src/index.ts`
 (the `@hono/node-server` entry that `pnpm dev`/`start` and the e2e suite run) stay in the repo.
 
 ## 1. Neon
@@ -97,7 +100,7 @@ on the next deployment: redeploy after editing (`vercel redeploy <production url
 | `VISION_MODEL` | no | Defaults to `qwen/qwen3.7-flash`. Override to swap models with a redeploy, no code change. |
 | `AUTH_MODE` | **leave unset** | Defaults to `firebase`. The API throws on boot if it is `test` while `NODE_ENV=production`. |
 | `CORS_ORIGINS` | yes in practice | Comma-separated browser origins, scheme + host only, no trailing slash: the admin on Vercel and the PWA on Cloudflare Pages, e.g. `https://skinny-legend-admin.vercel.app,https://skinny-legend.pages.dev`. Defaults to `http://localhost:3001`, which covers neither. See `docs/deploy/admin-vercel.md` and `docs/deploy/web-pages.md`. |
-| `CRON_SECRET` | yes (set since 2026-11-17) | `openssl rand -hex 32`. Vercel Cron sends it as `Authorization: Bearer <secret>`. While it is unset, `/cron/cleanup` answers 401 to everyone. |
+| `CRON_SECRET` | yes | `openssl rand -hex 32`. Vercel Cron sends it as `Authorization: Bearer <secret>`. While it is unset, `/cron/cleanup` answers 401 to everyone. |
 
 `PORT` is not used on Vercel: the function has no listener of its own.
 
@@ -131,17 +134,14 @@ Notes:
   Firebase/R2/OpenRouter credentials; it only writes rows.
 - The seed is idempotent: it skips when a `challenges` row already exists.
 
-## 5. Data copy into Neon (done at cutover 2026-11-17; also the restore procedure)
+## 5. Data copy or restore into Neon
 
-This copied Railway's Postgres into Neon at the 2026-11-17 cutover (all 14 tables matched on row
-count). It stays as the procedure for a copy or a restore: to restore from the final Railway
-dump kept offline, skip `pg_dump` and run step 3's `pg_restore` half on that file.
-
-1. **Stop writes** to the source database (at cutover: the Railway `api` service was paused), or
-   accept that anything written after the dump is lost.
-2. **Export the two URLs without printing them.** `SRC` is the source's public URL (at cutover:
-   Railway → Postgres service → *Variables* → `DATABASE_PUBLIC_URL`; the internal
-   `postgres.railway.internal` host does not resolve from your machine). `DST` is Neon's
+1. **Switch the cleanup cron off** when `DST` is the live database: remove `CRON_SECRET` and
+   redeploy, as §7 says.
+2. **Stop writes** to the source database, or accept that anything written after the dump is
+   lost.
+3. **Export the two URLs without printing them.** `SRC` is the source's public URL (a host
+   internal to the source's platform does not resolve from your machine). `DST` is Neon's
    **direct** URL.
 
    ```bash
@@ -149,11 +149,17 @@ dump kept offline, skip `pg_dump` and run step 3's `pg_restore` half on that fil
    read -rs DST && export DST
    ```
 
-3. **Dump and restore** with the Postgres 18 client tools from the official image. `-e SRC
+4. **Dump and restore** with the Postgres 18 client tools from the official image. `-e SRC
    -e DST` passes the values into the container without putting them on the command line:
 
    ```bash
    docker run --rm -e SRC -e DST postgres:18 sh -c 'pg_dump --format=custom --no-owner --no-privileges --file=/tmp/db.dump "$SRC" && pg_restore --clean --if-exists --no-owner --no-privileges --single-transaction --exit-on-error --dbname="$DST" /tmp/db.dump'
+   ```
+
+   To restore a dump file kept offline instead, export only `DST` and mount the file:
+
+   ```bash
+   docker run --rm -e DST -v "$PWD/railway-final.dump:/tmp/db.dump:ro" postgres:18 sh -c 'pg_restore --clean --if-exists --no-owner --no-privileges --single-transaction --exit-on-error --dbname="$DST" /tmp/db.dump'
    ```
 
    - The dump goes to a file first, so `pg_restore` only runs on a dump that `pg_dump` finished.
@@ -162,13 +168,11 @@ dump kept offline, skip `pg_dump` and run step 3's `pg_restore` half on that fil
      need to be empty.
    - `--single-transaction --exit-on-error`: the first failure rolls the whole restore back, the
      drops included, so `DST` is either the old copy or the new one, never half of each.
-   - `--no-owner --no-privileges`: the source's roles (Railway's) do not exist on Neon;
-     everything ends up owned by `neondb_owner`.
+   - `--no-owner --no-privileges`: the source's roles do not exist on Neon; everything ends up
+     owned by `neondb_owner`.
    - The dump includes the `drizzle` schema, so `drizzle.__drizzle_migrations` comes across.
-     This exact command was trial-run against the real databases on 2026-11-16, over an earlier
-     copy: all 14 tables, `drizzle.__drizzle_migrations` included, matched on row count.
 
-4. **Check the copy.**
+5. **Check the copy.**
 
    ```bash
    docker run --rm -e SRC -e DST postgres:18 sh -c '
@@ -180,12 +184,7 @@ dump kept offline, skip `pg_dump` and run step 3's `pg_restore` half on that fil
    The two `psql` lines must be identical. If `DST` still carries `&channel_binding=require`,
    drop it for the `db:migrate` call (§1).
 
-5. **Switch in the same sitting.** At cutover, right after step 4: §7's step (`CRON_SECRET` on
-   Vercel, Railway's `cleanup` removed), then the admin (`NEXT_PUBLIC_API_BASE_URL`) and the PWA
-   (`VITE_API_BASE_URL`) switched to Vercel (§10), with the Railway `api` paused from step 1
-   throughout. No gap was allowed: a write to Railway after the dump never reaches Neon, and the
-   Vercel cron deletes its photos. Railway's `api` and `cleanup` were then removed; the project
-   is paused pending deletion.
+6. **Switch the cleanup cron back on** (§7) only once Neon is the database the clients write to.
 
 ## 6. Promote the first admin
 
@@ -223,9 +222,10 @@ Until this runs, the dashboard shows `/not-authorized`.
   `Bearer <CRON_SECRET>`, and to everyone while `CRON_SECRET` is unset. It is set on Production
   (§3).
 - **Only one cleanup may sweep the shared R2 bucket: the one whose database is live.** A sweep
-  against a stale database deletes photos the live one still references. So at the 2026-11-17
-  cutover, right after §5, one step added `CRON_SECRET` on Vercel (Production, then a redeploy)
-  and removed Railway's `cleanup` service.
+  against a stale database deletes photos the live one still references. Before a §5 copy or
+  restore over the live database, or a rollback to another API, remove `CRON_SECRET` and
+  redeploy (the cron then answers 401); add it back and redeploy only once the restored
+  database is the one the clients write to.
 - Manual run:
 
   ```bash
@@ -263,11 +263,10 @@ no 500 and no `ECONNRESET`. A failure means the function kept postgres.js socket
 compute had closed. Fix it with a postgres.js `idle_timeout` below the 5-minute
 suspend window, or a retry-once.
 
-## 10. Client base URLs (switched at cutover 2026-11-17)
+## 10. Client base URLs
 
-At the 2026-11-17 cutover, right after §7, the clients were switched to
-`https://skinny-legend-api.vercel.app` (Production and Preview, both projects redeployed). Where
-each base URL lives, for a later change:
+The clients use `https://skinny-legend-api.vercel.app` (Production and Preview). Where each base
+URL lives:
 
 - `NEXT_PUBLIC_API_BASE_URL` on the Vercel admin project `skinny-legend-admin` (no trailing slash),
   then redeploy that project (the value is baked in at build time);

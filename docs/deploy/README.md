@@ -1,8 +1,6 @@
 # Deploy runbooks (SKI-37)
 
-Four providers, one order. Each step below links to the runbook that has the clicks. The API has
-run on Vercel + Neon since the 2026-11-17 cutover; the old Railway project is paused pending
-deletion.
+Four providers, one order. Each step below links to the runbook that has the clicks.
 
 | # | Step | Runbook | Blocked by |
 | --- | --- | --- | --- |
@@ -14,7 +12,7 @@ deletion.
 | 6 | Firebase authorized domains for the Vercel domain | [`firebase.md`](./firebase.md) §6 | 5 |
 | 6b | Cloudflare Pages project for the member PWA, env vars, `CORS_ORIGINS` and Firebase authorized domains for the Pages domain | [`web-pages.md`](./web-pages.md) | 3, 4 |
 | 7 | Promote the first admin (SQL on Neon) | [`vercel-api.md`](./vercel-api.md) §6 | 5, 6, plus one sign-in from the dashboard |
-| 8 | `cleanup` Vercel cron (`0 3 * * 1`), switched on with `CRON_SECRET` | [`vercel-api.md`](./vercel-api.md) §7 | 4 (and, after a data copy, §5 first) |
+| 8 | `cleanup` Vercel cron (`0 3 * * 1`), switched on with `CRON_SECRET` | [`vercel-api.md`](./vercel-api.md) §7 | 4 |
 | 9 | Apple: Sign in with Apple key + APNs key, uploaded to Firebase | [`firebase.md`](./firebase.md) §3, §5 | **SKI-42** (paid Apple Developer account) |
 | 10 | `notify` Vercel cron (`0 13 * * *`), not wired yet | [`vercel-api.md`](./vercel-api.md) §8 | 4, 9 — sends fail without the `FIREBASE_*` vars and the APNs key |
 | 11 | iOS release wiring: `GoogleService-Info.plist`, `GOOGLE_REVERSED_CLIENT_ID`, Release `API_BASE_URL`, `DEVELOPMENT_TEAM`, `aps-environment: production` | [`firebase.md`](./firebase.md) §2 and README "Before TestFlight" | 3, 4, SKI-42 |
@@ -52,7 +50,7 @@ rotate it at the provider rather than deleting the message.
 | `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` | Vercel API project env |
 | `OPENROUTER_API_KEY` | Vercel API project env |
 | `FIREBASE_PRIVATE_KEY` (+ the rest of the service-account JSON) | Vercel API project env, one line with literal `\n` |
-| `CRON_SECRET` | Vercel API project env (Production), set since 2026-11-17 (`openssl rand -hex 32`) |
+| `CRON_SECRET` | Vercel API project env (Production), `openssl rand -hex 32` |
 | APNs `.p8`, Sign in with Apple `.p8` | uploaded to Firebase / Apple only; keep the downloads in a password manager |
 | `GoogleService-Info.plist` | on disk at `ios/SkinnyLegend/` only — gitignored, never committed |
 

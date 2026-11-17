@@ -54,9 +54,6 @@ live in [`docs/deploy/`](docs/deploy/README.md); the API's is
 [`docs/deploy/vercel-api.md`](docs/deploy/vercel-api.md). The sections below are the reference
 for what the code expects.
 
-The live clients moved here at the 2026-11-17 cutover; the old Railway project is paused pending
-deletion. The data-copy (and restore) procedure is in the runbook, §5.
-
 `apps/api/vercel.json` sets the framework (`hono`), install and build commands, output directory
 (`dist`, whose `app.js` default export Vercel serves), region and cron. `drizzle-kit` is a
 devDependency and does not ship with the deployment, so run migrations and the seed from a dev
@@ -88,7 +85,7 @@ Set these on the Vercel API project, Production (see `.env.example` for the shap
 | `OPENROUTER_API_KEY` | Required |
 | `VISION_MODEL` | Defaults to `qwen/qwen3.7-flash` |
 | `CORS_ORIGINS` | Comma-separated admin and PWA origins; defaults to `http://localhost:3001` |
-| `CRON_SECRET` | Guards `/cron/*`; empty (the default) refuses every request. Set on the Vercel API project (Production) |
+| `CRON_SECRET` | Guards `/cron/*`; empty (the default) refuses every request. |
 
 `AUTH_MODE` must be **unset** in production. It defaults to `firebase`, and the API refuses to
 boot when it is `test` while `NODE_ENV=production`. Any missing or empty required variable from
@@ -104,8 +101,8 @@ A Vercel cron declared in `apps/api/vercel.json` calls `GET /cron/cleanup` on th
 - Response: `{"deleted":n}`
 
 It deletes R2 objects older than 24h that no row references. Only the cleanup whose database is
-live may sweep the shared bucket, so `CRON_SECRET` has been set since the 2026-11-17 cutover — see
-[`docs/deploy/vercel-api.md`](docs/deploy/vercel-api.md) §7, which also has the manual `curl` run.
+live may sweep the shared bucket — see [`docs/deploy/vercel-api.md`](docs/deploy/vercel-api.md)
+§7, which also has the manual `curl` run.
 
 ### Daily push cron
 
