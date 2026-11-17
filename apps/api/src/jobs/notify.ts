@@ -139,6 +139,7 @@ export async function runNotifyJob(deps: { sender?: PushSender; now?: Date } = {
   return { planned: plan.length, sent, failed, removedTokens: dead.length };
 }
 
+// CLI entry point, mirroring jobs/cleanup.ts.
 if (process.argv[1]?.endsWith('notify.ts') || process.argv[1]?.endsWith('notify.js')) {
   const r = await runNotifyJob();
   console.log(`notify: planned ${r.planned}, sent ${r.sent}, failed ${r.failed}, removed ${r.removedTokens} dead tokens`);

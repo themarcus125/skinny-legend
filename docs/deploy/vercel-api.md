@@ -18,12 +18,10 @@ Framework, install, build, output directory, region and cron all live in
 **Status.** The live clients moved here at the 2026-11-17 cutover, in one sitting: the Railway
 `api` was paused, §5 copied Railway's Postgres into Neon (all 14 tables matched on row count),
 `CRON_SECRET` was added on Vercel as Railway's `cleanup` was removed (§7), and the admin and PWA
-were switched to Vercel (§10). Railway's `api` deployment was then removed too, so a rollback to
-Railway means redeploying it; the Railway project is paused for about a week, pending deletion.
-A final Railway dump taken at cutover is kept offline as `railway-final.dump`, a restore source
-(§5). Before a restore or a rollback to Railway, switch the cleanup cron off first (§7);
-restoring the cutover dump also drops every write since 2026-11-17. `apps/api/Dockerfile` and `src/index.ts`
-(the `@hono/node-server` entry that `pnpm dev`/`start` and the e2e suite run) stay in the repo.
+were switched to Vercel (§10). Railway's `api` and `cleanup` deployments were then removed; the
+Railway project is paused for about a week, pending deletion. `apps/api/Dockerfile` and
+`src/index.ts` (the `@hono/node-server` entry that `pnpm dev`/`start` and the e2e suite run) stay
+in the repo.
 
 ## 1. Neon
 
@@ -113,8 +111,8 @@ not silent. `CRON_SECRET` is not one of the gates, so the API boots without it.
 
 ## 4. Migrate and seed (fresh install only)
 
-**Skip this section when §5's copy will run.** The dump brings the schema and drizzle's
-migration table with it, and its restore drops and recreates them.
+**Not used at cutover:** §5's copy brought the schema and drizzle's migration table with the
+data.
 
 The deployed function ships only the production build, so `drizzle-kit` is not in it. Run both
 from a local checkout with Neon's **direct** URL (no `-pooler`, no `channel_binding`) exported:
@@ -135,58 +133,42 @@ Notes:
   Firebase/R2/OpenRouter credentials; it only writes rows.
 - The seed is idempotent: it skips when a `challenges` row already exists.
 
-## 5. Data copy or restore into Neon
+## 5. Data copy from Railway (done at cutover, 2026-11-17)
 
-1. **Make sure the cleanup cron is off**: `CRON_SECRET` removed and redeployed (§7).
-2. **Stop writes** to the source database, or accept that anything written after the dump is
-   lost. A dump file kept offline has no source: skip this step.
-3. **Export the two URLs without printing them.** `SRC` is the source's public URL (a host
-   internal to the source's platform does not resolve from your machine). `DST` is Neon's
-   **direct** URL. For a dump file, export only `DST`.
+The record of how the data moved from Railway's Postgres into Neon at cutover:
 
-   ```bash
-   read -rs SRC && export SRC   # paste, Enter; nothing is echoed
-   read -rs DST && export DST
-   ```
-
-4. **Dump and restore** with the Postgres 18 client tools from the official image. `-e SRC
-   -e DST` passes the values into the container without putting them on the command line:
+1. **Writes stopped**: the Railway `api` service was paused.
+2. **The two URLs were exported without printing them**: `SRC` was Railway → Postgres service →
+   *Variables* → `DATABASE_PUBLIC_URL` (the internal `postgres.railway.internal` host does not
+   resolve from a laptop), `DST` Neon's **direct** URL (`read -rs SRC && export SRC`, same for
+   `DST`).
+3. **Dump and restore** with the Postgres 18 client tools from the official image; `-e SRC -e DST`
+   passes the values into the container without putting them on the command line:
 
    ```bash
    docker run --rm -e SRC -e DST postgres:18 sh -c 'pg_dump --format=custom --no-owner --no-privileges --file=/tmp/db.dump "$SRC" && pg_restore --clean --if-exists --no-owner --no-privileges --single-transaction --exit-on-error --dbname="$DST" /tmp/db.dump'
    ```
 
-   To restore the dump file kept offline instead, run this from the directory that holds
-   `railway-final.dump`:
+   - The dump went to a file first, so `pg_restore` ran only on a finished dump.
+   - `--clean --if-exists` dropped each object before recreating it, so it ran over the trial
+     copy made on 2026-11-16.
+   - `--single-transaction --exit-on-error`: a failure would have rolled the whole restore back,
+     the drops included.
+   - `--no-owner --no-privileges`: Railway's roles do not exist on Neon; everything is owned by
+     `neondb_owner`.
+   - The dump included the `drizzle` schema, so `drizzle.__drizzle_migrations` came across.
 
-   ```bash
-   docker run --rm -e DST -v "$PWD/railway-final.dump:/tmp/db.dump:ro" postgres:18 sh -c 'pg_restore --clean --if-exists --no-owner --no-privileges --single-transaction --exit-on-error --dbname="$DST" /tmp/db.dump'
-   ```
-
-   - The dump goes to a file first, so `pg_restore` only runs on a dump that `pg_dump` finished.
-   - `--clean --if-exists`: drops each object before recreating it, so the command can run again
-     over an earlier copy (or a §4 run by mistake). `DST` does not
-     need to be empty.
-   - `--single-transaction --exit-on-error`: the first failure rolls the whole restore back, the
-     drops included, so `DST` is either the old copy or the new one, never half of each.
-   - `--no-owner --no-privileges`: the source's roles do not exist on Neon; everything ends up
-     owned by `neondb_owner`.
-   - The dump includes the `drizzle` schema, so `drizzle.__drizzle_migrations` comes across.
-
-5. **Check the copy.**
+4. **Row-count check**: counts were read on both sides and matched for all 14 tables, including
+   `drizzle.__drizzle_migrations`. The query, as for three of them:
 
    ```bash
    docker run --rm -e SRC -e DST postgres:18 sh -c '
      q="select (select count(*) from users), (select count(*) from entries), (select count(*) from drizzle.__drizzle_migrations)"
      psql "$SRC" -Atc "$q"; psql "$DST" -Atc "$q"'
-   DATABASE_URL="$DST" pnpm --filter @skinny/api db:migrate   # must apply nothing
    ```
 
-   The two `psql` lines must be identical. A dump file has no `SRC` to compare against: run only
-   the `db:migrate` line. If `DST` still carries `&channel_binding=require`, drop it for the
-   `db:migrate` call (§1).
-
-6. **Switch the cleanup cron back on** (§7) only once Neon is the database the clients write to.
+The final Railway dump is kept offline at
+`~/skinny-legend-backups/railway-final-2026-11-17.dump` on the maintainer's machine.
 
 ## 6. Promote the first admin
 
@@ -224,10 +206,9 @@ Until this runs, the dashboard shows `/not-authorized`.
   `Bearer <CRON_SECRET>`, and to everyone while `CRON_SECRET` is unset. It is set on Production
   (§3).
 - **Only one cleanup may sweep the shared R2 bucket: the one whose database is live.** A sweep
-  against a stale database deletes photos the live one still references. Before any §5 copy or
-  restore, or a rollback to another API, remove `CRON_SECRET` and
-  redeploy (the cron then answers 401); add it back and redeploy only once the restored
-  database is the one the clients write to.
+  against a stale database deletes photos the live one still references. So at the 2026-11-17
+  cutover, right after §5, one step added `CRON_SECRET` on Vercel (Production, then a redeploy)
+  and removed Railway's `cleanup` deployment.
 - Manual run:
 
   ```bash
