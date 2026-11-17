@@ -1,10 +1,13 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { drizzle } from 'drizzle-orm/postgres-js';
+import postgres from 'postgres';
 import { schema } from '@skinny/shared';
 import { db } from '../src/db.js';
+import { env } from '../src/env.js';
 import { createApp } from '../src/app.js';
 import { app, resetDb, asUser } from './helpers.js';
 import {
-  ATTRIBUTION, cellFor, haversineMeters, makeRateLimiter, nearbyPlaces,
+  ATTRIBUTION, NOMINATIM_LOCK_KEY, cellFor, haversineMeters, makePgRateLimiter, nearbyPlaces, type Limiter,
 } from '../src/services/places.js';
 
 beforeEach(resetDb);
@@ -13,10 +16,10 @@ const HCMC = { lat: 10.7769, lng: 106.7009 };
 
 /**
  * The module-level limiter is the real 1 rps one, and these cases do not exercise it (the
- * `makeRateLimiter` block above does), so they inject a zero-interval one instead of spending
- * a second of wall clock per assertion.
+ * `makePgRateLimiter` block does), so they inject a pass-through instead of spending a second of
+ * wall clock per assertion.
  */
-const fast = makeRateLimiter(0);
+const fast: Limiter = (task) => task();
 
 /** A Nominatim jsonv2 `/reverse` body, in the shape the service parses. */
 function nominatim(body: Record<string, unknown>) {
@@ -53,23 +56,86 @@ describe('haversineMeters', () => {
   });
 });
 
-describe('makeRateLimiter', () => {
-  it('spaces tasks at least the interval apart and runs them in order', async () => {
+describe('makePgRateLimiter', () => {
+  it('runs one task at a time and sleeps out the spacing on a fake clock', async () => {
     let clock = 0;
-    const slept: number[] = [];
-    const limit = makeRateLimiter(1000, () => clock, async (ms) => { slept.push(ms); clock += ms; });
-    const order: number[] = [];
-    await Promise.all([1, 2, 3].map((n) => limit(async () => { order.push(n); clock += 10; })));
-    expect(order).toEqual([1, 2, 3]);
-    expect(slept.every((ms) => ms >= 990)).toBe(true);
-    expect(slept).toHaveLength(2);
+    const sleeps: number[] = [];
+    const limit = makePgRateLimiter(db, 1_000, {
+      now: () => clock,
+      sleep: async (ms) => { sleeps.push(ms); clock += ms; },
+    });
+    let running = 0;
+    let maxRunning = 0;
+    const task = async () => {
+      maxRunning = Math.max(maxRunning, ++running);
+      clock += 10;
+      await Promise.resolve();
+      running--;
+    };
+    await Promise.all([limit(task), limit(task), limit(task)]);
+    expect(maxRunning).toBe(1);
+    expect(sleeps).toEqual([990, 990, 990]);
   });
 
-  it('keeps serving later tasks after one rejects', async () => {
-    let clock = 0;
-    const limit = makeRateLimiter(1000, () => clock, async (ms) => { clock += ms; });
+  it('runs one task at a time and spaces task starts across two instances on separate connections', async () => {
+    const a = postgres(env.DATABASE_URL, { max: 2, prepare: false });
+    const b = postgres(env.DATABASE_URL, { max: 2, prepare: false });
+    try {
+      const interval = 200;
+      const starts: number[] = [];
+      let running = 0;
+      let maxRunning = 0;
+      const task = async () => {
+        starts.push(performance.now());
+        maxRunning = Math.max(maxRunning, ++running);
+        await new Promise((resolve) => setTimeout(resolve, 5));
+        running--;
+      };
+      const limitA = makePgRateLimiter(drizzle(a, { schema }), interval);
+      const limitB = makePgRateLimiter(drizzle(b, { schema }), interval);
+      await Promise.all([limitA(task), limitB(task), limitA(task), limitB(task)]);
+      expect(maxRunning).toBe(1);
+      starts.sort((x, y) => x - y);
+      expect(starts).toHaveLength(4);
+      for (let i = 1; i < starts.length; i++) expect(starts[i]! - starts[i - 1]!).toBeGreaterThanOrEqual(interval - 5);
+    } finally {
+      await Promise.all([a.end(), b.end()]);
+    }
+  });
+
+  it('releases the lock when a task rejects, so the next caller proceeds', async () => {
+    const limit = makePgRateLimiter(db, 0);
     await expect(limit(async () => { throw new Error('boom'); })).rejects.toThrow('boom');
     await expect(limit(async () => 'ok')).resolves.toBe('ok');
+  });
+
+  it('rejects a caller that waits past the lock timeout, so nearbyPlaces degrades', async () => {
+    const holder = postgres(env.DATABASE_URL, { max: 1, prepare: false });
+    let release!: () => void;
+    const released = new Promise<void>((resolve) => { release = resolve; });
+    let locked!: () => void;
+    const isLocked = new Promise<void>((resolve) => { locked = resolve; });
+    const holding = holder.begin(async (tx) => {
+      await tx`select pg_advisory_xact_lock(${NOMINATIM_LOCK_KEY})`;
+      locked();
+      await released;
+    });
+    try {
+      await isLocked;
+      const limiter = makePgRateLimiter(db, 0, { lockTimeoutMs: 50 });
+      // drizzle wraps the driver error; Postgres's own message is on `cause`.
+      await expect(limiter(async () => 'never'))
+        .rejects.toMatchObject({ cause: { message: expect.stringMatching(/lock timeout/) } });
+      const fetchImpl = nominatim(reverseBody());
+      const result = await nearbyPlaces(HCMC.lat, HCMC.lng, { fetch: fetchImpl, limiter });
+      expect(result).toMatchObject({ places: [], degraded: true });
+      expect(fetchImpl).not.toHaveBeenCalled();
+      expect(await db.select().from(schema.placeCache)).toHaveLength(0);
+    } finally {
+      release();
+      await holding;
+      await holder.end();
+    }
   });
 });
 

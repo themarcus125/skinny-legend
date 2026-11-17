@@ -1,6 +1,7 @@
-import { eq } from 'drizzle-orm';
+import { setTimeout as sleep } from 'node:timers/promises';
+import { eq, sql } from 'drizzle-orm';
 import { schema, type NearbyPlace, type NearbyPlacesResponse } from '@skinny/shared';
-import { db } from '../db.js';
+import { db, type Db } from '../db.js';
 
 /**
  * Nearby-place lookup for the web PWA's manual place picker (spec §3.1).
@@ -21,8 +22,12 @@ export const NOMINATIM_TIMEOUT_MS = 5_000;
 export const USER_AGENT = 'SkinnyLegend/1.0 (+https://github.com/themarcus125/skinny-legend)';
 export const ATTRIBUTION = '© OpenStreetMap contributors';
 export const NOMINATIM_BASE = 'https://nominatim.openstreetmap.org';
-/** One outbound request per second, in process, as the fair-use policy demands. */
+/** One outbound request per second across every API instance, as the fair-use policy demands. */
 export const MIN_REQUEST_INTERVAL_MS = 1_000;
+/** App-wide advisory lock key that serialises Nominatim calls; any fixed int unique to this use. */
+export const NOMINATIM_LOCK_KEY = 138_001;
+/** Bounds the cross-instance queue: a caller waiting longer than this degrades instead of hanging. */
+export const LOCK_TIMEOUT_MS = 10_000;
 
 /** lat/lng rounded to 3 decimals (~110 m) — the place_cache primary key. */
 export function cellFor(lat: number, lng: number): string {
@@ -43,35 +48,38 @@ export function haversineMeters(a: { lat: number; lng: number }, b: { lat: numbe
 export type Limiter = <T>(task: () => Promise<T>) => Promise<T>;
 
 /**
- * Serialises callers to at most one outbound request per `minIntervalMs`. Tasks queue on a promise
- * chain, so they also run in submission order; a rejected task never stalls the queue behind it.
+ * Serialises callers on every instance to at most one task start per `minIntervalMs`, using a
+ * transaction-scoped Postgres advisory lock held until max(task end, start + minIntervalMs). The
+ * lock frees at commit or rollback, so a rejected task releases it and the caller sees its error.
+ * set_config(..., true) is transaction-local, which keeps it safe behind a transaction-mode pooler.
+ * Trade-off: one pooled connection is held per lookup, including while a caller waits for the lock
+ * (<= LOCK_TIMEOUT_MS + NOMINATIM_TIMEOUT_MS + the spacing), and a cache miss can wait up to ~1 s
+ * minus fetch time; fine at ~100 req/day behind place_cache.
  * `now`/`sleep` are injectable so the spacing can be asserted without real time passing.
  */
-export function makeRateLimiter(
+export function makePgRateLimiter(
+  database: Db,
   minIntervalMs: number,
-  now: () => number = Date.now,
-  sleep: (ms: number) => Promise<void> = (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+  opts: { now?: () => number; sleep?: (ms: number) => Promise<unknown>; lockTimeoutMs?: number } = {},
 ): Limiter {
-  let chain: Promise<unknown> = Promise.resolve();
-  let lastStartedAt = Number.NEGATIVE_INFINITY;
-  return <T>(task: () => Promise<T>): Promise<T> => {
-    const run = chain.then(async () => {
-      const wait = lastStartedAt + minIntervalMs - now();
-      if (wait > 0) await sleep(wait);
-      lastStartedAt = now();
-      return task();
+  const { now = () => performance.now(), sleep: pause = sleep, lockTimeoutMs = LOCK_TIMEOUT_MS } = opts;
+  const lockTimeout = `${lockTimeoutMs}ms`;
+  return (task) =>
+    database.transaction(async (tx) => {
+      await tx.execute(sql`select set_config('lock_timeout', ${lockTimeout}, true)`);
+      await tx.execute(sql`select pg_advisory_xact_lock(${NOMINATIM_LOCK_KEY})`);
+      const startedAt = now();
+      try {
+        return await task();
+      } finally {
+        const wait = startedAt + minIntervalMs - now();
+        if (wait > 0) await pause(wait);
+      }
     });
-    // Swallow only on the *queue* copy: the caller still sees the rejection through `run`.
-    chain = run.then(
-      () => undefined,
-      () => undefined,
-    );
-    return run;
-  };
 }
 
-/** Shared by every request this process serves, which is what makes the 1 rps budget global. */
-const sharedLimiter = makeRateLimiter(MIN_REQUEST_INTERVAL_MS);
+/** Shared by every request on every instance (the lock lives in Postgres), so the 1 rps budget is global. */
+const sharedLimiter = makePgRateLimiter(db, MIN_REQUEST_INTERVAL_MS);
 
 export interface NearbyDeps {
   fetch?: typeof fetch;
