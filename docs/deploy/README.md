@@ -7,7 +7,7 @@ Four providers, one order. Each step below links to the runbook that has the cli
 | 1 | Cloudflare R2 bucket, scoped API token, CORS | [`r2.md`](./r2.md) | — |
 | 2 | OpenRouter API key | (no runbook: openrouter.ai → Keys → create) | — |
 | 3 | Firebase project, Google provider, service account, web app config | [`firebase.md`](./firebase.md) | — |
-| 4 | Neon database, Vercel API project `skinny-legend-api`, env vars, migrate + seed (at cutover, the §5 data copy from Railway instead) | [`vercel-api.md`](./vercel-api.md) §1–§5 | 1–3 (the API will not boot without R2, OpenRouter and Firebase vars) |
+| 4 | Neon database, Vercel API project `skinny-legend-api`, env vars, migrate + seed | [`vercel-api.md`](./vercel-api.md) §1–§4 | 1–3 (the API will not boot without R2, OpenRouter and Firebase vars) |
 | 5 | Vercel admin project, env vars, `CORS_ORIGINS` back on the Vercel API project | [`admin-vercel.md`](./admin-vercel.md), [`vercel-api.md`](./vercel-api.md) §3 | 3, 4 |
 | 6 | Firebase authorized domains for the Vercel domain | [`firebase.md`](./firebase.md) §6 | 5 |
 | 6b | Cloudflare Pages project for the member PWA, env vars, `CORS_ORIGINS` and Firebase authorized domains for the Pages domain | [`web-pages.md`](./web-pages.md) | 3, 4 |
