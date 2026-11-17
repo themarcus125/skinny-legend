@@ -54,9 +54,6 @@ live in [`docs/deploy/`](docs/deploy/README.md); the API's is
 [`docs/deploy/vercel-api.md`](docs/deploy/vercel-api.md). The sections below are the reference
 for what the code expects.
 
-Until cutover the Railway deployment, built from `apps/api/Dockerfile`, keeps serving the live
-clients. The data copy from Railway to Neon and the cutover order are in the runbook (§5, §7).
-
 `apps/api/vercel.json` sets the framework (`hono`), install and build commands, output directory
 (`dist`, whose `app.js` default export Vercel serves), region and cron. `drizzle-kit` is a
 devDependency and does not ship with the deployment, so run migrations and the seed from a dev
@@ -88,7 +85,7 @@ Set these on the Vercel API project, Production (see `.env.example` for the shap
 | `OPENROUTER_API_KEY` | Required |
 | `VISION_MODEL` | Defaults to `qwen/qwen3.7-flash` |
 | `CORS_ORIGINS` | Comma-separated admin and PWA origins; defaults to `http://localhost:3001` |
-| `CRON_SECRET` | Guards `/cron/*`; empty (the default) refuses every request. Set only at cutover |
+| `CRON_SECRET` | Guards `/cron/*`; empty (the default) refuses every request. |
 
 `AUTH_MODE` must be **unset** in production. It defaults to `firebase`, and the API refuses to
 boot when it is `test` while `NODE_ENV=production`. Any missing or empty required variable from
@@ -104,9 +101,8 @@ A Vercel cron declared in `apps/api/vercel.json` calls `GET /cron/cleanup` on th
 - Response: `{"deleted":n}`
 
 It deletes R2 objects older than 24h that no row references. Only the cleanup whose database is
-live may sweep the shared bucket, so `CRON_SECRET` is set at cutover — see
-[`docs/deploy/vercel-api.md`](docs/deploy/vercel-api.md) §7. `node dist/jobs/cleanup.js` still
-runs the same sweep once from a shell.
+live may sweep the shared bucket — see [`docs/deploy/vercel-api.md`](docs/deploy/vercel-api.md)
+§7, which also has the manual `curl` run.
 
 ### Daily push cron
 
@@ -300,7 +296,7 @@ XcodeGen (`ios/*.xcodeproj` is gitignored), so project settings are edited there
    auth key uploaded, and the matching service credentials set on the API, so FCM can deliver.
 5. **Production API base URL** — the `API_BASE_URL` Info.plist key, fed per configuration from
    `settings.configs` in `ios/project.yml` (Debug `http://localhost:3000`, Release the Vercel API
-   `https://skinny-legend-api.vercel.app`, live only after cutover). Regenerate after changing it; an
+   `https://skinny-legend-api.vercel.app`). Regenerate after changing it; an
    `API_BASE_URL` process-environment variable still overrides it for a scheme or a device
    pointing at a laptop (`AppMode.resolveBaseURL`: env → Info.plist → localhost).
 6. **Code signing** — `ios/project.yml` switches signing off (`CODE_SIGN_STYLE: Manual`,

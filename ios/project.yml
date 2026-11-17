@@ -29,7 +29,7 @@ settings:
       CODE_SIGN_STYLE: Automatic
       # Set to your Apple Developer team id before archiving for TestFlight.
       DEVELOPMENT_TEAM: ""
-      # The Vercel API (docs/deploy/vercel-api.md); it serves live data only after cutover.
+      # The Vercel API (docs/deploy/vercel-api.md).
       API_BASE_URL: https://skinny-legend-api.vercel.app
 
 packages:

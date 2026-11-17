@@ -16,7 +16,7 @@ export function firebaseApp(): App {
       credential: cert({
         projectId: env.FIREBASE_PROJECT_ID,
         clientEmail: env.FIREBASE_CLIENT_EMAIL,
-        // Railway stores the key with literal \n escapes.
+        // Hosting env vars store the key with literal \n escapes (see docs/deploy/firebase.md).
         privateKey: env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
       }),
     });

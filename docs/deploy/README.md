@@ -7,12 +7,12 @@ Four providers, one order. Each step below links to the runbook that has the cli
 | 1 | Cloudflare R2 bucket, scoped API token, CORS | [`r2.md`](./r2.md) | — |
 | 2 | OpenRouter API key | (no runbook: openrouter.ai → Keys → create) | — |
 | 3 | Firebase project, Google provider, service account, web app config | [`firebase.md`](./firebase.md) | — |
-| 4 | Neon database, Vercel API project `skinny-legend-api`, env vars, migrate + seed (or the data copy from Railway) | [`vercel-api.md`](./vercel-api.md) §1–§5 | 1–3 (the API will not boot without R2, OpenRouter and Firebase vars) |
+| 4 | Neon database, Vercel API project `skinny-legend-api`, env vars, migrate + seed | [`vercel-api.md`](./vercel-api.md) §1–§4 | 1–3 (the API will not boot without R2, OpenRouter and Firebase vars) |
 | 5 | Vercel admin project, env vars, `CORS_ORIGINS` back on the Vercel API project | [`admin-vercel.md`](./admin-vercel.md), [`vercel-api.md`](./vercel-api.md) §3 | 3, 4 |
 | 6 | Firebase authorized domains for the Vercel domain | [`firebase.md`](./firebase.md) §6 | 5 |
 | 6b | Cloudflare Pages project for the member PWA, env vars, `CORS_ORIGINS` and Firebase authorized domains for the Pages domain | [`web-pages.md`](./web-pages.md) | 3, 4 |
 | 7 | Promote the first admin (SQL on Neon) | [`vercel-api.md`](./vercel-api.md) §6 | 5, 6, plus one sign-in from the dashboard |
-| 8 | `cleanup` Vercel cron (`0 3 * * 1`), switched on with `CRON_SECRET` | [`vercel-api.md`](./vercel-api.md) §7 | 4 (and, when moving from Railway, the §5 data copy) |
+| 8 | `cleanup` Vercel cron (`0 3 * * 1`), switched on with `CRON_SECRET` | [`vercel-api.md`](./vercel-api.md) §7 | 4 |
 | 9 | Apple: Sign in with Apple key + APNs key, uploaded to Firebase | [`firebase.md`](./firebase.md) §3, §5 | **SKI-42** (paid Apple Developer account) |
 | 10 | `notify` Vercel cron (`0 13 * * *`), not wired yet | [`vercel-api.md`](./vercel-api.md) §8 | 4, 9 — sends fail without the `FIREBASE_*` vars and the APNs key |
 | 11 | iOS release wiring: `GoogleService-Info.plist`, `GOOGLE_REVERSED_CLIENT_ID`, Release `API_BASE_URL`, `DEVELOPMENT_TEAM`, `aps-environment: production` | [`firebase.md`](./firebase.md) §2 and README "Before TestFlight" | 3, 4, SKI-42 |
@@ -50,7 +50,7 @@ rotate it at the provider rather than deleting the message.
 | `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` | Vercel API project env |
 | `OPENROUTER_API_KEY` | Vercel API project env |
 | `FIREBASE_PRIVATE_KEY` (+ the rest of the service-account JSON) | Vercel API project env, one line with literal `\n` |
-| `CRON_SECRET` | Vercel API project env, added only at cutover (`openssl rand -hex 32`) |
+| `CRON_SECRET` | Vercel API project env (Production), `openssl rand -hex 32` |
 | APNs `.p8`, Sign in with Apple `.p8` | uploaded to Firebase / Apple only; keep the downloads in a password manager |
 | `GoogleService-Info.plist` | on disk at `ios/SkinnyLegend/` only — gitignored, never committed |
 

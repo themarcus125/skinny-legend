@@ -25,9 +25,3 @@ export async function cleanupOrphans(now = new Date()): Promise<{ deleted: strin
   }
   return { deleted };
 }
-
-if (process.argv[1]?.endsWith('cleanup.ts') || process.argv[1]?.endsWith('cleanup.js')) {
-  const { deleted } = await cleanupOrphans();
-  console.log(`deleted ${deleted.length} orphaned objects`);
-  process.exit(0);
-}
